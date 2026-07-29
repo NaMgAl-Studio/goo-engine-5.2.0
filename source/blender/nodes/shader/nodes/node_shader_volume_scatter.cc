@@ -1,0 +1,140 @@
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "node_shader_util.hh"
+
+#include "BLI_string.h"
+
+#include "UI_interface_layout.hh"
+#include "UI_resources.hh"
+
+#include "BKE_node_runtime.hh"
+
+namespace blender {
+
+namespace nodes::node_shader_volume_scatter_cc {
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  const bNodeTree *ntree = b.tree_or_null();
+  const bool is_gpu_internal = ntree && (ntree->flag & NTREE_IS_GPU_SHADER_INTERNAL);
+
+  b.add_input<decl::Color>("Color"_ustr).default_value({0.8f, 0.8f, 0.8f, 1.0f});
+#define SOCK_COLOR_ID 0
+  b.add_input<decl::Float>("Density"_ustr).default_value(1.0f).min(0.0f).max(1000.0f);
+#define SOCK_DENSITY_ID 1
+  b.add_input<decl::Float>("Anisotropy"_ustr)
+      .default_value(0.0f)
+      .min(-1.0f)
+      .max(1.0f)
+      .subtype(PROP_FACTOR)
+      .description(
+          "Directionality of the scattering. Zero is isotropic, negative is backward, "
+          "positive is forward")
+      .make_available([](bNode &node) { node.custom1 = SHD_PHASE_HENYEY_GREENSTEIN; });
+  b.add_input<decl::Float>("IOR"_ustr)
+      .default_value(1.33f)
+      .min(1.0f)
+      .max(2.0f)
+      .subtype(PROP_FACTOR)
+      .description("Index Of Refraction of the scattering particles")
+      .make_available([](bNode &node) { node.custom1 = SHD_PHASE_FOURNIER_FORAND; });
+  b.add_input<decl::Float>("Backscatter"_ustr)
+      .default_value(0.1f)
+      .min(0.0f)
+      .max(0.5f)
+      .subtype(PROP_FACTOR)
+      .description("Fraction of light that is scattered backwards")
+      .make_available([](bNode &node) { node.custom1 = SHD_PHASE_FOURNIER_FORAND; });
+  b.add_input<decl::Float>("Alpha"_ustr)
+      .default_value(0.5f)
+      .min(0.0f)
+      .max(500.0f)
+      .make_available([](bNode &node) { node.custom1 = SHD_PHASE_DRAINE; });
+  b.add_input<decl::Float>("Diameter"_ustr)
+      .default_value(20.0f)
+      .min(0.0f)
+      .max(50.0f)
+      .description("Diameter of the water droplets, in micrometers")
+      .make_available([](bNode &node) { node.custom1 = SHD_PHASE_MIE; });
+  b.add_input<decl::Float>("Weight"_ustr).available(is_gpu_internal);
+  b.add_output<decl::Shader>("Volume"_ustr).translation_context(BLT_I18NCONTEXT_ID_ID);
+}
+
+static void node_shader_buts_scatter(ui::Layout &layout, bContext * /*C*/, PointerRNA *ptr)
+{
+  layout.prop(ptr, "phase", ui::ITEM_R_SPLIT_EMPTY_NAME, "", ICON_NONE);
+}
+
+static void node_shader_init_scatter(bNodeTree * /*ntree*/, bNode *node)
+{
+  node->custom1 = SHD_PHASE_HENYEY_GREENSTEIN;
+}
+
+static void node_shader_update_scatter(bNodeTree *ntree, bNode *node)
+{
+  const int phase_function = node->custom1;
+
+  for (bNodeSocket &sock : node->inputs) {
+    if (STR_ELEM(sock.name, "IOR", "Backscatter")) {
+      bke::node_set_socket_availability(*ntree, sock, phase_function == SHD_PHASE_FOURNIER_FORAND);
+    }
+    else if (STR_ELEM(sock.name, "Anisotropy")) {
+      bke::node_set_socket_availability(
+          *ntree, sock, ELEM(phase_function, SHD_PHASE_HENYEY_GREENSTEIN, SHD_PHASE_DRAINE));
+    }
+    else if (STR_ELEM(sock.name, "Alpha")) {
+      bke::node_set_socket_availability(*ntree, sock, phase_function == SHD_PHASE_DRAINE);
+    }
+    else if (STR_ELEM(sock.name, "Diameter")) {
+      bke::node_set_socket_availability(*ntree, sock, phase_function == SHD_PHASE_MIE);
+    }
+  }
+}
+
+static int node_shader_gpu_volume_scatter(GPUMaterial *mat,
+                                          bNode *node,
+                                          bNodeExecData * /*execdata*/,
+                                          GPUNodeStack *in,
+                                          GPUNodeStack *out)
+{
+  if (in[SOCK_DENSITY_ID].socket_not_zero() && in[SOCK_COLOR_ID].socket_not_black()) {
+    /* Consider there is absorption phenomenon when there is scattering since
+     * `extinction = scattering + absorption`. */
+    GPU_material_flag_set(mat, GPU_MATFLAG_VOLUME_SCATTER | GPU_MATFLAG_VOLUME_ABSORPTION);
+  }
+  return GPU_stack_link(mat, node, "node_volume_scatter", in, out);
+}
+
+#undef SOCK_COLOR_ID
+#undef SOCK_DENSITY_ID
+
+}  // namespace nodes::node_shader_volume_scatter_cc
+
+/* node type definition */
+void register_node_type_sh_volume_scatter()
+{
+  namespace file_ns = nodes::node_shader_volume_scatter_cc;
+
+  static bke::bNodeType ntype;
+
+  sh_node_type_base(&ntype, "ShaderNodeVolumeScatter"_ustr, SH_NODE_VOLUME_SCATTER);
+  ntype.ui_name = "Volume Scatter";
+  ntype.ui_description =
+      "Scatter light as it passes through the volume, often used to add fog to a scene";
+  ntype.enum_name_legacy = "VOLUME_SCATTER";
+  ntype.nclass = NODE_CLASS_SHADER;
+  ntype.declare = file_ns::node_declare;
+  ntype.gather_link_search_ops = search_link_ops_for_shader_bsdf_node;
+  ntype.add_ui_poll = object_shader_nodes_poll;
+  ntype.draw_buttons = file_ns::node_shader_buts_scatter;
+  ntype.default_width = bke::NodeWidth::_160;
+  ntype.initfunc = file_ns::node_shader_init_scatter;
+  ntype.gpu_fn = file_ns::node_shader_gpu_volume_scatter;
+  ntype.updatefunc = file_ns::node_shader_update_scatter;
+
+  bke::node_register_type(ntype);
+}
+
+}  // namespace blender

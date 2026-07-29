@@ -1,0 +1,147 @@
+# SPDX-FileCopyrightText: 2025 Blender Authors
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+"""
+This file does not run anything, its methods are accessed for tests by ``run_blender_setup.py``.
+"""
+import modules.ui_test_utils as ui
+
+
+def sanity_check_general():
+    e, t, window = ui.test_window()
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("ga")  # General > Animation
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Animation")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gc")  # General > Compositing
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Compositing")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gg")  # General > Geometry Nodes
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Geometry Nodes")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gl")  # General > Layout
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Layout")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gm")  # General > Modeling
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Modeling")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gr")  # General > Rendering
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Rendering")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gscr")  # General > Scripting
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Scripting")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gscu")  # General > Sculpting
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Sculpting")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gsh")  # General > Shading
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Shading")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gt")  # General > Texture Paint
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Texture Paint")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("gu")  # General > UV Editing
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "UV Editing")
+
+
+def sanity_check_2d_animation():
+    e, t, window = ui.test_window()
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text(" 2d")  # 2D Animation > 2D Animation
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "2D Animation")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("fu")  # 2D Animation > 2D Full Canvas
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "2D Full Canvas")
+
+
+def sanity_check_sculpting():
+    e, t, window = ui.test_window()
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("sscu")  # Sculpting > Sculpting
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Sculpting")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("ssh")  # Sculpting > Shading
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Shading")
+
+
+def sanity_check_storyboarding():
+    e, t, window = ui.test_window()
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("sv")  # Storyboarding > Video Editing
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Video Editing")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("st")  # Storyboarding > Storyboarding
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Storyboarding")
+
+
+def sanity_check_vfx():
+    e, t, window = ui.test_window()
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("vc")  # VFX > Compositing
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Compositing")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("vma")  # VFX > Masking
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Masking")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("vmo")  # VFX > Motion Tracking
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Motion Tracking")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("vr")  # VFX > Rendering
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Rendering")
+
+
+def sanity_check_video_editing():
+    e, t, window = ui.test_window()
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("vir")  # Video Editing > Rendering
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Rendering")
+
+    yield from ui.call_operator(e, "Add Workspace")
+    yield e.text("vv")  # Video Editing > Video Editing
+    yield e.ret()
+    t.assertEqual(window.workspace.name_full.split(".", 1)[0], "Video Editing")

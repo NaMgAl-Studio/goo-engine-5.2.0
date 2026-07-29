@@ -1,0 +1,122 @@
+/* SPDX-FileCopyrightText: 2004 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#pragma once
+
+/** \file
+ * \ingroup sequencer
+ */
+
+#include "BKE_sound_types.hh"
+
+#include "BLI_function_ref.hh"
+
+#include "DNA_sequence_types.h"
+
+namespace blender {
+
+struct ARegionType;
+struct BlendDataReader;
+struct BlendWriter;
+struct Strip;
+struct StripModifierData;
+struct ID;
+
+namespace seq {
+
+struct ModifierApplyContext;
+
+struct StripModifierTypeInfo {
+  /**
+   * A unique identifier for this modifier. Used to generate the panel id type name.
+   * See #seq::modifier_type_panel_id.
+   */
+  char idname[/*MAX_NAME*/ 64];
+
+  /* default name for the modifier */
+  char name[/*MAX_NAME*/ 64];
+
+  /* DNA structure name used on load/save filed */
+  char struct_name[/*MAX_NAME*/ 64];
+
+  /* size of modifier data structure, used by allocation */
+  int struct_size;
+
+  /* data initialization */
+  void (*init_data)(StripModifierData *smd);
+
+  /* free data used by modifier,
+   * only modifier-specific data should be freed, modifier descriptor would
+   * be freed outside of this callback
+   */
+  void (*free_data)(StripModifierData *smd);
+
+  /* copy data from one modifier to another */
+  void (*copy_data)(StripModifierData *smd, StripModifierData *target);
+
+  /* Apply modifier on an image buffer. */
+  void (*apply)(ModifierApplyContext &context, StripModifierData *smd);
+
+  /** Register the panel types for the modifier's UI. */
+  void (*panel_register)(ARegionType *region_type);
+
+  /* Callback to read custom strip modifier data. */
+  void (*blend_write)(BlendWriter *writer, const StripModifierData *smd);
+
+  /* Callback to write custom strip modifier data. */
+  void (*blend_read)(BlendDataReader *reader, StripModifierData *smd);
+};
+
+struct StripModifierDataRuntime {
+  /* Reference parameters for optimizing updates. Sound modifiers can store parameters, sound
+   * inputs and outputs. When all existing parameters do match new ones, the update can be skipped
+   * and old sound handle may be returned. This is to prevent audio glitches, see #141595 */
+
+  /* Reference sound handles (may be used by any sound modifier). */
+  AUD_Sound last_sound_in;
+  AUD_Sound last_sound_out;
+
+  /* Hash to detect change in modifier state. */
+  uint64_t params_hash = 0;
+
+  eStripModifierFlag flag = STRIP_MODIFIER_FLAG_NONE;
+};
+
+void modifiers_init();
+
+const StripModifierTypeInfo *modifier_type_info_get(eStripModifierType type);
+StripModifierData *modifier_new(Strip *strip, const char *name, eStripModifierType type);
+bool modifier_remove(Strip *strip, StripModifierData *smd);
+void modifier_clear(Strip *strip);
+void modifier_free(StripModifierData *smd);
+void modifier_unique_name(Strip *strip, StripModifierData *smd);
+StripModifierData *modifier_find_by_name(Strip *strip, const char *name);
+/**
+ * Copy the `mod_src` modifier and add it to `strip_dst`.
+ * \param flag: The flag used for copying the system ID properties.
+ */
+StripModifierData *modifier_copy(Strip &strip_dst, StripModifierData *mod_src, int flag);
+void modifier_list_copy(Strip *strip_new, Strip *strip, int flag);
+bool strip_supports_modifiers(const Strip *strip);
+
+void modifier_blend_write(BlendWriter *writer, ListBaseT<StripModifierData> *modbase);
+void modifier_blend_read_data(BlendDataReader *reader, ListBaseT<StripModifierData> *lb);
+void modifier_persistent_uid_init(const Strip &strip, StripModifierData &smd);
+
+bool modifier_move_to_index(Strip *strip, StripModifierData *smd, int new_index);
+
+StripModifierData *modifier_get_active(const Strip *strip);
+void modifier_set_active(Strip *strip, StripModifierData *smd);
+
+static constexpr char STRIP_MODIFIER_TYPE_PANEL_PREFIX[] = "STRIPMOD_PT_";
+void modifier_type_panel_id(eStripModifierType type, char *r_idname);
+
+/* Iterate over all the modifiers and call the callback function for every referenced ID. */
+void foreach_strip_modifier_id(Strip *strip, const FunctionRef<void(ID *)> fn);
+
+void compositor_nodes_update_interface(Scene &sequencer_scene,
+                                       SequencerCompositorModifierData &cmd);
+
+}  // namespace seq
+}  // namespace blender

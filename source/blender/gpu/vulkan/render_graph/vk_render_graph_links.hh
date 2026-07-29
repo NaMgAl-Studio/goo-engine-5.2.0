@@ -1,0 +1,99 @@
+/* SPDX-FileCopyrightText: 2024 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup gpu
+ *
+ * Nodes inside the render graph are connected via links to the resources they use. These links are
+ * determined when adding a node to the render graph.
+ *
+ * The inputs of the node link to the resources that the node reads from. The outputs of the node
+ * link to the resources that the node modifies.
+ *
+ * All links inside the graph are stored inside `VKResourceDependencies`.
+ */
+
+#pragma once
+
+#include "BLI_utility_mixins.hh"
+#include "BLI_vector.hh"
+
+#include "vk_common.hh"
+#include "vk_resource_state_tracker.hh"
+
+namespace blender::gpu::render_graph {
+
+/** Which access flags are considered for write access. */
+static constexpr VkAccessFlags VK_ACCESS_WRITE_MASK =
+    VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT |
+    VK_ACCESS_HOST_WRITE_BIT;
+
+struct VKRenderGraphResource {
+  /**
+   * Which resource is being accessed.
+   */
+  ResourceWithStamp resource;
+
+  /**
+   * How is the resource being accessed.
+   *
+   * When generating pipeline barriers of a resource, the nodes access flags are evaluated to
+   * create src/dst access masks.
+   */
+  VkAccessFlags vk_access_flags;
+
+  bool has_write_access() const
+  {
+    return vk_access_flags & VK_ACCESS_WRITE_MASK;
+  }
+};
+
+struct VKRenderGraphBuffer : public VKRenderGraphResource {};
+
+struct VKRenderGraphImage : public VKRenderGraphResource {
+  /**
+   * When resource is an image, which layout should the image be using.
+   *
+   * When generating the commands this attribute is compared with the actual image layout of the
+   * the image. Additional pipeline barriers will be added to transit to the layout stored here.
+   */
+  VkImageLayout vk_image_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+  /**
+   * Which aspect of the image is being used.
+   */
+  VkImageAspectFlags vk_image_aspect = VK_IMAGE_ASPECT_NONE;
+
+  /**
+   * The layers and mipmap levels to bind.
+   *
+   * Used when layer_tracking will be enabled to transit the layout of these layers only.
+   */
+  VKSubImageRange subimage;
+};
+
+struct VKRenderGraphLinks {
+  /**
+   * VKRenderGraphNode.links.buffers contains indices to #VKRenderGraphLinks.buffers.
+   *
+   * This reduces reallocations as otherwise complex data types are needed.
+   */
+  Vector<VKRenderGraphBuffer> buffers;
+
+  /**
+   * VKRenderGraphNode.links.images only contains indices to the #VKRenderGraphLinks.images.
+   *
+   * This reduces reallocations as otherwise complex data types are needed.
+   */
+  Vector<VKRenderGraphImage> images;
+
+  void clear()
+  {
+    buffers.clear();
+    images.clear();
+  }
+};
+
+}  // namespace blender::gpu::render_graph

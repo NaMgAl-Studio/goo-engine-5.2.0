@@ -1,0 +1,31 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup freestyle
+ */
+
+#pragma once
+
+#include "../BPy_UnaryFunction0D.h"
+
+#include "../../scene_graph/FrsMaterial.h"
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+extern PyTypeObject UnaryFunction0DMaterial_Type;
+
+#define BPy_UnaryFunction0DMaterial_Check(v) \
+  (PyObject_IsInstance((PyObject *)v, (PyObject *)&UnaryFunction0DMaterial_Type))
+
+/*---------------------------Python BPy_UnaryFunction0DMaterial structure definition----------*/
+struct BPy_UnaryFunction0DMaterial {
+  BPy_UnaryFunction0D py_uf0D;
+  Freestyle::UnaryFunction0D<Freestyle::FrsMaterial> *uf0D_material;
+};
+
+/*---------------------------Python BPy_UnaryFunction0DMaterial visible prototypes-----------*/
+int UnaryFunction0DMaterial_Init(PyObject *module);
+
+///////////////////////////////////////////////////////////////////////////////////////////

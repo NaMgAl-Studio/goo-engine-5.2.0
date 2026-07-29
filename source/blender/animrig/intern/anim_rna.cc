@@ -1,0 +1,345 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup animrig
+ */
+
+#include <fmt/format.h>
+
+#include "ANIM_rna.hh"
+
+#include "BLI_listbase.h"
+#include "BLI_math_base.h"
+#include "BLI_string.h"
+#include "BLI_vector.hh"
+
+#include "DNA_object_types.h"
+
+#include "RNA_access.hh"
+#include "RNA_path.hh"
+#include "RNA_prototypes.hh"
+
+namespace blender::animrig {
+
+Vector<float> get_rna_values(PointerRNA *ptr, PropertyRNA *prop)
+{
+  Vector<float> values;
+  if (RNA_property_array_check(prop)) {
+    const int length = RNA_property_array_length(ptr, prop);
+
+    switch (RNA_property_type(prop)) {
+      case PROP_BOOLEAN: {
+        bool *tmp_bool = MEM_new_array_uninitialized<bool>(length, __func__);
+        RNA_property_boolean_get_array(ptr, prop, tmp_bool);
+        for (int i = 0; i < length; i++) {
+          values.append(float(tmp_bool[i]));
+        }
+        MEM_delete(tmp_bool);
+        break;
+      }
+      case PROP_INT: {
+        int *tmp_int = MEM_new_array_uninitialized<int>(length, __func__);
+        RNA_property_int_get_array(ptr, prop, tmp_int);
+        for (int i = 0; i < length; i++) {
+          values.append(float(tmp_int[i]));
+        }
+        MEM_delete(tmp_int);
+        break;
+      }
+      case PROP_FLOAT: {
+        values.reinitialize(length);
+        RNA_property_float_get_array(ptr, prop, values.data());
+        break;
+      }
+      default:
+        values.reinitialize(length);
+        break;
+    }
+  }
+  else {
+    switch (RNA_property_type(prop)) {
+      case PROP_BOOLEAN:
+        values.append(float(RNA_property_boolean_get(ptr, prop)));
+        break;
+      case PROP_INT:
+        values.append(float(RNA_property_int_get(ptr, prop)));
+        break;
+      case PROP_FLOAT:
+        values.append(RNA_property_float_get(ptr, prop));
+        break;
+      case PROP_ENUM:
+        values.append(float(RNA_property_enum_get(ptr, prop)));
+        break;
+      default:
+        values.append(0.0f);
+    }
+  }
+
+  return values;
+}
+
+constexpr const char *pose_bone_path_prefix = "pose.bones[\"";
+constexpr int pose_bone_path_prefix_length = std::char_traits<char>::length(pose_bone_path_prefix);
+
+std::string get_pose_bone_rna_path(const bPoseChannel &pose_bone)
+{
+  char name_esc[sizeof(pose_bone.name) * 2];
+  BLI_str_escape(name_esc, pose_bone.name, sizeof(name_esc));
+  return fmt::format("{}{}\"]", pose_bone_path_prefix, name_esc);
+}
+
+std::optional<std::string> pose_bone_name_from_rna_path(const StringRefNull rna_path)
+{
+  if (rna_path.size() < pose_bone_path_prefix_length ||
+      !rna_path.startswith(pose_bone_path_prefix))
+  {
+    return std::nullopt;
+  }
+
+  const char *name_esc = rna_path.data() + pose_bone_path_prefix_length;
+  const char *name_esc_end = BLI_str_escape_find_quote(name_esc);
+  if (!name_esc_end) {
+    return std::nullopt;
+  }
+  char name[MAXBONENAME];
+  const size_t name_esc_len = size_t(name_esc_end - name_esc);
+  if (name_esc_len >= sizeof(name)) {
+    return std::nullopt;
+  }
+  BLI_str_unescape(name, name_esc, name_esc_len);
+  return name;
+}
+
+StringRefNull get_rotation_mode_path(const eRotationModes rotation_mode)
+{
+  switch (rotation_mode) {
+    case ROT_MODE_QUAT:
+      return "rotation_quaternion";
+    case ROT_MODE_AXISANGLE:
+      return "rotation_axis_angle";
+    default:
+      return "rotation_euler";
+  }
+}
+
+std::optional<eRotationModes> get_rotation_mode_from_path(const StringRefNull rna_path)
+{
+  /* Accounting for the difference between objects and bones where the latter is e.g.
+   * `pose.bones["foo"].rotation_euler`. Assumes that rfind returns -1 if the string
+   * is not found. */
+  const int start_of_propname = rna_path.rfind(".") + 1;
+  if (!rna_path.substr(start_of_propname, rna_path.size()).startswith("rotation_")) {
+    return std::nullopt;
+  }
+  /* We already know that "rotation_" is in the rna_path, we can skip the full check for
+   * "rotation_quaternion", "rotation_euler" or "rotation_axis_angle". */
+  if (rna_path.endswith("quaternion")) {
+    return ROT_MODE_QUAT;
+  }
+  else if (rna_path.endswith("euler")) {
+    /* Cannot determine the rotation order from the path alone. */
+    return ROT_MODE_EUL;
+  }
+  else if (rna_path.endswith("axis_angle")) {
+    return ROT_MODE_AXISANGLE;
+  }
+  return std::nullopt;
+}
+
+std::optional<eRotationModes> get_rotation_mode_from_rna_pointer(const PointerRNA &ptr)
+{
+  if (ptr.type == RNA_PoseBone) {
+    bPoseChannel *pchan = static_cast<bPoseChannel *>(ptr.data);
+    return eRotationModes(pchan->rotmode);
+  }
+  if (ptr.type == RNA_Object) {
+    Object *ob = static_cast<Object *>(ptr.data);
+    return eRotationModes(ob->rotmode);
+  }
+  return std::nullopt;
+}
+
+bool is_rotation_path(const StringRefNull rna_path)
+{
+  return get_rotation_mode_from_path(rna_path).has_value();
+}
+
+static bool is_idproperty_keyable(const IDProperty *id_prop, PointerRNA *ptr, PropertyRNA *prop)
+{
+  /* While you can cast the IDProperty* to a PropertyRNA* and pass it to the RNA_* functions, this
+   * does not work because it will not have the right flags set. Instead the resolved
+   * PointerRNA and PropertyRNA need to be passed. */
+  if (!RNA_property_anim_editable(ptr, prop)) {
+    return false;
+  }
+
+  if (ELEM(id_prop->type,
+           eIDPropertyType::IDP_BOOLEAN,
+           eIDPropertyType::IDP_INT,
+           eIDPropertyType::IDP_FLOAT,
+           eIDPropertyType::IDP_DOUBLE))
+  {
+    return true;
+  }
+
+  if (id_prop->type == eIDPropertyType::IDP_ARRAY) {
+    if (ELEM(id_prop->subtype,
+             eIDPropertyType::IDP_BOOLEAN,
+             eIDPropertyType::IDP_INT,
+             eIDPropertyType::IDP_FLOAT,
+             eIDPropertyType::IDP_DOUBLE))
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+Vector<RNAPath> get_keyable_id_property_paths(const PointerRNA &ptr)
+{
+  IDProperty *properties;
+
+  if (ptr.type == RNA_PoseBone) {
+    const bPoseChannel *pchan = static_cast<bPoseChannel *>(ptr.data);
+    properties = pchan->prop;
+  }
+  else if (ptr.type == RNA_Object) {
+    const Object *ob = static_cast<Object *>(ptr.data);
+    properties = ob->id.properties;
+  }
+  else {
+    /* Pointer type not supported. */
+    return {};
+  }
+
+  if (!properties) {
+    return {};
+  }
+
+  Vector<RNAPath> paths;
+  for (const IDProperty &id_prop : properties->data.group) {
+    PointerRNA resolved_ptr;
+    PropertyRNA *resolved_prop;
+    std::string path = id_prop.name;
+    /* Resolving the path twice, once as RNA property (without brackets, `"propname"`),
+     * and once as ID property (with brackets, `["propname"]`).
+     * This is required to support IDProperties that have been defined as part of an add-on.
+     * Those need to be animated through an RNA path without the brackets. */
+    bool is_resolved = RNA_path_resolve_property(
+        &ptr, path.c_str(), &resolved_ptr, &resolved_prop);
+    /* ID properties can be named the same as internal properties, for example `scale`. In that
+     * case they would resolve, but it wouldn't be the correct property. `RNA_property_is_runtime`
+     * catches that case. */
+    if (!is_resolved || !RNA_property_is_runtime(resolved_prop)) {
+      char name_escaped[MAX_IDPROP_NAME * 2];
+      BLI_str_escape(name_escaped, id_prop.name, sizeof(name_escaped));
+      path = fmt::format("[\"{}\"]", name_escaped);
+      is_resolved = RNA_path_resolve_property(&ptr, path.c_str(), &resolved_ptr, &resolved_prop);
+    }
+    if (!is_resolved) {
+      continue;
+    }
+    if (is_idproperty_keyable(&id_prop, &resolved_ptr, resolved_prop)) {
+      paths.append({path});
+    }
+  }
+  return paths;
+}
+
+Array<float> rna_property_get_as_float(PointerRNA &ptr, PropertyRNA &prop)
+{
+  const bool is_array = RNA_property_array_check(&prop);
+  Array<float> values;
+  if (is_array) {
+    values.reinitialize(RNA_property_array_length(&ptr, &prop));
+  }
+  else {
+    values.reinitialize(1);
+  }
+  switch (RNA_property_type(&prop)) {
+    case PROP_BOOLEAN:
+      if (is_array) {
+        for (const int i : values.index_range()) {
+          values[i] = RNA_property_boolean_get_index(&ptr, &prop, i);
+        }
+      }
+      else {
+        values[0] = RNA_property_boolean_get(&ptr, &prop);
+      }
+      break;
+
+    case PROP_INT:
+      if (is_array) {
+        for (const int i : values.index_range()) {
+          values[i] = RNA_property_int_get_index(&ptr, &prop, i);
+        }
+      }
+      else {
+        values[0] = RNA_property_int_get(&ptr, &prop);
+      }
+      break;
+
+    case PROP_FLOAT:
+      if (is_array) {
+        RNA_property_float_get_array(&ptr, &prop, values.data());
+      }
+      else {
+        values[0] = RNA_property_float_get(&ptr, &prop);
+      }
+      break;
+    default:
+      /* Unsupported property type. */
+      return {};
+  }
+  return values;
+}
+
+void rna_property_set_as_float(PointerRNA &ptr, PropertyRNA &prop, const Span<float> values)
+{
+  const bool is_array = RNA_property_array_check(&prop);
+  if (is_array && RNA_property_array_length(&ptr, &prop) != values.size()) {
+    /* Array length has to match. */
+    BLI_assert_unreachable();
+    return;
+  }
+
+  switch (RNA_property_type(&prop)) {
+    case PROP_BOOLEAN:
+      if (is_array) {
+        for (const int i : values.index_range()) {
+          RNA_property_boolean_set_index(&ptr, &prop, i, values[i]);
+        }
+      }
+      else {
+        RNA_property_boolean_set(&ptr, &prop, values[0]);
+      }
+      break;
+    case PROP_INT:
+      if (is_array) {
+        for (const int i : values.index_range()) {
+          RNA_property_int_set_index(&ptr, &prop, i, values[i]);
+        }
+      }
+      else {
+        RNA_property_int_set(&ptr, &prop, values[0]);
+      }
+      break;
+    case PROP_FLOAT:
+      if (is_array) {
+        RNA_property_float_set_array(&ptr, &prop, values.data());
+      }
+      else {
+        RNA_property_float_set(&ptr, &prop, values[0]);
+      }
+      break;
+    default:
+      /* Unsupported property type. */
+      BLI_assert_unreachable();
+      return;
+  }
+}
+
+}  // namespace blender::animrig

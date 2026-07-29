@@ -1,0 +1,292 @@
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
+
+#pragma once
+
+#include <atomic>
+
+#include "scene/shader.h"
+#include "scene/shader_graph.h"
+
+#include "util/array.h"
+#include "util/string.h"
+
+CCL_NAMESPACE_BEGIN
+
+class Device;
+class DeviceScene;
+class ImageManager;
+class Scene;
+class ShaderGraph;
+class ShaderInput;
+class ShaderNode;
+class ShaderOutput;
+struct SVMNodeClosureBsdf;
+
+/* Shader Manager */
+
+class SVMShaderManager : public ShaderManager {
+ public:
+  SVMShaderManager();
+  ~SVMShaderManager() override;
+
+  void device_update_specific(Device *device,
+                              DeviceScene *dscene,
+                              Scene *scene,
+                              Progress &progress) override;
+  void device_free(Device *device, DeviceScene *dscene, Scene *scene) override;
+
+ protected:
+  void device_update_shader(Scene *scene,
+                            Shader *shader,
+                            Progress &progress,
+                            array<int> *svm_nodes);
+};
+
+/* Graph Compiler */
+
+class SVMCompiler {
+ public:
+  struct Summary {
+    Summary();
+
+    /* Number of SVM nodes shader was compiled into. */
+    int num_svm_nodes;
+
+    /* Peak stack usage during shader evaluation. */
+    int peak_stack_usage;
+
+    /* Time spent on generating SVM nodes for surface shader. */
+    double time_generate_surface;
+
+    /* Time spent on generating SVM nodes for bump shader. */
+    double time_generate_bump;
+
+    /* Time spent on generating SVM nodes for volume shader. */
+    double time_generate_volume;
+
+    /* Time spent on generating SVM nodes for displacement shader. */
+    double time_generate_displacement;
+
+    /* Total time spent on all routines. */
+    double time_total;
+
+    /* A full multi-line description of the state of the compiler after compilation. */
+    string full_report() const;
+  };
+
+  SVMCompiler(Scene *scene, Progress &progress);
+  void compile(Shader *shader, array<int> &svm_nodes, const int index, Summary *summary = nullptr);
+
+  /* Create input and output node parameters for struct T passed to add_node. */
+  SVMInputInt input_int(const char *name);
+  SVMInputFloat input_float(const char *name);
+  SVMInputFloat3 input_float3(const char *name);
+  SVMInputFloat3 input_float3_from_offset(SVMStackOffset offset);
+  SVMStackOffset input_link(const char *name);
+  SVMStackOffset output(const char *name);
+  SVMStackOffset output(ShaderOutput *shader_output);
+
+  /* Add simple SVM node without parameters. */
+  void add_node(ShaderNodeType type);
+
+  /* Add SVM node with parameters in struct T. */
+  template<typename T>
+  void add_node(ShaderNode *shader_node,
+                const ShaderNodeType type,
+                const T &node,
+                const bool use_derivatives = false)
+    requires(std::is_class_v<T> && sizeof(T) % sizeof(int) == 0 && alignof(T) <= sizeof(uint))
+  {
+    const ShaderNodeType resolved_type = node_type(shader_node, type, use_derivatives);
+    current_svm_nodes.push_back_slow(resolved_type);
+    const int *data = reinterpret_cast<const int *>(&node);
+    svm_node_types_used[resolved_type] = true;
+    for (size_t i = 0; i < sizeof(T) / sizeof(int); i++) {
+      current_svm_nodes.push_back_slow(data[i]);
+    }
+    if (shader_node) {
+      shader_node->added_to_svm = true;
+    }
+  }
+
+  /* Add value node. */
+  void add_value_node(ShaderNode *shader_node, const float value, const int stack_offset);
+  void add_value_node(ShaderNode *shader_node, const float3 &value, const int stack_offset);
+
+  /* Add BSDF node. */
+  template<typename T> void add_bsdf_node(const SVMNodeClosureBsdf &node, const T &data)
+  {
+    assert(current_node->shader_node_type() == NODE_CLOSURE_BSDF);
+    add_node(current_node, NODE_CLOSURE_BSDF, node);
+    add_node_data(data);
+  }
+
+  /* Add extra node data following add_node. */
+  template<typename T>
+  void add_node_data(const T &data)
+    requires(std::is_class_v<T> && sizeof(T) % sizeof(int) == 0 && alignof(T) <= sizeof(uint))
+  {
+    const int *ptr = reinterpret_cast<const int *>(&data);
+    for (size_t i = 0; i < sizeof(T) / sizeof(int); i++) {
+      current_svm_nodes.push_back_slow(ptr[i]);
+    }
+  }
+  void add_node_data_float4(const float4 &f);
+  void add_node_data_float(const float f);
+
+  /* Low level input and output handling for some special nodes. Usually the functions
+   * above should be used instead of these. */
+  SVMStackOffset stack_assign(ShaderInput *input);
+  SVMStackOffset stack_find_offset(const ShaderIO *io);
+  void stack_clear_offset(const ShaderIO *io, const SVMStackOffset offset);
+  void stack_link(ShaderInput *input, ShaderOutput *output);
+
+  uint attribute(ustring name);
+  uint attribute(AttributeStandard std);
+  uint attribute_standard(ustring name);
+  SVMStackOffset closure_mix_weight_offset()
+  {
+    return mix_weight_offset;
+  }
+  SVMStackOffset get_bump_state_offset()
+  {
+    return bump_state_offset;
+  }
+
+  ShaderType output_type()
+  {
+    return current_type;
+  }
+
+  Scene *scene;
+  Progress &progress;
+  ShaderGraph *current_graph;
+  ShaderNode *current_node;
+  bool background;
+
+ protected:
+  /* stack */
+  struct Stack {
+    Stack()
+    {
+      memset(users, 0, sizeof(users));
+    }
+    Stack(const Stack &other)
+    {
+      memcpy(users, other.users, sizeof(users));
+    }
+    Stack &operator=(const Stack &other)
+    {
+      memcpy(users, other.users, sizeof(users));
+      return *this;
+    }
+
+    bool empty()
+    {
+      for (int i = 0; i < SVM_STACK_SIZE; i++) {
+        if (users[i]) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    void print()
+    {
+      printf("stack <");
+
+      for (int i = 0; i < SVM_STACK_SIZE; i++) {
+        printf((users[i]) ? "*" : " ");
+      }
+
+      printf(">\n");
+    }
+
+    int users[SVM_STACK_SIZE];
+  };
+
+  /* Global state of the compiler accessible from the compilation routines. */
+  struct CompilerState {
+    explicit CompilerState(ShaderGraph *graph);
+
+    /* ** Global state, used by various compilation steps. ** */
+
+    /* Set of nodes which were already compiled. */
+    ShaderNodeSet nodes_done;
+
+    /* Set of closures which were already compiled. */
+    ShaderNodeSet closure_done;
+
+    /* Set of nodes used for writing AOVs. */
+    ShaderNodeSet aov_nodes;
+
+    /* ** SVM nodes generation state ** */
+
+    /* Flag whether the node with corresponding ID was already compiled or
+     * not. Array element with index i corresponds to a node with such if.
+     *
+     * TODO(sergey): This is actually a copy of nodes_done just in another
+     * notation. We can de-duplicate this storage actually after switching
+     * all areas to use this flags array.
+     */
+    vector<bool> nodes_done_flag;
+
+    /* Node features that can be compiled. */
+    uint node_feature_mask;
+  };
+
+  ShaderNodeType node_type(const ShaderNode *shader_node,
+                           const ShaderNodeType type,
+                           const bool use_derivatives);
+
+  SVMStackOffset stack_assign(ShaderOutput *output);
+  SVMStackOffset stack_find_offset(const int size);
+
+  void stack_clear_temporary(ShaderNode *node);
+  int stack_size(SocketType::Type type);
+  int stack_size(const ShaderIO *io);
+  void stack_clear_users(ShaderNode *node, ShaderNodeSet &done);
+  bool is_sole_user(const ShaderNode *node, const ShaderOutput *output, const ShaderNodeSet &done);
+  void stack_zero_incomplete_derivatives(const ShaderNode *node);
+
+  /* Stack size that will be allocated for the outputs of this node. */
+  int stack_node_output_size(const ShaderNode *node);
+
+  /* single closure */
+  void find_dependencies(ShaderNodeSet &dependencies,
+                         const ShaderNodeSet &done,
+                         ShaderInput *input,
+                         ShaderNode *skip_node = nullptr);
+  void find_aov_nodes_and_dependencies(ShaderNodeSet &aov_nodes,
+                                       ShaderGraph *graph,
+                                       CompilerState *state);
+  void generate_node(ShaderNode *node, ShaderNodeSet &done);
+  void generate_aov_node(ShaderNode *node, CompilerState *state);
+  void generate_closure_node(ShaderNode *node, CompilerState *state);
+  void generated_shared_closure_nodes(ShaderNode *root_node,
+                                      ShaderNode *node,
+                                      CompilerState *state,
+                                      const ShaderNodeSet &shared);
+  void generate_svm_nodes(const ShaderNodeSet &nodes, CompilerState *state);
+
+  /* multi closure */
+  void generate_multi_closure(ShaderNode *root_node, ShaderNode *node, CompilerState *state);
+
+  /* compile */
+  void compile_type(Shader *shader, ShaderGraph *graph, ShaderType type);
+
+  std::atomic_int *svm_node_types_used;
+  array<int> current_svm_nodes;
+  ShaderType current_type;
+  Shader *current_shader;
+  Stack active_stack;
+  int max_stack_use;
+  SVMStackOffset mix_weight_offset;
+  SVMStackOffset bump_state_offset;
+  bool compile_failed;
+};
+
+CCL_NAMESPACE_END

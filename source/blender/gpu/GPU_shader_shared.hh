@@ -1,0 +1,267 @@
+/* SPDX-FileCopyrightText: 2022 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup gpu
+ */
+
+#pragma once
+
+#include "GPU_shader_shared_utils.hh"
+
+#ifndef GPU_SHADER
+struct TestOutputRawData;
+#endif
+
+/* NOTE: float3 has differing stride and alignment rules across different GPU back-ends. If 12 byte
+ * stride and alignment is essential, use `packed_float3` to avoid data read issues. This is
+ * required in the common use-case where a float3 and an int/float are paired together for optimal
+ * data transfer. */
+
+enum [[host_shared]] GPUKeyframeShapes : uint32_t {
+  GPU_KEYFRAME_SHAPE_DIAMOND = (1u << 0u),
+  GPU_KEYFRAME_SHAPE_CIRCLE = (1u << 1u),
+  GPU_KEYFRAME_SHAPE_CLIPPED_VERTICAL = (1u << 2u),
+  GPU_KEYFRAME_SHAPE_CLIPPED_HORIZONTAL = (1u << 3u),
+  GPU_KEYFRAME_SHAPE_INNER_DOT = (1u << 4u),
+  GPU_KEYFRAME_SHAPE_ARROW_END_MAX = (1u << 8u),
+  GPU_KEYFRAME_SHAPE_ARROW_END_MIN = (1u << 9u),
+  GPU_KEYFRAME_SHAPE_ARROW_END_MIXED = (1u << 10u),
+  GPU_KEYFRAME_SHAPE_SQUARE = (GPU_KEYFRAME_SHAPE_CLIPPED_VERTICAL |
+                               GPU_KEYFRAME_SHAPE_CLIPPED_HORIZONTAL),
+};
+
+#define MAX_SOCKET_PARAMETERS 4
+#define MAX_SOCKET_INSTANCE 32
+
+/* Node Socket shader parameters. Must match the shader layout of "gpu_shader_2D_node_socket". */
+struct [[host_shared]] NodeSocketShaderParameters {
+  float4 rect;
+  float4 color_inner;
+  float4 color_outline;
+  float outline_thickness;
+  float outline_offset;
+  float shape;
+  float aspect;
+};
+
+/* Per link data. */
+struct [[host_shared]] NodeLinkData {
+  float4 start_color;
+  float4 end_color;
+  float2 bezier_P0;
+  float2 bezier_P1;
+  float2 bezier_P2;
+  float2 bezier_P3;
+  uint color_ids;
+  float dash_length;
+  float dash_factor;
+  float dash_alpha;
+  float dim_factor;
+  float thickness;
+  float aspect;
+  bool32_t do_arrow;
+  bool32_t do_muted;
+  bool32_t has_back_link;
+  float _pad0;
+  float _pad1;
+};
+
+/* Data common to all links. */
+struct [[host_shared]] NodeLinkUniformData {
+  float4 colors[6];
+  float aspect;
+  float arrow_size;
+  float2 _pad;
+};
+
+struct [[host_shared]] GPencilStrokeData {
+  float2 viewport;
+  float pixsize;
+  float objscale;
+  int caps_start;
+  int caps_end;
+  bool32_t fill_stroke;
+  float _pad;
+};
+
+struct [[host_shared]] GPUClipPlanes {
+  float4x4 ClipModelMatrix;
+  float4 world[6];
+};
+
+struct [[host_shared]] SimpleLightingData {
+  float4 l_color;
+  packed_float3 light;
+  float _pad;
+};
+
+#define MAX_CALLS 16
+
+struct [[host_shared]] MultiIconCallData {
+  float4 calls_data[MAX_CALLS * 3];
+};
+
+#define GPU_SEQ_STRIP_DRAW_DATA_LEN 256
+
+enum [[host_shared]] GPUSeqFlags : uint32_t {
+  GPU_SEQ_FLAG_BACKGROUND = (1u << 0u),
+  GPU_SEQ_FLAG_SINGLE_IMAGE = (1u << 1u),
+  GPU_SEQ_FLAG_COLOR_BAND = (1u << 2u),
+  GPU_SEQ_FLAG_TRANSITION = (1u << 3u),
+  GPU_SEQ_FLAG_LOCKED = (1u << 4u),
+  GPU_SEQ_FLAG_MISSING_TITLE = (1u << 5u),
+  GPU_SEQ_FLAG_MISSING_CONTENT = (1u << 6u),
+  GPU_SEQ_FLAG_SELECTED = (1u << 7u),
+  GPU_SEQ_FLAG_ACTIVE = (1u << 8u),
+  GPU_SEQ_FLAG_HIGHLIGHT = (1u << 9u),
+  GPU_SEQ_FLAG_BORDER = (1u << 10u),
+  GPU_SEQ_FLAG_SELECTED_LH = (1u << 11u),
+  GPU_SEQ_FLAG_SELECTED_RH = (1u << 12u),
+  GPU_SEQ_FLAG_OVERLAP = (1u << 15u),
+  GPU_SEQ_FLAG_CLAMPED = (1u << 16u),
+
+  GPU_SEQ_FLAG_ANY_HANDLE = GPU_SEQ_FLAG_SELECTED_LH | GPU_SEQ_FLAG_SELECTED_RH
+};
+
+/* Glyph for text rendering. */
+struct [[host_shared]] GlyphQuad {
+  int4 position;
+  float4 glyph_color; /* Cannot be name `color` because of metal macros. */
+  int2 glyph_size;
+  int offset;
+  uint flags;
+};
+
+/* VSE per-strip data for timeline rendering. */
+struct [[host_shared]] SeqStripDrawData {
+  /* Horizontal strip positions (1.0 is one frame). */
+  /* Left and right strip sides. */
+  float left_handle;
+  float right_handle;
+  /* Start and end of actual content (only relevant for strips  that have holdout regions). */
+  float content_start;
+  float content_end;
+  float handle_width;
+  /* Vertical strip positions (1.0 is one channel). */
+  float bottom;
+  float top;
+  float strip_content_top; /* Content coordinate, i.e. below title bar if there is one. */
+  uint flags;              /* GPUSeqFlags bitmask. */
+  /* Strip colors, each is uchar4 packed with equivalent of packUnorm4x8. */
+  uint col_background;
+  uint col_outline;
+  uint col_color_band;
+  uint col_transition_in;
+  uint col_transition_out;
+  float _pad0;
+  float _pad1;
+};
+/* clang-format off */ /* Keep one line. Avoid issues with shader error line. */
+BLI_STATIC_ASSERT(sizeof(SeqStripDrawData) * GPU_SEQ_STRIP_DRAW_DATA_LEN <= 16384, "SeqStripDrawData UBO must not exceed minspec UBO size (16384)")
+/* clang-format on */
+
+/* VSE per-thumbnail data for timeline rendering. */
+struct [[host_shared]] SeqStripThumbData {
+  /* Strip rectangle positions. */
+  float left;
+  float right;
+  float bottom;
+  float top;
+  /* Thumbnail rectangle positions. */
+  float x1;
+  float y1;
+  float x2;
+  float y2;
+  /* Thumbnail UVs. */
+  float u1;
+  float v1;
+  float u2;
+  float v2;
+  float4 tint_color;
+};
+/* clang-format off */ /* Keep one line. Avoid issues with shader error line. */
+BLI_STATIC_ASSERT(sizeof(SeqStripThumbData) * GPU_SEQ_STRIP_DRAW_DATA_LEN <= 16384, "SeqStripThumbData UBO must not exceed minspec UBO size (16384)")
+/* clang-format on */
+
+/* VSE global data for timeline rendering. */
+struct [[host_shared]] SeqContextDrawData {
+  float round_radius;
+  float pixelsize;
+  uint col_back;
+  float _pad0;
+};
+
+/* VSE scope point rasterizer data. */
+struct [[host_shared]] SeqScopeRasterData {
+  uint col_r;
+  uint col_g;
+  uint col_b;
+  uint col_a;
+};
+
+struct [[host_shared]] GreasePencilStrokeData {
+  packed_float3 position;
+  float stroke_thickness;
+  float4 stroke_color;
+};
+
+enum [[host_shared]] TestStatus : uint32_t {
+  TEST_STATUS_NONE = 0u,
+  TEST_STATUS_PASSED = 1u,
+  TEST_STATUS_FAILED = 2u,
+};
+enum [[host_shared]] TestType : uint32_t {
+  TEST_TYPE_BOOL = 0u,
+  TEST_TYPE_UINT = 1u,
+  TEST_TYPE_INT = 2u,
+  TEST_TYPE_FLOAT = 3u,
+  TEST_TYPE_IVEC2 = 4u,
+  TEST_TYPE_IVEC3 = 5u,
+  TEST_TYPE_IVEC4 = 6u,
+  TEST_TYPE_UVEC2 = 7u,
+  TEST_TYPE_UVEC3 = 8u,
+  TEST_TYPE_UVEC4 = 9u,
+  TEST_TYPE_VEC2 = 10u,
+  TEST_TYPE_VEC3 = 11u,
+  TEST_TYPE_VEC4 = 12u,
+  TEST_TYPE_MAT2X2 = 13u,
+  TEST_TYPE_MAT2X3 = 14u,
+  TEST_TYPE_MAT2X4 = 15u,
+  TEST_TYPE_MAT3X2 = 16u,
+  TEST_TYPE_MAT3X3 = 17u,
+  TEST_TYPE_MAT3X4 = 18u,
+  TEST_TYPE_MAT4X2 = 19u,
+  TEST_TYPE_MAT4X3 = 20u,
+  TEST_TYPE_MAT4X4 = 21u,
+};
+
+/** \note Contains arrays of scalar. To be use only with SSBOs to avoid padding issues. */
+struct [[host_shared]] TestOutputRawData {
+  uint data[16];
+};
+
+struct [[host_shared]] TestOutput {
+  struct TestOutputRawData expect;
+  struct TestOutputRawData result;
+  /** TestStatus. */
+  uint status;
+  /** Line error in the GLSL file. */
+  int line;
+  /** TestType of expect and result. */
+  uint type;
+  int _pad0;
+};
+
+#ifdef GPU_SHADER
+TestOutput test_output(TestOutputRawData expect, TestOutputRawData result, bool status, uint type)
+{
+  TestOutput test;
+  test.expect = expect;
+  test.result = result;
+  test.status = status ? TEST_STATUS_PASSED : TEST_STATUS_FAILED;
+  test.type = type;
+  return test;
+}
+#endif

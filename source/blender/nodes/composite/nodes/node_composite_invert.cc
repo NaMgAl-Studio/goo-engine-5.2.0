@@ -1,0 +1,92 @@
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "BLI_math_vector.hh"
+#include "BLI_math_vector_types.hh"
+
+#include "FN_multi_function_builder.hh"
+
+#include "NOD_multi_function.hh"
+
+#include "GPU_material.hh"
+
+#include "COM_result.hh"
+
+#include "node_composite_util.hh"
+
+namespace blender::nodes::node_composite_invert_cc {
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  b.use_custom_socket_order();
+  b.allow_any_socket_order();
+  b.is_function_node();
+  b.add_input<decl::Color>("Color"_ustr).default_value({1.0f, 1.0f, 1.0f, 1.0f}).hide_value();
+  b.add_output<decl::Color>("Color"_ustr).align_with_previous();
+
+  b.add_input<decl::Float>("Factor"_ustr, "Fac"_ustr)
+      .default_value(1.0f)
+      .min(0.0f)
+      .max(1.0f)
+      .subtype(PROP_FACTOR);
+  b.add_input<decl::Bool>("Invert Color"_ustr).default_value(true);
+  b.add_input<decl::Bool>("Invert Alpha"_ustr).default_value(false);
+}
+
+using namespace blender::compositor;
+
+static int node_gpu_material(GPUMaterial *material,
+                             bNode *node,
+                             bNodeExecData * /*execdata*/,
+                             GPUNodeStack *inputs,
+                             GPUNodeStack *outputs)
+{
+  return GPU_stack_link(material, node, "node_composite_invert", inputs, outputs);
+}
+
+static float4 invert(const float4 &color,
+                     const float factor,
+                     const bool invert_color,
+                     const bool invert_alpha)
+{
+  float4 result = color;
+  if (invert_color) {
+    result = float4(1.0f - result.xyz(), result.w);
+  }
+  if (invert_alpha) {
+    result = float4(result.xyz(), 1.0f - result.w);
+  }
+  return math::interpolate(color, result, factor);
+}
+
+using compositor::Color;
+
+static void node_build_multi_function(nodes::NodeMultiFunctionBuilder &builder)
+{
+  static auto function = mf::build::SI4_SO<Color, float, bool, bool, Color>(
+      "Invert Color",
+      [](const Color &color, const float factor, const bool invert_color, const bool invert_alpha)
+          -> Color { return Color(invert(float4(color), factor, invert_color, invert_alpha)); },
+      mf::build::exec_presets::SomeSpanOrSingle<0>());
+  builder.set_matching_fn(function);
+}
+
+static void node_register()
+{
+  static bke::bNodeType ntype;
+
+  cmp_node_type_base(&ntype, "CompositorNodeInvert"_ustr, CMP_NODE_INVERT);
+  ntype.ui_name = "Invert Color";
+  ntype.ui_description = "Invert colors, producing a negative";
+  ntype.enum_name_legacy = "INVERT";
+  ntype.nclass = NODE_CLASS_OP_COLOR;
+  ntype.declare = node_declare;
+  ntype.gpu_fn = node_gpu_material;
+  ntype.build_multi_function = node_build_multi_function;
+
+  bke::node_register_type(ntype);
+}
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_composite_invert_cc

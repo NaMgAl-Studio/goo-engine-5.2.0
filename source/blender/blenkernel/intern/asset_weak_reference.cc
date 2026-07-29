@@ -1,0 +1,186 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup bke
+ */
+
+#include <memory>
+
+#include "BLI_listbase.h"
+#include "BLI_path_utils.hh"
+#include "BLI_string.h"
+
+#include "AS_asset_library.hh"
+
+#include "BKE_asset.hh"
+
+#include "BLO_read_write.hh"
+
+#include "DNA_asset_types.h"
+
+#include "MEM_guardedalloc.h"
+
+namespace blender {
+
+/* #AssetWeakReference -------------------------------------------- */
+
+AssetWeakReference::AssetWeakReference() = default;
+
+AssetWeakReference::AssetWeakReference(const AssetWeakReference &other)
+    : asset_library_type(other.asset_library_type),
+      asset_library_identifier(BLI_strdup_null(other.asset_library_identifier)),
+      relative_asset_identifier(BLI_strdup_null(other.relative_asset_identifier))
+{
+}
+
+AssetWeakReference::AssetWeakReference(AssetWeakReference &&other)
+    : asset_library_type(other.asset_library_type),
+      asset_library_identifier(other.asset_library_identifier),
+      relative_asset_identifier(other.relative_asset_identifier)
+{
+  other.asset_library_type = eAssetLibraryType{}; /* Not a valid type. */
+  other.asset_library_identifier = nullptr;
+  other.relative_asset_identifier = nullptr;
+}
+
+AssetWeakReference::~AssetWeakReference()
+{
+  MEM_delete(asset_library_identifier);
+  MEM_delete(relative_asset_identifier);
+}
+
+AssetWeakReference &AssetWeakReference::operator=(const AssetWeakReference &other)
+{
+  if (this == &other) {
+    return *this;
+  }
+  std::destroy_at(this);
+  new (this) AssetWeakReference(other);
+  return *this;
+}
+
+AssetWeakReference &AssetWeakReference::operator=(AssetWeakReference &&other)
+{
+  if (this == &other) {
+    return *this;
+  }
+  std::destroy_at(this);
+  new (this) AssetWeakReference(std::move(other));
+  return *this;
+}
+
+bool operator==(const AssetWeakReference &a, const AssetWeakReference &b)
+{
+  if (a.asset_library_type != b.asset_library_type) {
+    return false;
+  }
+
+  if (a.asset_library_type == ASSET_LIBRARY_CUSTOM) {
+    const char *a_lib_idenfifier = a.asset_library_identifier ? a.asset_library_identifier : "";
+    const char *b_lib_idenfifier = b.asset_library_identifier ? b.asset_library_identifier : "";
+    if (BLI_path_cmp_normalized(a_lib_idenfifier, b_lib_idenfifier) != 0) {
+      return false;
+    }
+  }
+  const char *a_asset_idenfifier = a.relative_asset_identifier ? a.relative_asset_identifier : "";
+  const char *b_asset_idenfifier = b.relative_asset_identifier ? b.relative_asset_identifier : "";
+  if (BLI_path_cmp_normalized(a_asset_idenfifier, b_asset_idenfifier) != 0) {
+    return false;
+  }
+  return true;
+}
+
+AssetWeakReference AssetWeakReference::make_reference(const asset_system::AssetLibrary &library,
+                                                      const StringRef library_relative_identifier)
+{
+  AssetWeakReference weak_ref{};
+
+  BLI_assert_msg(
+      !(library.library_type() == ASSET_LIBRARY_CUSTOM && library.name().is_empty()),
+      "Custom asset libraries should have a name set, otherwise weak references will not work");
+
+  weak_ref.asset_library_type = library.library_type();
+  StringRefNull name = library.name();
+  if (!name.is_empty()) {
+    weak_ref.asset_library_identifier = BLI_strdupn(name.c_str(), name.size());
+  }
+
+  weak_ref.relative_asset_identifier = BLI_strdupn(library_relative_identifier.data(),
+                                                   library_relative_identifier.size());
+
+  return weak_ref;
+}
+
+void BKE_asset_weak_reference_write(BlendWriter *writer, const AssetWeakReference *weak_ref)
+{
+  writer->write_struct(weak_ref);
+  writer->write_string(weak_ref->asset_library_identifier);
+  writer->write_string(weak_ref->relative_asset_identifier);
+}
+
+void BKE_asset_weak_reference_read(BlendDataReader *reader, AssetWeakReference *weak_ref)
+{
+  BLO_read_string(reader, &weak_ref->asset_library_identifier);
+  BLO_read_string(reader, &weak_ref->relative_asset_identifier);
+}
+
+void BKE_asset_catalog_path_list_free(ListBaseT<AssetCatalogPathLink> &catalog_path_list)
+{
+  for (AssetCatalogPathLink &catalog_path : catalog_path_list.items_mutable()) {
+    MEM_delete(catalog_path.path);
+    BLI_freelinkN(&catalog_path_list, &catalog_path);
+  }
+  BLI_assert(catalog_path_list.is_empty());
+}
+
+ListBaseT<AssetCatalogPathLink> BKE_asset_catalog_path_list_duplicate(
+    const ListBaseT<AssetCatalogPathLink> &catalog_path_list)
+{
+  ListBaseT<AssetCatalogPathLink> duplicated_list = {nullptr};
+
+  for (AssetCatalogPathLink &catalog_path : catalog_path_list) {
+    AssetCatalogPathLink *copied_path = MEM_new<AssetCatalogPathLink>(__func__);
+    copied_path->path = BLI_strdup(catalog_path.path);
+
+    BLI_addtail(&duplicated_list, copied_path);
+  }
+
+  return duplicated_list;
+}
+
+void BKE_asset_catalog_path_list_blend_write(
+    BlendWriter *writer, const ListBaseT<AssetCatalogPathLink> &catalog_path_list)
+{
+  for (const AssetCatalogPathLink &catalog_path : catalog_path_list) {
+    writer->write_struct(&catalog_path);
+    writer->write_string(catalog_path.path);
+  }
+}
+
+void BKE_asset_catalog_path_list_blend_read_data(
+    BlendDataReader *reader, ListBaseT<AssetCatalogPathLink> &catalog_path_list)
+{
+  BLO_read_struct_list(reader, AssetCatalogPathLink, &catalog_path_list);
+  for (AssetCatalogPathLink &catalog_path : catalog_path_list) {
+    BLO_read_string(reader, &catalog_path.path);
+  }
+}
+
+bool BKE_asset_catalog_path_list_has_path(const ListBaseT<AssetCatalogPathLink> &catalog_path_list,
+                                          const char *catalog_path)
+{
+  return BLI_findstring_ptr(
+             &catalog_path_list, catalog_path, offsetof(AssetCatalogPathLink, path)) != nullptr;
+}
+
+void BKE_asset_catalog_path_list_add_path(ListBaseT<AssetCatalogPathLink> &catalog_path_list,
+                                          const char *catalog_path)
+{
+  AssetCatalogPathLink *new_path = MEM_new<AssetCatalogPathLink>(__func__);
+  new_path->path = BLI_strdup(catalog_path);
+  BLI_addtail(&catalog_path_list, new_path);
+}
+
+}  // namespace blender

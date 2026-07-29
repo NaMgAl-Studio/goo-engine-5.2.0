@@ -1,0 +1,121 @@
+/* SPDX-FileCopyrightText: 2025 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+#include "testing/testing.h"
+
+#include "BKE_gtest_base.hh"
+
+#include "NOD_geometry_nodes_bundle.hh"
+
+namespace blender::nodes::tests {
+
+class BundleTest : public bke::BlenderGTestBase {};
+
+TEST_F(BundleTest, DefaultBundle)
+{
+  BundlePtr bundle = Bundle::create();
+  EXPECT_TRUE(bundle);
+  EXPECT_TRUE(bundle->is_empty());
+}
+
+TEST_F(BundleTest, AddItems)
+{
+  BundlePtr bundle_ptr = Bundle::create();
+  Bundle &bundle = const_cast<Bundle &>(*bundle_ptr);
+  bundle.add(*BundleKey::from_str("a"), 3);
+  EXPECT_EQ(bundle.size(), 1);
+  EXPECT_TRUE(bundle.contains(*BundleKey::from_str("a")));
+  EXPECT_EQ(bundle.lookup<int>(*BundleKey::from_str("a")), 3);
+}
+
+TEST_F(BundleTest, AddLookupPath)
+{
+  BundlePtr bundle_ptr = Bundle::create();
+  Bundle &bundle = const_cast<Bundle &>(*bundle_ptr);
+  bundle.add_path("a/b/c", 3);
+  bundle.add_path("a/b/d", 4);
+  EXPECT_EQ(bundle.size(), 1);
+  EXPECT_EQ((*bundle.lookup_path<BundlePtr>("a"))->size(), 1);
+  EXPECT_EQ((*bundle.lookup_path<BundlePtr>("a/b"))->size(), 2);
+  EXPECT_EQ(bundle.lookup_path<int>("a/b/c"), 3);
+  EXPECT_EQ(bundle.lookup_path<int>("a/b/d"), 4);
+  EXPECT_EQ(bundle.lookup_path<BundlePtr>("a/b/c"), std::nullopt);
+  EXPECT_EQ(bundle.lookup_path<BundlePtr>("a/b/x"), std::nullopt);
+  bundle.add_path_override("a/b/c/d", 5);
+  EXPECT_EQ(bundle.lookup_path<int>("a/b/c/d"), 5);
+}
+
+TEST_F(BundleTest, RemovePath)
+{
+  BundlePtr bundle_ptr = Bundle::create();
+  Bundle &bundle = const_cast<Bundle &>(*bundle_ptr);
+  bundle.add_path("a/b/c", 3);
+  bundle.add_path("a/b/d", 4);
+  EXPECT_FALSE(bundle.remove_path("a/b/x"));
+  EXPECT_EQ(bundle.lookup_path<int>("a/b/c"), 3);
+  EXPECT_TRUE(bundle.remove_path("a/b/c"));
+  EXPECT_EQ(bundle.lookup_path<int>("a/b/c"), std::nullopt);
+  EXPECT_TRUE((*bundle.lookup_path<BundlePtr>("a/b"))->size() == 1);
+  bundle.remove_path("a/b");
+  EXPECT_EQ(bundle.lookup_path<BundlePtr>("a/b"), std::nullopt);
+  EXPECT_TRUE((*bundle.lookup_path<BundlePtr>("a"))->is_empty());
+  EXPECT_TRUE(bundle.remove_path("a"));
+}
+
+TEST_F(BundleTest, LookupConversion)
+{
+  BundlePtr bundle_ptr = Bundle::create();
+  Bundle &bundle = const_cast<Bundle &>(*bundle_ptr);
+  bundle.add_path("a/b", -3.4f);
+  EXPECT_EQ(bundle.lookup_path<float>("a/b"), -3.4f);
+  EXPECT_EQ(bundle.lookup_path<int>("a/b"), -3);
+  EXPECT_EQ(bundle.lookup_path<bool>("a/b"), false);
+  EXPECT_EQ(bundle.lookup_path<float3>("a/b"), float3(-3.4f));
+  EXPECT_EQ(bundle.lookup_path<std::string>("a/b"), std::nullopt);
+}
+
+TEST_F(BundleTest, AddOverride)
+{
+  BundlePtr bundle_ptr = Bundle::create();
+  Bundle &bundle = const_cast<Bundle &>(*bundle_ptr);
+  bundle.add_path("a/b", 4);
+  EXPECT_EQ(bundle.lookup_path<int>("a/b"), 4);
+  bundle.add_path_override("a/b", 10);
+  EXPECT_EQ(bundle.lookup_path<int>("a/b"), 10);
+  bundle.add_path("a/b", 15);
+  EXPECT_EQ(bundle.lookup_path<int>("a/b"), 10);
+}
+
+TEST_F(BundleTest, EnsureNestedBundle)
+{
+  BundlePtr bundle_ptr = Bundle::create();
+  Bundle &bundle = bundle_ptr.ensure_mutable_inplace();
+  Bundle &nested_bundle = bundle.ensure_nested_bundle("a/b/c");
+  nested_bundle.add(*BundleKey::from_str("test"), 4);
+  const std::optional<int> value = bundle.lookup_path<int>("a/b/c/test");
+  EXPECT_EQ(value, 4);
+}
+
+TEST_F(BundleTest, LookupPtr)
+{
+  BundlePtr bundle_ptr = Bundle::create();
+  Bundle &bundle = bundle_ptr.ensure_mutable_inplace();
+  bundle.add_path("a/b", 3);
+  EXPECT_EQ(bundle.lookup_path_ptr<int>("a/a"), nullptr);
+  EXPECT_EQ(*bundle.lookup_path<int>("a/b"), 3);
+  int *value = bundle.lookup_path_for_write_ptr<int>("a/b");
+  *value = 10;
+  EXPECT_EQ(bundle.lookup_path<int>("a/b"), 10);
+}
+
+TEST_F(BundleTest, Clear)
+{
+  BundlePtr bundle_ptr = Bundle::create();
+  Bundle &bundle = bundle_ptr.ensure_mutable_inplace();
+  bundle.add_path("a/b", 3);
+  EXPECT_FALSE(bundle.is_empty());
+  bundle.clear();
+  EXPECT_TRUE(bundle.is_empty());
+}
+
+}  // namespace blender::nodes::tests

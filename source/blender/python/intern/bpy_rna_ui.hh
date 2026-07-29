@@ -1,0 +1,17 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup pythonintern
+ */
+
+#pragma once
+
+#include <Python.h>
+
+namespace blender {
+
+extern PyMethodDef BPY_rna_uilayout_introspect_method_def;
+
+}  // namespace blender

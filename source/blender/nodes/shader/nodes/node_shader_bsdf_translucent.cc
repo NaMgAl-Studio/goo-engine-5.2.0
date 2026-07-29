@@ -1,0 +1,76 @@
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "node_shader_util.hh"
+
+namespace blender {
+
+namespace nodes::node_shader_bsdf_translucent_cc {
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  const bNodeTree *ntree = b.tree_or_null();
+  const bool is_gpu_internal = ntree && (ntree->flag & NTREE_IS_GPU_SHADER_INTERNAL);
+
+  b.add_input<decl::Color>("Color"_ustr).default_value({0.8f, 0.8f, 0.8f, 1.0f});
+  b.add_input<decl::Vector>("Normal"_ustr).hide_value();
+  b.add_input<decl::Float>("Weight"_ustr).available(is_gpu_internal);
+  b.add_output<decl::Shader>("BSDF"_ustr);
+}
+
+static int node_shader_gpu_bsdf_translucent(GPUMaterial *mat,
+                                            bNode *node,
+                                            bNodeExecData * /*execdata*/,
+                                            GPUNodeStack *in,
+                                            GPUNodeStack *out)
+{
+  if (!in[1].link) {
+    GPU_link(mat, "world_normals_get", &in[1].link);
+  }
+
+  GPU_material_flag_set(mat, GPU_MATFLAG_TRANSLUCENT);
+
+  return GPU_stack_link(mat, node, "node_bsdf_translucent", in, out);
+}
+
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  if (to_type_ != NodeItem::Type::BSDF) {
+    return empty();
+  }
+
+  NodeItem color = get_input_value("Color", NodeItem::Type::Color3);
+  NodeItem normal = get_input_link("Normal", NodeItem::Type::Vector3);
+
+  return create_node(
+      "translucent_bsdf", NodeItem::Type::BSDF, {{"color", color}, {"normal", normal}});
+}
+#endif
+NODE_SHADER_MATERIALX_END
+
+}  // namespace nodes::node_shader_bsdf_translucent_cc
+
+/* node type definition */
+void register_node_type_sh_bsdf_translucent()
+{
+  namespace file_ns = nodes::node_shader_bsdf_translucent_cc;
+
+  static bke::bNodeType ntype;
+
+  sh_node_type_base(&ntype, "ShaderNodeBsdfTranslucent"_ustr, SH_NODE_BSDF_TRANSLUCENT);
+  ntype.ui_name = "Translucent BSDF";
+  ntype.ui_description = "Lambertian diffuse transmission";
+  ntype.enum_name_legacy = "BSDF_TRANSLUCENT";
+  ntype.nclass = NODE_CLASS_SHADER;
+  ntype.declare = file_ns::node_declare;
+  ntype.gather_link_search_ops = search_link_ops_for_shader_bsdf_node;
+  ntype.add_ui_poll = object_shader_nodes_poll;
+  ntype.gpu_fn = file_ns::node_shader_gpu_bsdf_translucent;
+  ntype.materialx_fn = file_ns::node_shader_materialx;
+
+  bke::node_register_type(ntype);
+}
+
+}  // namespace blender

@@ -1,0 +1,25 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup freestyle
+ */
+
+#pragma once
+
+#include "../BPy_StrokeShader.h"
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+extern PyTypeObject BezierCurveShader_Type;
+
+#define BPy_BezierCurveShader_Check(v) \
+  (PyObject_IsInstance((PyObject *)v, (PyObject *)&BezierCurveShader_Type))
+
+/*---------------------------Python BPy_BezierCurveShader structure definition----------*/
+struct BPy_BezierCurveShader {
+  BPy_StrokeShader py_ss;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////

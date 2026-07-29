@@ -1,0 +1,17 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup bpygpu
+ */
+
+#pragma once
+
+#include <Python.h>
+
+namespace blender {
+
+[[nodiscard]] PyObject *bpygpu_select_init();
+
+}  // namespace blender

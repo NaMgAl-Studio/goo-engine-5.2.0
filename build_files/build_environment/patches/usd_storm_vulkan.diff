@@ -1,0 +1,22 @@
+diff --git a/pxr/imaging/hdSt/renderDelegate.cpp b/pxr/imaging/hdSt/renderDelegate.cpp
+index d430b824c..2cae24678 100644
+--- a/pxr/imaging/hdSt/renderDelegate.cpp
++++ b/pxr/imaging/hdSt/renderDelegate.cpp
+@@ -567,13 +567,10 @@ bool
+ HdStRenderDelegate::IsSupported(
+     HdRendererCreateArgs const& rendererCreateArgs)
+ {
+-    if (rendererCreateArgs.hgi) {
+-        return rendererCreateArgs.hgi->IsBackendSupported();
+-    }
+-
+-    // If invalid Hgi instance is provided, check support for platform default
+-    // Hgi.
+-    return Hgi::IsSupported();
++    // BLENDER: This doesn't take into account the backend, and fails for Vulkan
++    // because it defaults to OpenGL. Instead assume Blender already succeeded
++    // creating a relevant GPU device before using Storm.
++    return true;
+ }
+ 
+ TfTokenVector

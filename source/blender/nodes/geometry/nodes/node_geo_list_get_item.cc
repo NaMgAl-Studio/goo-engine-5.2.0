@@ -1,0 +1,241 @@
+/* SPDX-FileCopyrightText: 2025 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "NOD_geometry_nodes_list.hh"
+#include "NOD_geometry_nodes_values.hh"
+#include "NOD_rna_define.hh"
+#include "NOD_socket.hh"
+#include "NOD_socket_search_link.hh"
+
+#include "RNA_enum_types.hh"
+
+#include "UI_interface_layout.hh"
+#include "UI_resources.hh"
+
+#include "list_function_eval.hh"
+#include "node_geometry_util.hh"
+
+namespace blender::nodes::node_geo_list_get_item_cc {
+
+NODE_STORAGE_FUNCS(NodeGeometryListGetItem);
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  const bNode *node = b.node_or_null();
+  if (!node) {
+    return;
+  }
+
+  const NodeGeometryListGetItem &storage = node_storage(*node);
+  const eNodeSocketDatatype type = storage.socket_type;
+  const bool is_auto_structure_type = storage.structure_type ==
+                                      NodeSocketInterfaceStructureType::Auto;
+
+  auto &list = b.add_input(type, "List"_ustr).structure_type(StructureType::List).hide_value();
+  b.add_input<decl::Int>("Index"_ustr).min(0).structure_type(StructureType::Dynamic);
+  b.add_output(type, "Value"_ustr)
+      .propagate_all({list.index()})
+      .propagate_references()
+      .structure_type(is_auto_structure_type ? StructureType::Dynamic :
+                                               StructureType(storage.structure_type));
+}
+
+static void node_layout(ui::Layout &layout, bContext * /*C*/, PointerRNA *ptr)
+{
+  layout.prop(ptr, "socket_type", UI_ITEM_NONE, "", ICON_NONE);
+}
+
+static void node_layout_ex(ui::Layout &layout, bContext * /*C*/, PointerRNA *ptr)
+{
+  layout.use_property_split_set(true);
+  layout.use_property_decorate_set(false);
+  layout.prop(ptr, "structure_type", UI_ITEM_NONE, IFACE_("Shape"), ICON_NONE);
+}
+
+static void node_init(bNodeTree * /*tree*/, bNode *node)
+{
+  auto *storage = MEM_new<NodeGeometryListGetItem>(__func__);
+  node->storage = storage;
+}
+
+class SocketSearchOp {
+ public:
+  UString socket_name;
+  eNodeSocketDatatype socket_type;
+  void operator()(LinkSearchOpParams &params)
+  {
+    bNode &node = params.add_node("GeometryNodeListGetItem"_ustr);
+    node_storage(node).socket_type = socket_type;
+    params.update_and_connect_available_socket(node, socket_name);
+  }
+};
+
+static void node_gather_link_searches(GatherLinkSearchOpParams &params)
+{
+  const eNodeSocketDatatype socket_type = params.other_socket().type;
+  if (params.in_out() == SOCK_IN) {
+    if (params.node_tree().typeinfo->validate_link(socket_type, SOCK_INT)) {
+      params.add_item(IFACE_("Index"), SocketSearchOp{"Index"_ustr, SOCK_INT});
+    }
+    params.add_item(IFACE_("List"), SocketSearchOp{"List"_ustr, socket_type});
+  }
+  else {
+    params.add_item(IFACE_("Value"), SocketSearchOp{"Value"_ustr, socket_type});
+  }
+}
+
+static void node_rna(StructRNA *srna)
+{
+  RNA_def_node_enum(
+      srna,
+      "socket_type",
+      "Socket Type",
+      "Value may be implicitly converted if the type does not match",
+      rna_enum_node_socket_data_type_items,
+      NOD_storage_enum_accessors(socket_type),
+      SOCK_FLOAT,
+      [](bContext * /*C*/, PointerRNA *ptr, PropertyRNA * /*prop*/, bool *r_free) {
+        *r_free = true;
+        const bNodeTree &ntree = *reinterpret_cast<bNodeTree *>(ptr->owner_id);
+        bke::bNodeTreeType *ntree_type = ntree.typeinfo;
+        return enum_items_filter(
+            rna_enum_node_socket_data_type_items, [&](const EnumPropertyItem &item) -> bool {
+              bke::bNodeSocketType *socket_type = bke::node_socket_type_find_static(item.value);
+              return ntree_type->valid_socket_type(ntree_type, socket_type);
+            });
+      });
+  RNA_def_node_enum(srna,
+                    "structure_type",
+                    "Structure Type",
+                    "What kind of higher order types are expected to flow through this socket",
+                    rna_enum_node_socket_structure_type_items,
+                    NOD_storage_enum_accessors(structure_type));
+}
+
+/**
+ * Needed because #execute_multi_function_on_value_variant does not support types that can't be
+ * processed as fields.
+ */
+static bke::SocketValueVariant get_single_item(GListPtr &list,
+                                               const eNodeSocketDatatype socket_type,
+                                               const int64_t index)
+{
+  bke::SocketValueVariant value;
+  void *value_ptr = value.allocate_single(socket_type);
+  if (const auto *data = std::get_if<GList::ArrayData>(&list->data())) {
+    if (list->is_mutable() && data->sharing_info->is_mutable()) {
+      GMutableSpan data_span(list->cpp_type(), const_cast<void *>(data->data), list->size());
+      list->cpp_type().move_construct(data_span[index], value_ptr);
+      return value;
+    }
+    const GSpan data_span(list->cpp_type(), data->data, list->size());
+    list->cpp_type().copy_construct(data_span[index], value_ptr);
+    return value;
+  }
+  if (const auto *data = std::get_if<GList::SingleData>(&list->data())) {
+    if (list->is_mutable() && data->sharing_info->is_mutable()) {
+      list->cpp_type().move_construct(const_cast<void *>(data->value), value_ptr);
+      return value;
+    }
+    list->cpp_type().copy_construct(data->value, value_ptr);
+    return value;
+  }
+  BLI_assert_unreachable();
+  return {};
+}
+
+static bke::SocketValueVariant get_socket_value_item(GListPtr &list, const int64_t index)
+{
+  if (const auto *data = std::get_if<GList::ArrayData>(&list->data())) {
+    if (list->is_mutable() && data->sharing_info->is_mutable()) {
+      MutableSpan data_span(static_cast<bke::SocketValueVariant *>(const_cast<void *>(data->data)),
+                            list->size());
+      return std::move(data_span[index]);
+    }
+    const Span data_span(static_cast<bke::SocketValueVariant *>(const_cast<void *>(data->data)),
+                         list->size());
+    return data_span[index];
+  }
+  if (const auto *data = std::get_if<GList::SingleData>(&list->data())) {
+    if (list->is_mutable() && data->sharing_info->is_mutable()) {
+      return std::move(*static_cast<bke::SocketValueVariant *>(const_cast<void *>(data->value)));
+    }
+    return *static_cast<const bke::SocketValueVariant *>(data->value);
+  }
+  BLI_assert_unreachable();
+  return {};
+}
+
+static void node_geo_exec(GeoNodeExecParams params)
+{
+  bke::SocketValueVariant index = params.extract_input<bke::SocketValueVariant>("Index"_ustr);
+  GListPtr list = params.extract_input<GListPtr>("List"_ustr);
+  if (!list) {
+    params.set_default_remaining_outputs();
+    return;
+  }
+  const CPPType &list_type = list->cpp_type();
+  const std::optional<eNodeSocketDatatype> socket_type =
+      bke::geo_nodes_base_cpp_type_to_socket_type(list_type);
+
+  if (list_type.is<bke::SocketValueVariant>() || !socket_type_supports_fields(*socket_type)) {
+    if (!index.is_single()) {
+      params.error_message_add(NodeWarningType::Error, "Index must be a single value");
+      params.set_default_remaining_outputs();
+      return;
+    }
+    index.convert_to_single();
+    const int index_int = index.get<int>();
+    if (!IndexRange(list->size()).contains(index_int)) {
+      params.error_message_add(NodeWarningType::Error, "Index out of range");
+      params.set_default_remaining_outputs();
+      return;
+    }
+    if (list->cpp_type().is<bke::SocketValueVariant>()) {
+      params.set_output("Value"_ustr, get_socket_value_item(list, index_int));
+    }
+    else {
+      params.set_output("Value"_ustr, get_single_item(list, *socket_type, index_int));
+    }
+    return;
+  }
+
+  std::string error_message;
+  bke::SocketValueVariant output_value;
+  if (!execute_multi_function_on_value_variant(
+          std::make_shared<SampleIndexFunction>(std::move(list)),
+          {&index},
+          {&output_value},
+          params.user_data(),
+          error_message))
+  {
+    params.set_default_remaining_outputs();
+    params.error_message_add(NodeWarningType::Error, std::move(error_message));
+    return;
+  }
+
+  params.set_output("Value"_ustr, std::move(output_value));
+}
+
+static void node_register()
+{
+  static bke::bNodeType ntype;
+  geo_node_type_base(&ntype, "GeometryNodeListGetItem"_ustr);
+  ntype.ui_name = "Get List Item";
+  ntype.ui_description = "Retrieve a value from a list";
+  ntype.nclass = NODE_CLASS_CONVERTER;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.draw_buttons = node_layout;
+  ntype.declare = node_declare;
+  ntype.draw_buttons_ex = node_layout_ex;
+  ntype.initfunc = node_init;
+  ntype.gather_link_search_ops = node_gather_link_searches;
+  bke::node_type_storage(
+      ntype, "NodeGeometryListGetItem", node_free_standard_storage, node_copy_standard_storage);
+  bke::node_register_type(ntype);
+  node_rna(ntype.rna_ext.srna);
+}
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_list_get_item_cc

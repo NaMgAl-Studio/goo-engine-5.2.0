@@ -1,0 +1,1007 @@
+/* SPDX-FileCopyrightText: 2025 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include <fmt/format.h>
+#include <sstream>
+
+#include "BKE_compute_contexts.hh"
+#include "BKE_context.hh"
+#include "BKE_global.hh"
+#include "BKE_lib_id.hh"
+#include "BKE_main.hh"
+#include "BKE_modifier.hh"
+#include "BKE_node.hh"
+#include "BKE_node_runtime.hh"
+#include "BKE_screen.hh"
+
+#include "BLI_string.h"
+#include "BLI_string_utf8.h"
+
+#include "BLT_translation.hh"
+
+#include "DNA_modifier_types.h"
+#include "DNA_node_tree_interface_types.h"
+
+#include "ED_node.hh"
+#include "ED_object.hh"
+#include "ED_screen.hh"
+#include "ED_undo.hh"
+
+#include "MOD_nodes.hh"
+#include "NOD_caller_ui.hh"
+#include "NOD_eval_log.hh"
+#include "NOD_geometry.hh"
+#include "NOD_geometry_nodes_caller_ui.hh"
+#include "NOD_geometry_nodes_srna.hh"
+#include "NOD_socket_usage_inference.hh"
+
+#include "RNA_access.hh"
+#include "RNA_prototypes.hh"
+
+#include "UI_interface.hh"
+#include "UI_interface_layout.hh"
+#include "UI_resources.hh"
+
+#include "intern/MOD_ui_common.hh"
+
+namespace blender::nodes {
+
+namespace {
+struct SearchInfo {
+  eval_log::NodeTreeLog *tree_log = nullptr;
+  bNodeTree *tree = nullptr;
+  std::optional<PointerRNA> socket_props_ptr;
+};
+
+struct ModifierSearchData {
+  uint32_t object_session_uid;
+  char modifier_name[MAX_NAME];
+};
+
+struct OperatorSearchData {
+  /** Can store this data directly, because it's more persistent than for the modifier. */
+  eval_log::NodeTreeLog *tree_log = nullptr;
+  bNodeTree *tree = nullptr;
+  wmOperator *op = nullptr;
+};
+
+struct SocketSearchData {
+  std::variant<ModifierSearchData, OperatorSearchData> search_data;
+  char socket_identifier[MAX_NAME];
+  bool is_output;
+
+  SearchInfo info(const bContext &C) const;
+};
+/* This class must not have a destructor, since it is used by buttons and freed with
+ * #MEM_delete_void. */
+BLI_STATIC_ASSERT(std::is_trivially_destructible_v<SocketSearchData>, "");
+
+struct DrawGroupInputsContext {
+  const bContext &C;
+  bNodeTree *tree;
+  eval_log::NodeTreeLog *tree_log;
+  PointerRNA *properties_ptr;
+  PointerRNA *bmain_ptr;
+  Array<nodes::socket_usage_inference::SocketUsage> input_usages;
+  Array<nodes::socket_usage_inference::SocketUsage> output_usages;
+  bool use_name_for_ids = false;
+  std::function<SocketSearchData(const bNodeTreeInterfaceSocket &)> socket_search_data_fn;
+  std::function<void(ui::Layout &, int icon, const bNodeTreeInterfaceSocket &)>
+      draw_attribute_toggle_fn;
+
+  bool input_is_visible(const bNodeTreeInterfaceSocket &socket) const
+  {
+    return this->input_usages[this->tree->interface_input_index(socket)].is_visible;
+  }
+
+  bool input_is_active(const bNodeTreeInterfaceSocket &socket) const
+  {
+    return this->input_usages[this->tree->interface_input_index(socket)].is_used;
+  }
+};
+}  // namespace
+
+static eval_log::NodeTreeLog *get_root_tree_log(const Object &object, const NodesModifierData &nmd)
+{
+  if (!nmd.runtime->eval_log) {
+    return nullptr;
+  }
+  bke::DataBlockComputeContext data_block_context{nullptr, object.id};
+  bke::ModifierComputeContext modifier_context{&data_block_context, nmd};
+  return &nmd.runtime->eval_log->get_tree_log(modifier_context.hash());
+}
+
+static std::optional<ed::space_node::ObjectAndModifier> get_modifier_data(
+    Main &bmain, const wmWindowManager &wm, const ModifierSearchData &data)
+{
+  if (ED_screen_animation_playing(&wm)) {
+    /* Work around an issue where the attribute search exec function has stale pointers when data
+     * is reallocated when evaluating the node tree, causing a crash. This would be solved by
+     * allowing the UI search data to own arbitrary memory rather than just referencing it. */
+    return std::nullopt;
+  }
+
+  const Object *object = id_cast<Object *>(
+      BKE_libblock_find_session_uid(&bmain, ID_OB, data.object_session_uid));
+  if (object == nullptr) {
+    return std::nullopt;
+  }
+  ModifierData *md = BKE_modifiers_findby_name(object, data.modifier_name);
+  if (md == nullptr) {
+    return std::nullopt;
+  }
+  BLI_assert(md->type == eModifierType_Nodes);
+  return ed::space_node::ObjectAndModifier{object, reinterpret_cast<NodesModifierData *>(md)};
+}
+
+SearchInfo SocketSearchData::info(const bContext &C) const
+{
+  if (const auto *modifier_search_data = std::get_if<ModifierSearchData>(&this->search_data)) {
+    const std::optional<ed::space_node::ObjectAndModifier> object_and_modifier = get_modifier_data(
+        *CTX_data_main(&C), *CTX_wm_manager(&C), *modifier_search_data);
+    if (!object_and_modifier) {
+      return {};
+    }
+    const NodesModifierData *nmd = object_and_modifier->nmd;
+    if (nmd->node_group == nullptr || ID_MISSING(nmd->node_group)) {
+      return {};
+    }
+    eval_log::NodeTreeLog *tree_log = get_root_tree_log(*object_and_modifier->object, *nmd);
+    PointerRNA nmd_ptr = RNA_pointer_create_discrete(
+        &const_cast<Object *>(object_and_modifier->object)->id,
+        RNA_NodesModifier,
+        const_cast<NodesModifierData *>(nmd));
+    PointerRNA properties_ptr = RNA_pointer_get(&nmd_ptr, "properties");
+    const bNodeTree &node_group = *nmd->node_group;
+    const bool is_output = bke::node_find_interface_output_by_identifier(node_group,
+                                                                         this->socket_identifier);
+    PointerRNA inputs_ptr = RNA_pointer_get(&properties_ptr, is_output ? "outputs" : "inputs");
+    PointerRNA socket_props_ptr = RNA_pointer_get(&inputs_ptr, this->socket_identifier);
+    return {tree_log, nmd->node_group, socket_props_ptr};
+  }
+  if (const auto *operator_search_data = std::get_if<OperatorSearchData>(&this->search_data)) {
+    PointerRNA op_ptr = RNA_pointer_create_discrete(
+        &CTX_wm_manager(&C)->id, RNA_Operator, operator_search_data->op);
+    PointerRNA properties_ptr = RNA_pointer_get(&op_ptr, "properties");
+    PointerRNA inputs_ptr = RNA_pointer_get(&properties_ptr, "inputs");
+    PointerRNA socket_props_ptr = RNA_pointer_get(&inputs_ptr, this->socket_identifier);
+    return {operator_search_data->tree_log, operator_search_data->tree, socket_props_ptr};
+  }
+  return {};
+}
+
+static void layer_name_search_update_fn(
+    const bContext *C, void *arg, const char *str, ui::SearchItems *items, const bool is_first)
+{
+  const SocketSearchData &data = *static_cast<SocketSearchData *>(arg);
+  const SearchInfo info = data.info(*C);
+  if (!info.tree || !info.tree_log) {
+    return;
+  }
+  info.tree_log->ensure_layer_names();
+  info.tree->ensure_topology_cache();
+
+  Vector<const bNodeSocket *> sockets_to_check;
+  for (const bNode *node : info.tree->group_input_nodes()) {
+    for (const bNodeSocket *socket : node->output_sockets()) {
+      if (socket->type == SOCK_GEOMETRY) {
+        sockets_to_check.append(socket);
+      }
+    }
+  }
+
+  Set<StringRef> names;
+  Vector<const std::string *> layer_names;
+  for (const bNodeSocket *socket : sockets_to_check) {
+    const eval_log::ValueLog *value_log = info.tree_log->find_socket_value_log(*socket);
+    if (value_log == nullptr) {
+      continue;
+    }
+    if (const auto *eval_log = dynamic_cast<const eval_log::GeometryInfoLog *>(value_log)) {
+      if (const std::optional<eval_log::GeometryInfoLog::GreasePencilInfo> &grease_pencil_info =
+              eval_log->grease_pencil_info)
+      {
+        for (const std::string &name : grease_pencil_info->layer_names) {
+          if (names.add(name)) {
+            layer_names.append(&name);
+          }
+        }
+      }
+    }
+  }
+  BLI_assert(items);
+  ui::grease_pencil_layer_search_add_items(str, layer_names.as_span(), *items, is_first);
+}
+
+static void layer_name_search_exec_fn(bContext *C, void *data_v, void *item_v)
+{
+  const SocketSearchData &data = *static_cast<SocketSearchData *>(data_v);
+  const std::string *item = static_cast<std::string *>(item_v);
+  if (!item) {
+    return;
+  }
+  SearchInfo info = data.info(*C);
+  if (!info.socket_props_ptr) {
+    return;
+  }
+
+  RNA_string_set(&*info.socket_props_ptr, "layer_name", item->c_str());
+  ED_undo_push(C, "Assign Layer Name");
+}
+
+static void add_layer_name_search_button(DrawGroupInputsContext &ctx,
+                                         ui::Layout &layout,
+                                         const bNodeTreeInterfaceSocket &socket,
+                                         PointerRNA *socket_props_ptr)
+{
+  if (!ctx.tree_log) {
+    layout.prop(socket_props_ptr, "layer_name", UI_ITEM_NONE, "", ICON_NONE);
+    return;
+  }
+
+  layout.use_property_decorate_set(false);
+
+  ui::Layout &split = layout.split(0.4f, false);
+  ui::Layout &name_row = split.row(false);
+  name_row.alignment_set(ui::LayoutAlign::Right);
+
+  name_row.label(socket.name ? IFACE_(socket.name) : "", ICON_NONE);
+  ui::Layout &prop_row = split.row(true);
+
+  ui::Block *block = prop_row.block();
+  ui::Button *but = uiDefIconTextButR(block,
+                                      ui::ButtonType::SearchMenu,
+                                      ICON_OUTLINER_DATA_GP_LAYER,
+                                      "",
+                                      0,
+                                      0,
+                                      10 * UI_UNIT_X, /* Dummy value, replaced by layout system. */
+                                      UI_UNIT_Y,
+                                      socket_props_ptr,
+                                      "layer_name",
+                                      0,
+                                      StringRef(socket.description));
+  button_placeholder_set(but, IFACE_("Layer"));
+  layout.label("", ICON_BLANK1);
+
+  const Object *object = ed::object::context_object(&ctx.C);
+  BLI_assert(object != nullptr);
+  if (object == nullptr) {
+    return;
+  }
+
+  /* Using a custom free function make the search not work currently. So make sure this data can be
+   * freed with MEM_delete. */
+  SocketSearchData *data = static_cast<SocketSearchData *>(
+      MEM_new_uninitialized(sizeof(SocketSearchData), __func__));
+  *data = ctx.socket_search_data_fn(socket);
+  button_func_search_set_results_are_suggestions(but, true);
+  button_func_search_set_sep_string(but, UI_MENU_ARROW_SEP);
+  button_func_search_set(but,
+                         nullptr,
+                         layer_name_search_update_fn,
+                         data,
+                         true,
+                         nullptr,
+                         layer_name_search_exec_fn,
+                         nullptr);
+}
+
+static void attribute_search_update_fn(
+    const bContext *C, void *arg, const char *str, ui::SearchItems *items, const bool is_first)
+{
+  SocketSearchData &data = *static_cast<SocketSearchData *>(arg);
+  const SearchInfo info = data.info(*C);
+  if (!info.tree || !info.tree_log) {
+    return;
+  }
+  info.tree_log->ensure_existing_attributes();
+  info.tree->ensure_topology_cache();
+
+  Vector<const bNodeSocket *> sockets_to_check;
+  if (data.is_output) {
+    for (const bNode *node : info.tree->nodes_by_type("NodeGroupOutput"_ustr)) {
+      for (const bNodeSocket *socket : node->input_sockets()) {
+        if (socket->type == SOCK_GEOMETRY) {
+          sockets_to_check.append(socket);
+        }
+      }
+    }
+  }
+  else {
+    for (const bNode *node : info.tree->group_input_nodes()) {
+      for (const bNodeSocket *socket : node->output_sockets()) {
+        if (socket->type == SOCK_GEOMETRY) {
+          sockets_to_check.append(socket);
+        }
+      }
+    }
+  }
+  Set<StringRef> names;
+  Vector<const eval_log::GeometryAttributeInfo *> attributes;
+  for (const bNodeSocket *socket : sockets_to_check) {
+    const eval_log::ValueLog *value_log = info.tree_log->find_socket_value_log(*socket);
+    if (value_log == nullptr) {
+      continue;
+    }
+    if (const auto *eval_log = dynamic_cast<const eval_log::GeometryInfoLog *>(value_log)) {
+      for (const eval_log::GeometryAttributeInfo &attribute : eval_log->attributes) {
+        if (names.add(attribute.name)) {
+          attributes.append(&attribute);
+        }
+      }
+    }
+  }
+  ui::attribute_search_add_items(str, data.is_output, attributes.as_span(), items, is_first);
+}
+
+static void attribute_search_exec_fn(bContext *C, void *data_v, void *item_v)
+{
+  if (item_v == nullptr) {
+    return;
+  }
+  SocketSearchData &data = *static_cast<SocketSearchData *>(data_v);
+  const auto &item = *static_cast<const eval_log::GeometryAttributeInfo *>(item_v);
+  SearchInfo info = data.info(*C);
+  if (!info.socket_props_ptr) {
+    return;
+  }
+
+  RNA_string_set(&*info.socket_props_ptr, "attribute_name", item.name.c_str());
+  ED_undo_push(C, "Assign Attribute Name");
+}
+
+static void add_attribute_search_button(DrawGroupInputsContext &ctx,
+                                        ui::Layout &layout,
+                                        PointerRNA *socket_props_ptr,
+                                        const bNodeTreeInterfaceSocket &socket)
+{
+  if (!ctx.tree_log) {
+    layout.prop(socket_props_ptr, "attribute_name", UI_ITEM_NONE, "", ICON_NONE);
+    return;
+  }
+
+  ui::Block *block = layout.block();
+  ui::Button *but = uiDefIconTextButR(block,
+                                      ui::ButtonType::SearchMenu,
+                                      ICON_NONE,
+                                      "",
+                                      0,
+                                      0,
+                                      10 * UI_UNIT_X, /* Dummy value, replaced by layout system. */
+                                      UI_UNIT_Y,
+                                      socket_props_ptr,
+                                      "attribute_name",
+                                      0,
+                                      StringRef(socket.description));
+
+  const Object *object = ed::object::context_object(&ctx.C);
+  BLI_assert(object != nullptr);
+  if (object == nullptr) {
+    return;
+  }
+
+  /* Using a custom free function make the search not work currently. So make sure this data can be
+   * freed with MEM_delete. */
+  SocketSearchData *data = static_cast<SocketSearchData *>(
+      MEM_new_uninitialized(sizeof(SocketSearchData), __func__));
+  *data = ctx.socket_search_data_fn(socket);
+  button_func_search_set_results_are_suggestions(but, true);
+  button_func_search_set_sep_string(but, UI_MENU_ARROW_SEP);
+  button_func_search_set(but,
+                         nullptr,
+                         attribute_search_update_fn,
+                         data,
+                         true,
+                         nullptr,
+                         attribute_search_exec_fn,
+                         nullptr);
+
+  std::string attribute_name = RNA_string_get(socket_props_ptr, "attribute_name");
+  const bool access_allowed = bke::allow_procedural_attribute_access(attribute_name);
+  if (!access_allowed) {
+    button_flag_enable(but, ui::BUT_REDALERT);
+  }
+}
+
+static void add_attribute_search_or_value_buttons(
+    DrawGroupInputsContext &ctx,
+    ui::Layout &layout,
+    const bNodeTreeInterfaceSocket &socket,
+    PointerRNA *socket_props_ptr,
+    const std::optional<StringRefNull> use_name = std::nullopt)
+{
+  const bke::bNodeSocketType *typeinfo = socket.socket_typeinfo();
+  const eNodeSocketDatatype type = typeinfo ? typeinfo->type : SOCK_CUSTOM;
+
+  const bool show_attribute_input = RNA_enum_get(socket_props_ptr, "type") ==
+                                    int(nodes::GeometryNodesInputType::Attribute);
+
+  /* We're handling this manually in this case. */
+  layout.use_property_decorate_set(false);
+
+  ui::Layout &split = layout.split(0.4f, false);
+  ui::Layout &name_row = split.row(false);
+  name_row.alignment_set(ui::LayoutAlign::Right);
+
+  ui::Layout *prop_row = nullptr;
+  const StringRefNull socket_name = use_name.has_value() ?
+                                        (*use_name) :
+                                        (socket.name ? IFACE_(socket.name) : "");
+
+  if (type == SOCK_BOOLEAN && !show_attribute_input) {
+    name_row.label("", ICON_NONE);
+    prop_row = &split.row(true);
+  }
+  else {
+    prop_row = &layout.row(true);
+  }
+
+  if (type == SOCK_BOOLEAN) {
+    prop_row->use_property_split_set(false);
+    prop_row->alignment_set(ui::LayoutAlign::Expand);
+  }
+
+  if (show_attribute_input) {
+    name_row.label(IFACE_(socket_name), ICON_NONE);
+    prop_row = &split.row(true);
+    add_attribute_search_button(ctx, *prop_row, socket_props_ptr, socket);
+    layout.label("", ICON_BLANK1);
+  }
+  else {
+    const StringRef name = IFACE_(socket_name);
+    prop_row->prop(socket_props_ptr, "value", UI_ITEM_NONE, name, ICON_NONE);
+    layout.decorator(socket_props_ptr, "value", -1);
+  }
+
+  ctx.draw_attribute_toggle_fn(*prop_row, ICON_SPREADSHEET, socket);
+}
+
+/* Drawing the properties manually with #ui::Layout::prop instead of #uiDefAutoButsRNA allows using
+ * the node socket identifier for the property names, since they are unique, but also having
+ * the correct label displayed in the UI. */
+static void draw_property_for_socket(DrawGroupInputsContext &ctx,
+                                     ui::Layout &layout,
+                                     const bNodeTreeInterfaceSocket &socket,
+                                     PointerRNA *socket_props_ptr,
+                                     const std::optional<StringRef> parent_name = std::nullopt)
+{
+  const int input_index = ctx.tree->interface_input_index(socket);
+  if (!ctx.input_is_visible(socket)) {
+    /* The input is not used currently, but it would be used if any menu input is changed.
+     * By convention, the input is hidden in this case instead of just grayed out. */
+    return;
+  }
+
+  ui::Layout &row = layout.row(true);
+  row.use_property_decorate_set(true);
+  row.active_set(ctx.input_is_active(socket));
+
+  /* Use #ui::Layout::prop_search to draw pointer properties because #ui::Layout::prop would not
+   * have enough information about what type of ID to select for editing the values. This is
+   * because pointer IDProperties contain no information about their type. */
+  const bke::bNodeSocketType *typeinfo = socket.socket_typeinfo();
+  const eNodeSocketDatatype type = typeinfo ? typeinfo->type : SOCK_CUSTOM;
+
+  if (ELEM(type, SOCK_GEOMETRY, SOCK_MATRIX, SOCK_BUNDLE, SOCK_CLOSURE)) {
+    return;
+  }
+
+  std::string name = socket.name ? IFACE_(socket.name) : "";
+
+  /* If the property has a prefix that's the same string as the name of the panel it's in, remove
+   * the prefix so it appears less verbose. */
+  if (parent_name.has_value()) {
+    const StringRef prefix_to_remove = *parent_name;
+    const int prefix_size = prefix_to_remove.size();
+    const int pos = name.find(prefix_to_remove);
+    if (pos == 0 && name.size() > prefix_size && name[prefix_size] == ' ') {
+      name = name.substr(prefix_size + 1);
+    }
+  }
+
+  switch (type) {
+    case SOCK_OBJECT: {
+      row.prop_search(socket_props_ptr, "value", ctx.bmain_ptr, "objects", name, ICON_OBJECT_DATA);
+      break;
+    }
+    case SOCK_COLLECTION: {
+      row.prop_search(
+          socket_props_ptr, "value", ctx.bmain_ptr, "collections", name, ICON_OUTLINER_COLLECTION);
+      break;
+    }
+    case SOCK_MATERIAL: {
+      row.prop_search(socket_props_ptr, "value", ctx.bmain_ptr, "materials", name, ICON_MATERIAL);
+      break;
+    }
+    case SOCK_TEXTURE: {
+      row.prop_search(socket_props_ptr, "value", ctx.bmain_ptr, "textures", name, ICON_TEXTURE);
+      break;
+    }
+    case SOCK_FONT: {
+      PropertyRNA *prop = RNA_struct_find_property(socket_props_ptr, "value");
+      if (prop && RNA_property_type(prop) == PROP_POINTER) {
+        template_id(&row,
+                    &ctx.C,
+                    socket_props_ptr,
+                    "value",
+                    nullptr,
+                    "FONT_OT_open",
+                    "FONT_OT_unlink",
+                    ui::TEMPLATE_ID_FILTER_ALL,
+                    false,
+                    name);
+      }
+      else {
+        /* #template_id only supports pointer properties currently. Node tools store
+         * data-block pointers in strings currently. */
+        row.prop_search(socket_props_ptr, "value", ctx.bmain_ptr, "fonts", name, ICON_FONT_DATA);
+      }
+      break;
+    }
+    case SOCK_SCENE: {
+      row.prop_search(socket_props_ptr, "value", ctx.bmain_ptr, "scenes", name, ICON_SCENE);
+      break;
+    }
+    case SOCK_TEXT_ID: {
+      row.prop_search(socket_props_ptr, "value", ctx.bmain_ptr, "texts", name, ICON_TEXT);
+      break;
+    }
+    case SOCK_MASK: {
+      row.prop_search(socket_props_ptr, "value", ctx.bmain_ptr, "masks", name, ICON_NONE);
+      break;
+    }
+    case SOCK_SOUND: {
+      PropertyRNA *prop = RNA_struct_find_property(socket_props_ptr, "value");
+      if (prop && RNA_property_type(prop) == PROP_POINTER) {
+        template_id(&row, &ctx.C, socket_props_ptr, "value", nullptr, "SOUND_OT_open", nullptr);
+      }
+      else {
+        /* #template_id only supports pointer properties currently. Node tools store
+         * data-block pointers in strings currently. */
+        row.prop_search(socket_props_ptr, "value", ctx.bmain_ptr, "sounds", name, ICON_SOUND);
+      }
+
+      break;
+    }
+    case SOCK_IMAGE: {
+      PropertyRNA *prop = RNA_struct_find_property(socket_props_ptr, "value");
+      if (prop && RNA_property_type(prop) == PROP_POINTER) {
+        template_id(&row,
+                    &ctx.C,
+                    socket_props_ptr,
+                    "value",
+                    "image.new",
+                    "image.open",
+                    nullptr,
+                    ui::TEMPLATE_ID_FILTER_ALL,
+                    false,
+                    name);
+      }
+      else {
+        /* #template_id only supports pointer properties currently. Node tools store
+         * data-block pointers in strings currently. */
+        row.prop_search(socket_props_ptr, "value", ctx.bmain_ptr, "images", name, ICON_IMAGE_DATA);
+      }
+      break;
+    }
+    case SOCK_MENU: {
+      if (socket.flag & NODE_INTERFACE_SOCKET_MENU_EXPANDED) {
+        /* Use a single space when the name is empty to work around a bug with expanded enums. Also
+         * see #ui_item_enum_expand_exec. */
+        row.prop(socket_props_ptr,
+                 "value",
+                 ui::ITEM_R_EXPAND,
+                 StringRef(name).is_empty() ? " " : name,
+                 ICON_NONE);
+      }
+      else {
+        row.prop(socket_props_ptr, "value", UI_ITEM_NONE, name, ICON_NONE);
+      }
+      break;
+    }
+    case SOCK_BOOLEAN: {
+      if (is_layer_selection_field(socket)) {
+        add_layer_name_search_button(ctx, row, socket, socket_props_ptr);
+        /* Adds a spacing at the end of the row. */
+        row.label("", ICON_BLANK1);
+        break;
+      }
+      ATTR_FALLTHROUGH;
+    }
+    default: {
+      if (nodes::input_has_attribute_toggle(*ctx.tree, input_index)) {
+        add_attribute_search_or_value_buttons(ctx, row, socket, socket_props_ptr, name);
+      }
+      else {
+        row.prop(socket_props_ptr, "value", UI_ITEM_NONE, name, ICON_NONE);
+      }
+      break;
+    }
+  }
+  if (!nodes::input_has_attribute_toggle(*ctx.tree, input_index)) {
+    row.label("", ICON_BLANK1);
+  }
+}
+
+static std::string get_node_warning_panel_name(const int num_errors,
+                                               const int num_warnings,
+                                               const int num_infos)
+{
+  fmt::memory_buffer buffer;
+  fmt::appender buf = fmt::appender(buffer);
+  if (num_errors > 0) {
+    fmt::format_to(buf, "{} ({})", IFACE_("Errors"), num_errors);
+  }
+  if (num_warnings > 0) {
+    if (num_errors > 0) {
+      fmt::format_to(buf, ", ");
+    }
+    fmt::format_to(buf, "{} ({})", IFACE_("Warnings"), num_warnings);
+  }
+  if (num_infos > 0) {
+    if (num_errors > 0 || num_warnings > 0) {
+      fmt::format_to(buf, ", ");
+    }
+    fmt::format_to(buf, "{} ({})", IFACE_("Info"), num_infos);
+  }
+  return std::string(buffer.data(), buffer.size());
+}
+
+static void draw_warnings(const bContext *C,
+                          const NodesModifierData &nmd,
+                          ui::Layout &layout,
+                          PointerRNA *md_ptr)
+{
+  if (G.is_rendering) {
+    /* Avoid accessing this data while baking in a separate thread. */
+    return;
+  }
+  using namespace eval_log;
+  Object &object = *id_cast<Object *>(md_ptr->owner_id);
+  NodeTreeLog *tree_log = get_root_tree_log(object, nmd);
+  if (!tree_log) {
+    return;
+  }
+  tree_log->ensure_node_warnings(*CTX_data_main(C));
+  const int warnings_num = tree_log->all_warnings.size();
+  if (warnings_num == 0) {
+    return;
+  }
+  Map<NodeWarningType, int> count_by_type;
+  for (const NodeWarning &warning : tree_log->all_warnings) {
+    count_by_type.lookup_or_add(warning.type, 0)++;
+  }
+  const int num_errors = count_by_type.lookup_default(NodeWarningType::Error, 0);
+  const int num_warnings = count_by_type.lookup_default(NodeWarningType::Warning, 0);
+  const int num_infos = count_by_type.lookup_default(NodeWarningType::Info, 0);
+  const std::string panel_name = get_node_warning_panel_name(num_errors, num_warnings, num_infos);
+  ui::PanelLayout panel = layout.panel_prop(C, md_ptr, "open_warnings_panel");
+  panel.header->label(panel_name, ICON_NONE);
+  if (!panel.body) {
+    return;
+  }
+  Vector<const NodeWarning *> warnings(tree_log->all_warnings.size());
+  for (const int i : warnings.index_range()) {
+    warnings[i] = &tree_log->all_warnings[i];
+  }
+  std::ranges::sort(warnings, [](const NodeWarning *a, const NodeWarning *b) {
+    const int severity_a = node_warning_type_severity(a->type);
+    const int severity_b = node_warning_type_severity(b->type);
+    if (severity_a > severity_b) {
+      return true;
+    }
+    if (severity_a < severity_b) {
+      return false;
+    }
+    return BLI_strcasecmp_natural(a->message.c_str(), b->message.c_str()) < 0;
+  });
+
+  ui::Layout &col = panel.body->column(false);
+  ui::Block *block = col.block();
+  for (const NodeWarning *warning : warnings) {
+    const int icon = node_warning_type_icon(warning->type);
+    const StringRef message = RPT_(warning->message);
+    ui::Button *but = uiDefIconTextBut(
+        block, ui::ButtonType::Label, icon, message, 0, 0, 1, UI_UNIT_Y, nullptr, std::nullopt);
+    /* Add tooltip containing the same message. This is helpful if the message is very long so that
+     * it doesn't fit in the panel. */
+    button_func_tooltip_set(
+        but,
+        [](bContext * /*C*/, void *argN, StringRef /*tip*/) -> std::string {
+          return *static_cast<std::string *>(argN);
+        },
+        MEM_new<std::string>(__func__, message),
+        [](void *arg) { MEM_delete(static_cast<std::string *>(arg)); });
+  }
+}
+
+static bool has_output_attribute(const DrawGroupInputsContext &ctx, const bNodeTree *tree)
+{
+  if (!tree || ID_MISSING(tree)) {
+    return false;
+  }
+  const Span<const bNodeTreeInterfaceSocket *> interface_outputs = ctx.tree->interface_outputs();
+  for (const int i : interface_outputs.index_range()) {
+    const bNodeTreeInterfaceSocket &socket = *interface_outputs[i];
+    if (!ctx.output_usages[i].is_visible) {
+      continue;
+    }
+    const bke::bNodeSocketType *typeinfo = socket.socket_typeinfo();
+    const eNodeSocketDatatype type = typeinfo ? typeinfo->type : SOCK_CUSTOM;
+    if (nodes::socket_type_has_attribute_toggle(type)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static void draw_property_for_output_socket(DrawGroupInputsContext &ctx,
+                                            ui::Layout &layout,
+                                            const bNodeTreeInterfaceSocket &socket)
+{
+  ui::Layout &split = layout.split(0.4f, false);
+  ui::Layout &name_row = split.row(false);
+  name_row.alignment_set(ui::LayoutAlign::Right);
+  name_row.label(socket.name ? socket.name : "", ICON_NONE);
+
+  PropertyRNA *prop = RNA_struct_find_property(ctx.properties_ptr, "outputs");
+  if (!prop) {
+    return;
+  }
+  PointerRNA outputs_ptr = RNA_property_pointer_get(ctx.properties_ptr, prop);
+  PointerRNA output_socket_ptr = RNA_pointer_get(&outputs_ptr, socket.identifier);
+
+  ui::Layout &row = split.row(true);
+  add_attribute_search_button(ctx, row, &output_socket_ptr, socket);
+}
+
+static void draw_output_attributes_panel(DrawGroupInputsContext &ctx, ui::Layout &layout)
+{
+  const Span<const bNodeTreeInterfaceSocket *> interface_outputs = ctx.tree->interface_outputs();
+  for (const int i : interface_outputs.index_range()) {
+    const bNodeTreeInterfaceSocket &socket = *interface_outputs[i];
+    const bke::bNodeSocketType *typeinfo = socket.socket_typeinfo();
+    const eNodeSocketDatatype type = typeinfo ? typeinfo->type : SOCK_CUSTOM;
+    if (!ctx.output_usages[i].is_visible) {
+      continue;
+    }
+    if (nodes::socket_type_has_attribute_toggle(type)) {
+      draw_property_for_output_socket(ctx, layout, socket);
+    }
+  }
+}
+
+static void draw_bake_panel(ui::Layout &layout, PointerRNA *modifier_ptr)
+{
+  ui::Layout &col = layout.column(false);
+  col.use_property_split_set(true);
+  col.use_property_decorate_set(false);
+  col.prop(modifier_ptr, "bake_target", UI_ITEM_NONE, std::nullopt, ICON_NONE);
+  col.prop(modifier_ptr, "bake_directory", UI_ITEM_NONE, IFACE_("Bake Path"), ICON_NONE);
+}
+
+static void draw_named_attributes_panel(ui::Layout &layout, Object &object, NodesModifierData &nmd)
+{
+  if (G.is_rendering) {
+    /* Avoid accessing this data while baking in a separate thread. */
+    return;
+  }
+  eval_log::NodeTreeLog *tree_log = get_root_tree_log(object, nmd);
+  if (tree_log == nullptr) {
+    return;
+  }
+
+  tree_log->ensure_used_named_attributes();
+  const Map<StringRefNull, eval_log::NamedAttributeUsage> &usage_by_attribute =
+      tree_log->used_named_attributes;
+
+  if (usage_by_attribute.is_empty()) {
+    layout.label(RPT_("No named attributes used"), ICON_INFO);
+    return;
+  }
+
+  struct NameWithUsage {
+    StringRefNull name;
+    eval_log::NamedAttributeUsage usage;
+  };
+
+  Vector<NameWithUsage> sorted_used_attribute;
+  for (auto &&item : usage_by_attribute.items()) {
+    sorted_used_attribute.append({item.key, item.value});
+  }
+  std::ranges::sort(sorted_used_attribute, [](const NameWithUsage &a, const NameWithUsage &b) {
+    return BLI_strcasecmp_natural(a.name.c_str(), b.name.c_str()) < 0;
+  });
+
+  for (const NameWithUsage &attribute : sorted_used_attribute) {
+    const StringRef attribute_name = attribute.name;
+    const eval_log::NamedAttributeUsage usage = attribute.usage;
+
+    /* #uiLayoutRowWithHeading doesn't seem to work in this case. */
+    ui::Layout &split = layout.split(0.4f, false);
+
+    std::stringstream ss;
+    Vector<std::string> usages;
+    if (flag_is_set(usage, eval_log::NamedAttributeUsage::Read)) {
+      usages.append(IFACE_("Read"));
+    }
+    if (flag_is_set(usage, eval_log::NamedAttributeUsage::Write)) {
+      usages.append(IFACE_("Write"));
+    }
+    if (flag_is_set(usage, eval_log::NamedAttributeUsage::Remove)) {
+      usages.append(CTX_IFACE_(BLT_I18NCONTEXT_OPERATOR_DEFAULT, "Remove"));
+    }
+    for (const int i : usages.index_range()) {
+      ss << usages[i];
+      if (i < usages.size() - 1) {
+        ss << ", ";
+      }
+    }
+
+    ui::Layout &row = split.row(false);
+    row.alignment_set(ui::LayoutAlign::Right);
+    row.active_set(false);
+    row.label(ss.str(), ICON_NONE);
+
+    split.row(false).label(attribute_name, ICON_NONE);
+  }
+}
+
+static void draw_manage_panel(const bContext *C,
+                              ui::Layout &layout,
+                              PointerRNA *modifier_ptr,
+                              NodesModifierData &nmd)
+{
+  if (ui::Layout *panel_layout = layout.panel_prop(
+          C, modifier_ptr, "open_bake_panel", IFACE_("Bake")))
+  {
+    draw_bake_panel(*panel_layout, modifier_ptr);
+  }
+  if (ui::Layout *panel_layout = layout.panel_prop(
+          C, modifier_ptr, "open_named_attributes_panel", IFACE_("Named Attributes")))
+  {
+    Object &object = *id_cast<Object *>(modifier_ptr->owner_id);
+    draw_named_attributes_panel(*panel_layout, object, nmd);
+  }
+}
+
+void draw_geometry_nodes_modifier_ui(const bContext &C,
+                                     PointerRNA *modifier_ptr,
+                                     ui::Layout &layout)
+{
+  Main *bmain = CTX_data_main(&C);
+  PointerRNA bmain_ptr = RNA_main_pointer_create(bmain);
+  NodesModifierData &nmd = *modifier_ptr->data_as<NodesModifierData>();
+  Object &object = *reinterpret_cast<Object *>(modifier_ptr->owner_id);
+  PointerRNA properties_ptr = RNA_pointer_get(modifier_ptr, "properties");
+
+  DrawGroupInputsContext ctx{
+      C, nmd.node_group, get_root_tree_log(object, nmd), &properties_ptr, &bmain_ptr};
+
+  ctx.socket_search_data_fn = [&](const bNodeTreeInterfaceSocket &io_socket) -> SocketSearchData {
+    SocketSearchData data{};
+    ModifierSearchData &modifier_search_data = data.search_data.emplace<ModifierSearchData>();
+    modifier_search_data.object_session_uid = object.id.session_uid;
+    STRNCPY_UTF8(modifier_search_data.modifier_name, nmd.modifier.name);
+    STRNCPY_UTF8(data.socket_identifier, io_socket.identifier);
+    data.is_output = io_socket.flag & NODE_INTERFACE_SOCKET_OUTPUT;
+    return data;
+  };
+  ctx.draw_attribute_toggle_fn =
+      [&](ui::Layout &layout, const int icon, const bNodeTreeInterfaceSocket &io_socket) {
+        PointerRNA props = layout.op("object.geometry_nodes_input_attribute_toggle",
+                                     "",
+                                     icon,
+                                     wm::OpCallContext::InvokeDefault,
+                                     UI_ITEM_NONE);
+        RNA_string_set(&props, "modifier_name", nmd.modifier.name);
+        RNA_string_set(&props, "input_name", io_socket.identifier);
+      };
+
+  layout.use_property_split_set(true);
+  /* Decorators are added manually for supported properties because the
+   * attribute/value toggle requires a manually built layout anyway. */
+  layout.use_property_decorate_set(false);
+
+  if (!(nmd.flag & NODES_MODIFIER_HIDE_DATABLOCK_SELECTOR)) {
+    const char *newop = (nmd.node_group == nullptr) ? "node.new_geometry_node_group_assign" :
+                                                      "object.geometry_node_tree_copy_assign";
+    template_id(&layout, &C, modifier_ptr, "node_group", newop, nullptr, nullptr);
+  }
+
+  if (nmd.node_group != nullptr && !ID_MISSING(nmd.node_group)) {
+    nmd.runtime->usage_cache.ensure(object, nmd);
+    ctx.input_usages = nmd.runtime->usage_cache.inputs;
+    ctx.output_usages = nmd.runtime->usage_cache.outputs;
+    draw_interface_panel_content(
+        C,
+        layout,
+        &properties_ptr,
+        nmd.node_group->tree_interface.root_panel,
+        [&](const bNodeTreeInterfaceSocket &socket) { return ctx.input_is_visible(socket); },
+        [&](const bNodeTreeInterfaceSocket &socket) { return ctx.input_is_active(socket); },
+        [&](ui::Layout &layout,
+            const bNodeTreeInterfaceSocket &socket,
+            PointerRNA *socket_props_ptr,
+            const std::optional<StringRef> parent_name) {
+          draw_property_for_socket(ctx, layout, socket, socket_props_ptr, parent_name);
+        });
+  }
+
+  modifier_error_message_draw(layout, modifier_ptr);
+
+  draw_warnings(&C, nmd, layout, modifier_ptr);
+
+  if (has_output_attribute(ctx, nmd.node_group)) {
+    if (ui::Layout *panel_layout = layout.panel_prop(
+            &C, modifier_ptr, "open_output_attributes_panel", IFACE_("Output Attributes")))
+    {
+      draw_output_attributes_panel(ctx, *panel_layout);
+    }
+  }
+
+  if ((nmd.flag & NODES_MODIFIER_HIDE_MANAGE_PANEL) == 0) {
+    if (ui::Layout *panel_layout = layout.panel_prop(
+            &C, modifier_ptr, "open_manage_panel", IFACE_("Manage")))
+    {
+      draw_manage_panel(&C, *panel_layout, modifier_ptr, nmd);
+    }
+  }
+}
+
+void draw_geometry_nodes_operator_redo_ui(const bContext &C,
+                                          wmOperator &op,
+                                          bNodeTree &tree,
+                                          eval_log::NodeTreeLog *tree_log)
+{
+  ui::Layout &layout = *op.layout;
+  Main &bmain = *CTX_data_main(&C);
+  PointerRNA bmain_ptr = RNA_main_pointer_create(&bmain);
+
+  DrawGroupInputsContext ctx{C, &tree, tree_log, op.ptr, &bmain_ptr};
+  ctx.socket_search_data_fn = [&](const bNodeTreeInterfaceSocket &io_socket) -> SocketSearchData {
+    SocketSearchData data{};
+    OperatorSearchData &operator_search_data = data.search_data.emplace<OperatorSearchData>();
+    operator_search_data.tree = &tree;
+    operator_search_data.tree_log = tree_log;
+    operator_search_data.op = &op;
+    STRNCPY_UTF8(data.socket_identifier, io_socket.identifier);
+    data.is_output = io_socket.flag & NODE_INTERFACE_SOCKET_OUTPUT;
+    return data;
+  };
+  ctx.draw_attribute_toggle_fn =
+      [&](ui::Layout &layout, const int icon, const bNodeTreeInterfaceSocket &io_socket) {
+        PointerRNA inputs_ptr = RNA_pointer_get(op.ptr, "inputs");
+        PointerRNA socket_props_ptr = RNA_pointer_get(&inputs_ptr, io_socket.identifier);
+        layout.prop(&socket_props_ptr, "type", ui::ITEM_R_ICON_ONLY, "", icon);
+      };
+  ctx.use_name_for_ids = true;
+
+  layout.use_property_split_set(true);
+  /* Decorators are added manually for supported properties because the
+   * attribute/value toggle requires a manually built layout anyway. */
+  layout.use_property_decorate_set(false);
+
+  tree.ensure_interface_cache();
+  ctx.input_usages.reinitialize(tree.interface_inputs().size());
+  ctx.output_usages.reinitialize(tree.interface_outputs().size());
+  nodes::socket_usage_inference::infer_group_interface_inputs_usage(
+      tree, *ctx.properties_ptr, ctx.input_usages, ctx.output_usages);
+  draw_interface_panel_content(
+      C,
+      layout,
+      op.ptr,
+      tree.tree_interface.root_panel,
+      [&](const bNodeTreeInterfaceSocket &socket) { return ctx.input_is_visible(socket); },
+      [&](const bNodeTreeInterfaceSocket &socket) { return ctx.input_is_active(socket); },
+      [&](ui::Layout &layout,
+          const bNodeTreeInterfaceSocket &socket,
+          PointerRNA *socket_props_ptr,
+          const std::optional<StringRef> parent_name) {
+        draw_property_for_socket(ctx, layout, socket, socket_props_ptr, parent_name);
+      });
+}
+
+}  // namespace blender::nodes

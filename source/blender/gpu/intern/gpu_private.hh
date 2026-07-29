@@ -1,0 +1,18 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup gpu
+ */
+
+#pragma once
+
+namespace blender {
+
+/* gpu_backend.cc */
+
+void gpu_backend_init_resources();
+void gpu_backend_delete_resources();
+
+}  // namespace blender

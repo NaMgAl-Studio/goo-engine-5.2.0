@@ -1,0 +1,119 @@
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
+
+/* Volume Primitive
+ *
+ * Volumes are just regions inside meshes with the mesh surface as boundaries.
+ * There isn't as much data to access as for surfaces, there is only a position
+ * to do lookups in 3D voxel or procedural textures.
+ *
+ * 3D voxel textures can be assigned as attributes per mesh, which means the
+ * same shader can be used for volume objects with different densities, etc. */
+
+#pragma once
+
+#include "kernel/globals.h"
+
+#include "kernel/geom/attribute.h"
+#include "kernel/geom/object.h"
+
+#include "kernel/util/image_3d.h"
+
+CCL_NAMESPACE_BEGIN
+
+#ifdef __VOLUME__
+
+/* Return position normalized to 0..1 in mesh bounds */
+
+template<typename Float3Type>
+ccl_device_inline Float3Type volume_normalized_position(KernelGlobals kg,
+                                                        const ccl_private ShaderData *sd,
+                                                        Float3Type P)
+{
+  const AttributeDescriptor desc = find_attribute(kg, sd, ATTR_STD_GENERATED_TRANSFORM);
+
+  object_inverse_position_transform_if_object(kg, sd, &P);
+
+  if (is_attribute_found(desc)) {
+    const Transform tfm = primitive_attribute_matrix(kg, desc);
+    P = transform_point(&tfm, P);
+  }
+
+  return P;
+}
+
+template<typename T> ccl_device_inline T volume_attribute_value(const float4 value);
+
+ccl_device_template_spec float volume_attribute_value(const float4 value)
+{
+  return average(make_float3(value));
+}
+
+ccl_device_template_spec float2 volume_attribute_value(const float4 value)
+{
+  return make_float2(value.x, value.y);
+}
+
+ccl_device_template_spec float3 volume_attribute_value(const float4 value)
+{
+  return make_float3(value);
+}
+
+ccl_device_template_spec float4 volume_attribute_value(const float4 value)
+{
+  return value;
+}
+
+ccl_device float volume_attribute_alpha(const float4 value)
+{
+  return value.w;
+}
+
+ccl_device float4 volume_attribute_float4(KernelGlobals kg,
+                                          ccl_private ShaderData *sd,
+                                          const AttributeDescriptor desc,
+                                          const bool stochastic)
+{
+  if (desc.element & (ATTR_ELEMENT_OBJECT | ATTR_ELEMENT_MESH)) {
+    switch (desc.type) {
+      case NODE_ATTR_FLOAT: {
+        const float f = kernel_data_fetch(attributes_float, desc.offset);
+        return make_float4(f, f, f, 1.0f);
+      }
+      case NODE_ATTR_FLOAT2: {
+        const float2 f = kernel_data_fetch(attributes_float2, desc.offset);
+        return make_float4(f.x, f.y, 0.0f, 1.0f);
+      }
+      case NODE_ATTR_FLOAT3: {
+        const float3 f = kernel_data_fetch(attributes_float3, desc.offset);
+        return make_float4(f.x, f.y, f.z, 1.0f);
+      }
+      case NODE_ATTR_FLOAT4:
+      case NODE_ATTR_RGBA:
+        return kernel_data_fetch(attributes_float4, desc.offset);
+      case NODE_ATTR_MATRIX:
+        return zero_float4();
+    }
+  }
+  if (desc.element & ATTR_ELEMENT_VOXEL) {
+    /* todo: optimize this so we don't have to transform both here and in
+     * kernel_image_interp_3d when possible. Also could optimize for the
+     * common case where transform is translation/scale only. */
+    float3 P = sd->P;
+    object_inverse_position_transform(kg, sd, &P);
+    const InterpolationType interp = (sd->flag & SD_VOLUME_CUBIC) ? INTERPOLATION_CUBIC :
+                                                                    INTERPOLATION_NONE;
+    const float4 value = kernel_image_interp_3d(kg, sd, desc.offset, P, interp, stochastic);
+    if (value.w > 1e-6f && value.w != 1.0f) {
+      /* For RGBA colors, unpremultiply after interpolation. */
+      return make_float4(make_float3(value) / value.w, value.w);
+    }
+    return value;
+  }
+  return zero_float4();
+}
+
+#endif
+
+CCL_NAMESPACE_END

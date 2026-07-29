@@ -1,0 +1,53 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup animrig
+ *
+ * \brief C++ part of the BoneColor DNA struct.
+ */
+
+#pragma once
+
+#ifndef __cplusplus
+#  error This is a C++ header.
+#endif
+
+#include "BKE_pose.hh"
+
+#include "DNA_armature_types.h"
+
+namespace blender {
+
+struct bPoseChannel;
+struct ThemeWireColor;
+
+namespace animrig {
+
+/** C++ wrapper for the DNA BoneColor struct. */
+class BoneColor : public blender::BoneColor {
+ public:
+  BoneColor();
+  BoneColor(const BoneColor &other);
+  ~BoneColor();
+
+  const ThemeWireColor *effective_color() const;
+
+  /* Support for storing in a #Set<BoneColor>. */
+  bool operator==(const BoneColor &other) const;
+  bool operator!=(const BoneColor &other) const;
+  uint64_t hash() const;
+};
+
+/**
+ * Return the effective BoneColor of this pose bone.
+ *
+ * This returns the pose bone's own color, unless it's set to "default", then it defaults to the
+ * armature bone color.
+ */
+const BoneColor &ANIM_bonecolor_posebone_get(bke::PChanBoneConst pchanbone);
+
+};  // namespace animrig
+
+}  // namespace blender

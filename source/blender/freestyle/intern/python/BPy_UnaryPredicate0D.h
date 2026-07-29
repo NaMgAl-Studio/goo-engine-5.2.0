@@ -1,0 +1,34 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup freestyle
+ */
+
+#pragma once
+
+extern "C" {
+#include <Python.h>
+}
+
+#include "../stroke/Predicates0D.h"
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+extern PyTypeObject UnaryPredicate0D_Type;
+
+#define BPy_UnaryPredicate0D_Check(v) \
+  (PyObject_IsInstance((PyObject *)v, (PyObject *)&UnaryPredicate0D_Type))
+
+/*---------------------------Python BPy_UnaryPredicate0D structure definition----------*/
+struct BPy_UnaryPredicate0D {
+  PyObject_HEAD
+  Freestyle::UnaryPredicate0D *up0D;
+};
+
+/*---------------------------Python BPy_UnaryPredicate0D visible prototypes-----------*/
+
+int UnaryPredicate0D_Init(PyObject *module);
+
+///////////////////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,71 @@
+/* SPDX-FileCopyrightText: 2015 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup RNA
+ */
+
+#include "RNA_define.hh"
+#include "RNA_enum_types.hh"
+
+#include "BKE_packedFile.hh"
+
+#include "rna_internal.hh"
+
+#ifdef RNA_RUNTIME
+
+#  include "DNA_sound_types.h"
+
+#  include "BKE_library.hh"
+#  include "BKE_main.hh"
+#  include "BKE_report.hh"
+#  include "BKE_sound.hh"
+
+namespace blender {
+
+static void rna_Sound_pack(bSound *sound, Main *bmain, ReportList *reports)
+{
+  BKE_sound_packfile_ensure(bmain, sound, reports);
+}
+
+static void rna_Sound_unpack(bSound *sound, Main *bmain, ReportList *reports, int method)
+{
+  if (!sound->packedfile) {
+    BKE_report(reports, RPT_ERROR, "Sound not packed");
+    return;
+  }
+
+  if (!ID_IS_EDITABLE(&sound->id)) {
+    BKE_report(reports, RPT_ERROR, "Sound is not editable");
+    return;
+  }
+
+  /* reports its own error on failure */
+  BKE_packedfile_unpack_sound(bmain, reports, sound, ePF_FileStatus(method));
+}
+
+}  // namespace blender
+
+#else
+
+namespace blender {
+
+void RNA_api_sound(StructRNA *srna)
+{
+  FunctionRNA *func;
+
+  func = RNA_def_function(srna, "pack", "rna_Sound_pack");
+  RNA_def_function_ui_description(func, "Pack the sound into the current blend file");
+  RNA_def_function_flag(func, FUNC_USE_REPORTS | FUNC_USE_MAIN);
+
+  func = RNA_def_function(srna, "unpack", "rna_Sound_unpack");
+  RNA_def_function_ui_description(func, "Unpack the sound to the samples filename");
+  RNA_def_function_flag(func, FUNC_USE_REPORTS | FUNC_USE_MAIN);
+  RNA_def_enum(
+      func, "method", rna_enum_unpack_method_items, PF_USE_LOCAL, "method", "How to unpack");
+}
+
+}  // namespace blender
+
+#endif

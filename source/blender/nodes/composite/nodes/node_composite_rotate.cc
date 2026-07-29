@@ -1,0 +1,161 @@
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "BLI_math_angle_types.hh"
+#include "BLI_math_matrix.hh"
+
+#include "DNA_node_types.h"
+
+#include "RNA_enum_types.hh"
+
+#include "BKE_node.hh"
+
+#include "COM_domain.hh"
+#include "COM_node_operation.hh"
+
+#include "node_composite_util.hh"
+
+namespace blender::nodes::node_composite_rotate_cc {
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  b.use_custom_socket_order();
+  b.allow_any_socket_order();
+
+  b.add_input<decl::Color>("Image"_ustr)
+      .default_value({1.0f, 1.0f, 1.0f, 1.0f})
+      .hide_value()
+      .compositor_realization_mode(CompositorInputRealizationMode::None)
+      .structure_type(StructureType::Dynamic);
+  b.add_output<decl::Color>("Image"_ustr)
+      .structure_type(StructureType::Dynamic)
+      .align_with_previous();
+
+  b.add_input<decl::Float>("Angle"_ustr)
+      .default_value(0.0f)
+      .min(-10000.0f)
+      .max(10000.0f)
+      .subtype(PROP_ANGLE);
+
+  PanelDeclarationBuilder &sampling_panel = b.add_panel("Sampling"_ustr).default_closed(true);
+  sampling_panel.add_input<decl::Menu>("Interpolation"_ustr)
+      .default_value(CMP_NODE_INTERPOLATION_BILINEAR)
+      .static_items(rna_enum_node_compositor_interpolation_items)
+      .optional_label()
+      .description("Interpolation method");
+  sampling_panel.add_input<decl::Menu>("Extension X"_ustr)
+      .default_value(CMP_NODE_EXTENSION_MODE_CLIP)
+      .static_items(rna_enum_node_compositor_extension_items)
+      .optional_label()
+      .description("The extension mode applied to the X axis");
+  sampling_panel.add_input<decl::Menu>("Extension Y"_ustr)
+      .default_value(CMP_NODE_EXTENSION_MODE_CLIP)
+      .static_items(rna_enum_node_compositor_extension_items)
+      .optional_label()
+      .description("The extension mode applied to the Y axis");
+}
+
+static void node_init(bNodeTree * /*ntree*/, bNode *node)
+{
+  /* Unused, kept for forward compatibility. */
+  NodeRotateData *data = MEM_new<NodeRotateData>(__func__);
+  node->storage = data;
+}
+
+using namespace blender::compositor;
+
+class RotateOperation : public NodeOperation {
+ public:
+  using NodeOperation::NodeOperation;
+
+  void execute() override
+  {
+    const math::AngleRadian rotation = this->get_input("Angle").get_single_value_default<float>();
+    const float3x3 transformation = math::from_rotation<float3x3>(rotation);
+
+    const Result &input = this->get_input("Image");
+    Result &output = this->get_result("Image");
+    output.share_data(input);
+    output.transform(transformation);
+    output.get_realization_options().interpolation = this->get_interpolation();
+    output.get_realization_options().extension_x = this->get_extension_mode_x();
+    output.get_realization_options().extension_y = this->get_extension_mode_y();
+  }
+
+  Interpolation get_interpolation()
+  {
+    const CMPNodeInterpolation interpolation = CMPNodeInterpolation(
+        this->get_input("Interpolation").get_single_value_default<MenuValue>().value);
+    switch (interpolation) {
+      case CMP_NODE_INTERPOLATION_NEAREST:
+        return Interpolation::Nearest;
+      case CMP_NODE_INTERPOLATION_BILINEAR:
+        return Interpolation::Bilinear;
+      case CMP_NODE_INTERPOLATION_BICUBIC:
+        return Interpolation::Bicubic;
+      case CMP_NODE_INTERPOLATION_ANISOTROPIC:
+        return Interpolation::Anisotropic;
+    }
+
+    return Interpolation::Nearest;
+  }
+
+  Extension get_extension_mode_x()
+  {
+    const CMPExtensionMode extension_x = CMPExtensionMode(
+        this->get_input("Extension X").get_single_value_default<MenuValue>().value);
+    switch (extension_x) {
+      case CMP_NODE_EXTENSION_MODE_CLIP:
+        return Extension::Clip;
+      case CMP_NODE_EXTENSION_MODE_REPEAT:
+        return Extension::Repeat;
+      case CMP_NODE_EXTENSION_MODE_EXTEND:
+        return Extension::Extend;
+    }
+
+    return Extension::Clip;
+  }
+
+  Extension get_extension_mode_y()
+  {
+    const CMPExtensionMode extension_y = CMPExtensionMode(
+        this->get_input("Extension Y").get_single_value_default<MenuValue>().value);
+    switch (extension_y) {
+      case CMP_NODE_EXTENSION_MODE_CLIP:
+        return Extension::Clip;
+      case CMP_NODE_EXTENSION_MODE_REPEAT:
+        return Extension::Repeat;
+      case CMP_NODE_EXTENSION_MODE_EXTEND:
+        return Extension::Extend;
+    }
+
+    return Extension::Clip;
+  }
+};
+
+static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
+{
+  return new RotateOperation(context, node);
+}
+
+static void node_register()
+{
+  static bke::bNodeType ntype;
+
+  cmp_node_type_base(&ntype, "CompositorNodeRotate"_ustr, CMP_NODE_ROTATE);
+  ntype.ui_name = "Rotate";
+  ntype.ui_description = "Rotate image by specified angle";
+  ntype.enum_name_legacy = "ROTATE";
+  ntype.nclass = NODE_CLASS_DISTORT;
+  ntype.declare = node_declare;
+  ntype.initfunc = node_init;
+  ntype.get_compositor_operation = get_compositor_operation;
+  bke::node_type_storage(
+      ntype, "NodeRotateData", node_free_standard_storage, node_copy_standard_storage);
+
+  bke::node_register_type(ntype);
+}
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_composite_rotate_cc

@@ -1,0 +1,282 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "BKE_attribute.h"
+#include "BLI_array_utils.hh"
+
+#include "DNA_mesh_types.h"
+#include "DNA_pointcloud_types.h"
+
+#include "BKE_attribute_math.hh"
+#include "BKE_pointcloud.hh"
+
+#include "NOD_rna_define.hh"
+
+#include "UI_interface_layout.hh"
+#include "UI_resources.hh"
+
+#include "GEO_foreach_geometry.hh"
+
+#include "FN_multi_function_registry.hh"
+
+#include "node_geometry_util.hh"
+
+namespace blender::nodes::node_geo_mesh_to_points_cc {
+
+NODE_STORAGE_FUNCS(NodeGeometryMeshToPoints)
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  b.add_input<decl::Geometry>("Mesh"_ustr)
+      .supported_type(GeometryComponent::Type::Mesh)
+      .description("Mesh whose elements are converted to points");
+  b.add_input<decl::Bool>("Selection"_ustr)
+      .default_value(true)
+      .evaluated_geometry_field()
+      .hide_value();
+  b.add_input<decl::Vector>("Position"_ustr)
+      .evaluated_geometry_field()
+      .default_input_type(NODE_DEFAULT_INPUT_POSITION_FIELD);
+  b.add_input<decl::Float>("Radius"_ustr)
+      .default_value(0.05f)
+      .min(0.0f)
+      .subtype(PROP_DISTANCE)
+      .evaluated_geometry_field();
+  b.add_output<decl::Geometry>("Points"_ustr).propagate_all_geometry();
+}
+
+static void node_layout(ui::Layout &layout, bContext * /*C*/, PointerRNA *ptr)
+{
+  layout.prop(ptr, "mode", UI_ITEM_NONE, "", ICON_NONE);
+}
+
+static void node_init(bNodeTree * /*tree*/, bNode *node)
+{
+  NodeGeometryMeshToPoints *data = MEM_new<NodeGeometryMeshToPoints>(__func__);
+  data->mode = GEO_NODE_MESH_TO_POINTS_VERTICES;
+  node->storage = data;
+}
+
+static void geometry_set_mesh_to_points(GeometrySet &geometry_set,
+                                        const Field<float3> &position_field,
+                                        const Field<float> &radius_field,
+                                        const Field<bool> &selection_field,
+                                        const AttrDomain domain,
+                                        const AttributeFilter &attribute_filter)
+{
+  const Mesh *mesh = geometry_set.get_mesh();
+  if (mesh == nullptr) {
+    geometry_set.keep_only({GeometryComponent::Type::Edit});
+    return;
+  }
+  const int domain_size = mesh->attributes().domain_size(domain);
+  if (domain_size == 0) {
+    geometry_set.keep_only({GeometryComponent::Type::Edit});
+    return;
+  }
+  const AttributeAccessor src_attributes = mesh->attributes();
+  const bke::MeshFieldContext field_context{*mesh, domain};
+  fn::FieldEvaluator evaluator{field_context, domain_size};
+  evaluator.set_selection(selection_field);
+  /* Evaluating directly into the point cloud doesn't work because we are not using the full
+   * "min_array_size" array but compressing the selected elements into the final array with no
+   * gaps. */
+  evaluator.add(position_field);
+  evaluator.add(radius_field);
+  evaluator.evaluate();
+  const IndexMask selection = evaluator.get_evaluated_selection_as_mask();
+  const VArray<float3> positions_eval = evaluator.get_evaluated<float3>(0);
+  const VArray<float> radii_eval = evaluator.get_evaluated<float>(1);
+
+  const bool share_arrays = selection.size() == domain_size;
+  const bool share_position = share_arrays && positions_eval.is_span() &&
+                              positions_eval.get_internal_span().data() ==
+                                  mesh->vert_positions().data();
+
+  PointCloud *pointcloud;
+  if (share_position) {
+    /* Create an empty point cloud so the positions can be shared. */
+    pointcloud = bke::pointcloud_new_no_attributes(mesh->verts_num);
+    const bke::AttributeReader src = src_attributes.lookup<float3>("position");
+    const bke::AttributeInitShared init(src.varray.get_internal_span().data(), *src.sharing_info);
+    pointcloud->attributes_for_write().add<float3>("position", AttrDomain::Point, init);
+  }
+  else {
+    pointcloud = BKE_pointcloud_new_nomain(selection.size());
+    array_utils::gather(positions_eval, selection, pointcloud->positions_for_write());
+  }
+
+  MutableAttributeAccessor dst_attributes = pointcloud->attributes_for_write();
+  {
+    const VArray<float> radii = evaluator.get_evaluated<float>(1);
+    if (const std::optional<float> radius = radii.get_if_single()) {
+      dst_attributes.add<float>("radius", AttrDomain::Point, bke::AttributeInitValue(*radius));
+    }
+    else {
+      SpanAttributeWriter attr = dst_attributes.lookup_or_add_for_write_only_span<float>(
+          "radius", AttrDomain::Point);
+      array_utils::gather(radii, selection, attr.span);
+      attr.finish();
+    }
+  }
+
+  src_attributes.foreach_attribute([&](const bke::AttributeIter &iter) {
+    const StringRef src_name = iter.name;
+    if (iter.is_builtin && !dst_attributes.is_builtin(src_name)) {
+      return;
+    }
+    if (ELEM(src_name, "position", "radius", ".select_edge", ".select_poly")) {
+      return;
+    }
+    if (attribute_filter.allow_skip(src_name)) {
+      return;
+    }
+    const bke::AttrType data_type = iter.data_type;
+    const bke::GAttributeReader src = iter.get(domain);
+    if (!src) {
+      /* Domain interpolation can fail if the source domain is empty. */
+      return;
+    }
+    const StringRef dst_name = src_name == ".select_vert" ? ".selection" : src_name;
+    const CommonVArrayInfo info = src.varray.common_info();
+    if (info.type == CommonVArrayInfo::Type::Single) {
+      const CPPType &type = src.varray.type();
+      const bke::AttributeInitValue init(GPointer(type, info.data));
+      dst_attributes.add(dst_name, AttrDomain::Point, data_type, init);
+      return;
+    }
+
+    if (share_arrays && src.domain == domain && src.sharing_info &&
+        info.type == CommonVArrayInfo::Type::Span)
+    {
+      const bke::AttributeInitShared init(info.data, *src.sharing_info);
+      dst_attributes.add(dst_name, AttrDomain::Point, data_type, init);
+    }
+    else {
+      GSpanAttributeWriter dst = dst_attributes.lookup_or_add_for_write_only_span(
+          dst_name, AttrDomain::Point, data_type);
+      array_utils::gather(src.varray, selection, dst.span);
+      dst.finish();
+    }
+  });
+
+  geometry_set.replace_pointcloud(pointcloud);
+  geometry_set.keep_only({GeometryComponent::Type::PointCloud, GeometryComponent::Type::Edit});
+}
+
+static void node_geo_exec(GeoNodeExecParams params)
+{
+  GeometrySet geometry_set = params.extract_input<GeometrySet>("Mesh"_ustr);
+  Field<float3> position = params.extract_input<Field<float3>>("Position"_ustr);
+  Field<float> radius = params.extract_input<Field<float>>("Radius"_ustr);
+  Field<bool> selection = params.extract_input<Field<bool>>("Selection"_ustr);
+
+  static const auto &max_zero_fn = fn::multi_function::registry::lookup("max(float, float)"_ustr);
+  const Field<float> positive_radius(
+      FieldOperation::from(max_zero_fn, {std::move(radius), fn::Field<float>(0.0f)}), 0);
+
+  const NodeGeometryMeshToPoints &storage = node_storage(params.node());
+  const GeometryNodeMeshToPointsMode mode = GeometryNodeMeshToPointsMode(storage.mode);
+
+  const NodeAttributeFilter &attribute_filter = params.get_attribute_filter("Points"_ustr);
+
+  geometry::foreach_real_geometry(geometry_set, [&](GeometrySet &geometry_set) {
+    switch (mode) {
+      case GEO_NODE_MESH_TO_POINTS_VERTICES:
+        geometry_set_mesh_to_points(geometry_set,
+                                    position,
+                                    positive_radius,
+                                    selection,
+                                    AttrDomain::Point,
+                                    attribute_filter);
+        break;
+      case GEO_NODE_MESH_TO_POINTS_EDGES:
+        geometry_set_mesh_to_points(geometry_set,
+                                    position,
+                                    positive_radius,
+                                    selection,
+                                    AttrDomain::Edge,
+                                    attribute_filter);
+        break;
+      case GEO_NODE_MESH_TO_POINTS_FACES:
+        geometry_set_mesh_to_points(geometry_set,
+                                    position,
+                                    positive_radius,
+                                    selection,
+                                    AttrDomain::Face,
+                                    attribute_filter);
+        break;
+      case GEO_NODE_MESH_TO_POINTS_CORNERS:
+        geometry_set_mesh_to_points(geometry_set,
+                                    position,
+                                    positive_radius,
+                                    selection,
+                                    AttrDomain::Corner,
+                                    attribute_filter);
+        break;
+    }
+  });
+
+  params.set_output("Points"_ustr, std::move(geometry_set));
+}
+
+static void node_rna(StructRNA *srna)
+{
+  static EnumPropertyItem mode_items[] = {
+      {GEO_NODE_MESH_TO_POINTS_VERTICES,
+       "VERTICES",
+       0,
+       "Vertices",
+       "Create a point in the point cloud for each selected vertex"},
+      {GEO_NODE_MESH_TO_POINTS_EDGES,
+       "EDGES",
+       0,
+       "Edges",
+       "Create a point in the point cloud for each selected edge"},
+      {GEO_NODE_MESH_TO_POINTS_FACES,
+       "FACES",
+       0,
+       "Faces",
+       "Create a point in the point cloud for each selected face"},
+      {GEO_NODE_MESH_TO_POINTS_CORNERS,
+       "CORNERS",
+       0,
+       "Corners",
+       "Create a point in the point cloud for each selected face corner"},
+      {0, nullptr, 0, nullptr, nullptr},
+  };
+
+  RNA_def_node_enum(srna,
+                    "mode",
+                    "Mode",
+                    "",
+                    mode_items,
+                    NOD_storage_enum_accessors(mode),
+                    GEO_NODE_MESH_TO_POINTS_VERTICES,
+                    nullptr,
+                    true);
+}
+
+static void node_register()
+{
+  static bke::bNodeType ntype;
+
+  geo_node_type_base(&ntype, "GeometryNodeMeshToPoints"_ustr, GEO_NODE_MESH_TO_POINTS);
+  ntype.ui_name = "Mesh to Points";
+  ntype.ui_description = "Generate a point cloud from a mesh's vertices";
+  ntype.enum_name_legacy = "MESH_TO_POINTS";
+  ntype.nclass = NODE_CLASS_GEOMETRY;
+  ntype.declare = node_declare;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.initfunc = node_init;
+  ntype.draw_buttons = node_layout;
+  bke::node_type_storage(
+      ntype, "NodeGeometryMeshToPoints", node_free_standard_storage, node_copy_standard_storage);
+  bke::node_register_type(ntype);
+
+  node_rna(ntype.rna_ext.srna);
+}
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_mesh_to_points_cc

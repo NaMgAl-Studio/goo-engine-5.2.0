@@ -1,0 +1,67 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#pragma once
+
+#include "GPU_shader_shared_utils.hh"
+
+#define WORKBENCH_SHADER_SHARED_H
+
+struct [[host_shared]] SolidLightData {
+  float4 direction;
+  float4 specular_color;
+  float4 diffuse_color_wrap; /* rgb: diffuse col a: wrapped lighting factor */
+};
+
+struct [[host_shared]] WorldData {
+  float2 viewport_size;
+  float2 viewport_size_inv;
+  float4 object_outline_color;
+  float4 shadow_direction_vs;
+  float shadow_focus;
+  float shadow_shift;
+  float shadow_mul;
+  float shadow_add;
+  /* - 16 bytes alignment - */
+  struct SolidLightData lights[4];
+  float4 ambient_color;
+
+  int cavity_sample_start;
+  int cavity_sample_end;
+  float cavity_sample_count_inv;
+  float cavity_jitter_scale;
+
+  float cavity_valley_factor;
+  float cavity_ridge_factor;
+  float cavity_attenuation;
+  float cavity_distance;
+
+  float curvature_ridge;
+  float curvature_valley;
+  float ui_scale;
+  float _pad0;
+
+  int matcap_orientation;
+  bool32_t use_specular;
+  float xray_alpha;
+  int _pad1;
+
+  float4 background_color;
+};
+
+struct [[host_shared]] ExtrudedFrustum {
+  /** \note float3 array padded to float4. */
+  float4 corners[16];
+  float4 planes[12];
+  int corners_count;
+  int planes_count;
+  int _pad0;
+  int _pad1;
+};
+
+struct [[host_shared]] ShadowPassData {
+  float4 far_plane;
+  packed_float3 light_direction_ws;
+  int _padding;
+};

@@ -1,0 +1,90 @@
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "node_shader_util.hh"
+
+namespace blender {
+
+namespace nodes::node_shader_light_path_cc {
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  b.add_output<decl::Float>("Is Camera Ray"_ustr);
+  b.add_output<decl::Float>("Is Shadow Ray"_ustr);
+  b.add_output<decl::Float>("Is Diffuse Ray"_ustr);
+  b.add_output<decl::Float>("Is Glossy Ray"_ustr);
+  b.add_output<decl::Float>("Is Singular Ray"_ustr);
+  b.add_output<decl::Float>("Is Reflection Ray"_ustr);
+  b.add_output<decl::Float>("Is Transmission Ray"_ustr);
+  b.add_output<decl::Float>("Is Volume Scatter Ray"_ustr);
+  b.add_output<decl::Float>("Ray Length"_ustr);
+  b.add_output<decl::Float>("Ray Depth"_ustr);
+  b.add_output<decl::Float>("Diffuse Depth"_ustr);
+  b.add_output<decl::Float>("Glossy Depth"_ustr);
+  b.add_output<decl::Float>("Transparent Depth"_ustr);
+  b.add_output<decl::Float>("Transmission Depth"_ustr);
+  b.add_output<decl::Float>("Portal Depth"_ustr);
+}
+
+static int node_shader_gpu_light_path(GPUMaterial *mat,
+                                      bNode *node,
+                                      bNodeExecData * /*execdata*/,
+                                      GPUNodeStack *in,
+                                      GPUNodeStack *out)
+{
+  if (out[2].hasoutput ||  /* Is Diffuse Ray. */
+      out[3].hasoutput ||  /* Is Glossy Ray. */
+      out[4].hasoutput ||  /* Is Singular Ray. */
+      out[5].hasoutput ||  /* Is Reflection Ray. */
+      out[6].hasoutput ||  /* Is Transmission Ray. */
+      out[10].hasoutput || /* Diffuse Depth. */
+      out[11].hasoutput || /* Glossy Depth. */
+      out[13].hasoutput)   /* Transmission Depth. */
+  {
+    /* Used to detect that the world has a specific look for diffuse path. */
+    GPU_material_flag_set(mat, GPU_MATFLAG_IS_DIFFUSE_OR_GLOSSY_RAY_FLAG);
+  }
+  return GPU_stack_link(mat, node, "node_light_path", in, out);
+}
+
+NODE_SHADER_MATERIALX_BEGIN
+#ifdef WITH_MATERIALX
+{
+  /* NOTE: This node isn't supported by MaterialX. Only default values returned. */
+  if (STREQ(socket_out_->identifier, "Is Camera Ray")) {
+    return val(1.0f);
+  }
+  if (STREQ(socket_out_->identifier, "Ray Length")) {
+    return val(1.0f);
+  }
+  NodeItem res = val(0.0f);
+  return res;
+}
+#endif
+NODE_SHADER_MATERIALX_END
+
+}  // namespace nodes::node_shader_light_path_cc
+
+/* node type definition */
+void register_node_type_sh_light_path()
+{
+  namespace file_ns = nodes::node_shader_light_path_cc;
+
+  static bke::bNodeType ntype;
+
+  sh_node_type_base(&ntype, "ShaderNodeLightPath"_ustr, SH_NODE_LIGHT_PATH);
+  ntype.ui_name = "Light Path";
+  ntype.ui_description =
+      "Retrieve the type of incoming ray for which the shader is being executed.\nTypically used "
+      "for non-physically-based tricks";
+  ntype.enum_name_legacy = "LIGHT_PATH";
+  ntype.nclass = NODE_CLASS_INPUT;
+  ntype.declare = file_ns::node_declare;
+  ntype.gpu_fn = file_ns::node_shader_gpu_light_path;
+  ntype.materialx_fn = file_ns::node_shader_materialx;
+
+  bke::node_register_type(ntype);
+}
+
+}  // namespace blender

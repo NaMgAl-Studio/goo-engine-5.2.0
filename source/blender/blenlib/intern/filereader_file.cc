@@ -1,0 +1,69 @@
+/* SPDX-FileCopyrightText: 2004-2021 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup bli
+ */
+
+#ifndef WIN32
+#  include <unistd.h> /* for read close */
+#else
+#  include "BLI_winstuff.h"
+#  include "winsock2.h"
+#  include <io.h> /* for open close read */
+#endif
+
+#include "BLI_fileops.h"
+#include "BLI_filereader.h"
+
+#include "MEM_guardedalloc.h"
+
+namespace blender {
+
+struct RawFileReader {
+  FileReader reader;
+
+  int filedes;
+};
+
+static int64_t file_read(FileReader *reader, void *buffer, size_t size)
+{
+  RawFileReader *rawfile = reinterpret_cast<RawFileReader *>(reader);
+  int64_t readsize = BLI_read(rawfile->filedes, buffer, size);
+
+  if (readsize >= 0) {
+    rawfile->reader.offset += readsize;
+  }
+
+  return readsize;
+}
+
+static off64_t file_seek(FileReader *reader, off64_t offset, int whence)
+{
+  RawFileReader *rawfile = reinterpret_cast<RawFileReader *>(reader);
+  rawfile->reader.offset = BLI_lseek(rawfile->filedes, offset, whence);
+  return rawfile->reader.offset;
+}
+
+static void file_close(FileReader *reader)
+{
+  RawFileReader *rawfile = reinterpret_cast<RawFileReader *>(reader);
+  close(rawfile->filedes);
+  MEM_delete(rawfile);
+}
+
+FileReader *BLI_filereader_new_file(int filedes)
+{
+  RawFileReader *rawfile = MEM_new_zeroed<RawFileReader>(__func__);
+
+  rawfile->filedes = filedes;
+
+  rawfile->reader.read = file_read;
+  rawfile->reader.seek = file_seek;
+  rawfile->reader.close = file_close;
+
+  return reinterpret_cast<FileReader *>(rawfile);
+}
+
+}  // namespace blender

@@ -1,0 +1,47 @@
+/* SPDX-FileCopyrightText: 2021-2022 Intel Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
+
+/* Constant Globals */
+
+#pragma once
+
+#include "kernel/types.h"
+
+#include "kernel/integrator/state.h"
+#include "kernel/util/profiler.h"
+
+#include "util/color.h"
+#include "util/types_image.h"
+
+CCL_NAMESPACE_BEGIN
+
+/* NOTE(@nsirgien): With SYCL we can't declare __constant__ global variable, which will be
+ * accessible from device code, like it has been done for Cycles CUDA backend. So, the backend will
+ * allocate this "constant" memory regions and store pointers to them in oneAPI context class */
+
+struct IntegratorStateGPU;
+struct IntegratorQueueCounter;
+
+struct KernelGlobalsGPU {
+
+#define KERNEL_DATA_ARRAY(type, name) const type *__##name = nullptr;
+#define KERNEL_DATA_ARRAY_WRITABLE(type, name) type *__##name = nullptr;
+#include "kernel/data_arrays.h"
+  IntegratorStateGPU *integrator_state;
+  const KernelData *__data;
+  sycl::kernel_handler kernel_handler;
+};
+
+using KernelGlobals = ccl_global KernelGlobalsGPU *ccl_restrict;
+
+#define kernel_data (*(__data))
+#define kernel_integrator_state (*(integrator_state))
+
+/* data lookup defines */
+
+#define kernel_data_fetch(name, index) __##name[(index)]
+#define kernel_data_write(name, index, value) __##name[(index)] = (value)
+#define kernel_data_array(name) __##name
+
+CCL_NAMESPACE_END

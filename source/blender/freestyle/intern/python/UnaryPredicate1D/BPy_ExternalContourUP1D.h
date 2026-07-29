@@ -1,0 +1,25 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup freestyle
+ */
+
+#pragma once
+
+#include "../BPy_UnaryPredicate1D.h"
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+extern PyTypeObject ExternalContourUP1D_Type;
+
+#define BPy_ExternalContourUP1D_Check(v) \
+  (PyObject_IsInstance((PyObject *)v, (PyObject *)&ExternalContourUP1D_Type))
+
+/*---------------------------Python BPy_ExternalContourUP1D structure definition----------*/
+struct BPy_ExternalContourUP1D {
+  BPy_UnaryPredicate1D py_up1D;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////

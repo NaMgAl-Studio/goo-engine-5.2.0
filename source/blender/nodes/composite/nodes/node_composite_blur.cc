@@ -1,0 +1,492 @@
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "BLI_assert.h"
+#include "BLI_math_vector.hh"
+#include "BLI_math_vector_types.hh"
+
+#include "RNA_types.hh"
+
+#include "UI_interface_layout.hh"
+
+#include "GPU_shader.hh"
+
+#include "COM_algorithm_pad.hh"
+#include "COM_algorithm_parallel_reduction.hh"
+#include "COM_algorithm_recursive_gaussian_blur.hh"
+#include "COM_algorithm_symmetric_separable_blur.hh"
+#include "COM_node_operation.hh"
+#include "COM_symmetric_blur_weights.hh"
+#include "COM_utilities.hh"
+
+#include "node_composite_util.hh"
+
+namespace blender::nodes::node_composite_blur_cc {
+
+static const EnumPropertyItem type_items[] = {
+    {CMP_NODE_BLUR_TYPE_BOX, "FLAT", 0, N_("Flat"), N_("Applies a box blur filter")},
+    {CMP_NODE_BLUR_TYPE_TENT, "TENT", 0, N_("Tent"), N_("Applies a triangle blur filter")},
+    {CMP_NODE_BLUR_TYPE_QUAD, "QUAD", 0, N_("Quadratic"), N_("Applies a quadratic blur filter")},
+    {CMP_NODE_BLUR_TYPE_CUBIC, "CUBIC", 0, N_("Cubic"), N_("Applies a cubic blur filter")},
+    {CMP_NODE_BLUR_TYPE_GAUSS, "GAUSS", 0, N_("Gaussian"), N_("Applies a Gaussian blur")},
+    {CMP_NODE_BLUR_TYPE_FAST_GAUSS,
+     "FAST_GAUSS",
+     0,
+     N_("Fast Gaussian"),
+     N_("Applies a recursive Gaussian blur that can be faster and more accurate in some cases, "
+        "but less accurate in other cases")},
+    {CMP_NODE_BLUR_TYPE_CATROM,
+     "CATROM",
+     0,
+     N_("Catrom"),
+     N_("Applies a cubic Catmull-Rom filter")},
+    {CMP_NODE_BLUR_TYPE_MITCH,
+     "MITCH",
+     0,
+     N_("Mitch"),
+     N_("Applies a cubic Mitchell-Netravali filter")},
+    {0, nullptr, 0, nullptr, nullptr},
+};
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  b.use_custom_socket_order();
+  b.allow_any_socket_order();
+  b.add_input<decl::Color>("Image"_ustr)
+      .default_value({1.0f, 1.0f, 1.0f, 1.0f})
+      .hide_value()
+      .structure_type(StructureType::Dynamic);
+  b.add_output<decl::Color>("Image"_ustr)
+      .structure_type(StructureType::Dynamic)
+      .align_with_previous();
+
+  b.add_input<decl::Vector>("Size"_ustr)
+      .dimensions(2)
+      .default_value({0.0f, 0.0f})
+      .subtype(PROP_PIXEL)
+      .min(0.0f)
+      .structure_type(StructureType::Dynamic);
+  b.add_input<decl::Menu>("Type"_ustr)
+      .default_value(CMP_NODE_BLUR_TYPE_GAUSS)
+      .static_items(type_items)
+      .optional_label();
+  b.add_input<decl::Bool>("Extend Bounds"_ustr).default_value(false);
+  b.add_input<decl::Bool>("Separable"_ustr)
+      .default_value(true)
+      .description(
+          "Use faster approximation by blurring along the horizontal and vertical directions "
+          "independently");
+}
+
+static void node_init(bNodeTree * /*ntree*/, bNode *node)
+{
+  /* Unused, but allocated for forward compatibility. */
+  NodeBlurData *data = MEM_new<NodeBlurData>(__func__);
+  node->storage = data;
+}
+
+static math::FilterKernel blur_type_to_kernel(CMPNodeBlurType type)
+{
+  switch (type) {
+    case CMP_NODE_BLUR_TYPE_BOX:
+      return math::FilterKernel::Box;
+    case CMP_NODE_BLUR_TYPE_TENT:
+      return math::FilterKernel::Tent;
+    case CMP_NODE_BLUR_TYPE_QUAD:
+      return math::FilterKernel::Quad;
+    case CMP_NODE_BLUR_TYPE_CUBIC:
+      return math::FilterKernel::Cubic;
+    case CMP_NODE_BLUR_TYPE_CATROM:
+      return math::FilterKernel::Catrom;
+    case CMP_NODE_BLUR_TYPE_GAUSS:
+      return math::FilterKernel::Gauss;
+    case CMP_NODE_BLUR_TYPE_MITCH:
+      return math::FilterKernel::Mitch;
+    case CMP_NODE_BLUR_TYPE_FAST_GAUSS:
+      return math::FilterKernel::Gauss;
+  }
+
+  BLI_assert_unreachable();
+  return math::FilterKernel::Box;
+}
+
+using namespace blender::compositor;
+
+class BlurOperation : public NodeOperation {
+ public:
+  using NodeOperation::NodeOperation;
+
+  void execute() override
+  {
+    const Result &input = this->get_input("Image");
+    Result &output = this->get_result("Image");
+    if (this->is_identity()) {
+      output.share_data(input);
+      return;
+    }
+
+    const Result &size = this->get_input("Size");
+    if (!size.is_single_value()) {
+      this->execute_variable_size(input, size, output);
+      return;
+    }
+
+    if (this->get_type() == CMP_NODE_BLUR_TYPE_FAST_GAUSS) {
+      recursive_gaussian_blur(
+          this->context(), input, output, this->get_blur_size(), this->get_extend_bounds());
+    }
+    else if (use_separable_filter()) {
+      symmetric_separable_blur(this->context(),
+                               input,
+                               output,
+                               this->get_blur_size(),
+                               blur_type_to_kernel(this->get_type()),
+                               this->get_extend_bounds());
+    }
+    else {
+      this->execute_constant_size(input, output);
+    }
+  }
+
+  void execute_constant_size(const Result &input, Result &output)
+  {
+    if (this->get_extend_bounds()) {
+      Result padded_input = this->context().create_result(input.type());
+
+      const int2 padding_size = int2(math::ceil(this->get_blur_size()));
+
+      pad(this->context(), input, padded_input, padding_size, PaddingMethod::Zero);
+
+      if (this->context().use_gpu()) {
+        this->execute_constant_size_gpu(padded_input, output);
+      }
+      else {
+        this->execute_constant_size_cpu(padded_input, output);
+      }
+
+      padded_input.release();
+    }
+    else {
+      if (this->context().use_gpu()) {
+        this->execute_constant_size_gpu(input, output);
+      }
+      else {
+        this->execute_constant_size_cpu(input, output);
+      }
+    }
+  }
+
+  void execute_constant_size_gpu(const Result &input, Result &output)
+  {
+    gpu::Shader *shader = context().get_shader("compositor_symmetric_blur");
+    GPU_shader_bind(shader);
+
+    input.bind_as_texture(shader, "input_tx");
+
+    const float2 blur_radius = this->get_blur_size();
+
+    const Result &weights = context().cache_manager().symmetric_blur_weights.get(
+        context(), blur_type_to_kernel(this->get_type()), blur_radius);
+    weights.bind_as_texture(shader, "weights_tx");
+
+    const Domain domain = input.domain();
+    output.allocate_texture(domain);
+    output.bind_as_image(shader, "output_img");
+
+    compute_dispatch_threads_at_least(shader, domain.data_size);
+
+    GPU_shader_unbind();
+    output.unbind_as_image();
+    input.unbind_as_texture();
+    weights.unbind_as_texture();
+  }
+
+  void execute_constant_size_cpu(const Result &input, Result &output)
+  {
+    const float2 blur_radius = this->get_blur_size();
+    const Result &weights = this->context().cache_manager().symmetric_blur_weights.get(
+        this->context(), blur_type_to_kernel(this->get_type()), blur_radius);
+
+    const Domain domain = input.domain();
+    output.allocate_texture(domain);
+
+    parallel_for(domain.data_size, [&](const int2 texel) {
+      float4 accumulated_color = float4(0.0f);
+
+      /* First, compute the contribution of the center pixel. */
+      float4 center_color = float4(input.load_pixel_extended<Color>(texel));
+      accumulated_color += center_color * weights.load_pixel<float>(int2(0));
+
+      int2 weights_size = weights.domain().data_size;
+
+      /* Then, compute the contributions of the pixels along the x axis of the filter, noting that
+       * the weights texture only stores the weights for the positive half, but since the filter is
+       * symmetric, the same weight is used for the negative half and we add both of their
+       * contributions. */
+      for (int x = 1; x < weights_size.x; x++) {
+        float weight = weights.load_pixel<float>(int2(x, 0));
+        accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(x, 0))) * weight;
+        accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(-x, 0))) *
+                             weight;
+      }
+
+      /* Then, compute the contributions of the pixels along the y axis of the filter, noting that
+       * the weights texture only stores the weights for the positive half, but since the filter is
+       * symmetric, the same weight is used for the negative half and we add both of their
+       * contributions. */
+      for (int y = 1; y < weights_size.y; y++) {
+        float weight = weights.load_pixel<float>(int2(0, y));
+        accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(0, y))) * weight;
+        accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(0, -y))) *
+                             weight;
+      }
+
+      /* Finally, compute the contributions of the pixels in the four quadrants of the filter,
+       * noting that the weights texture only stores the weights for the upper right quadrant, but
+       * since the filter is symmetric, the same weight is used for the rest of the quadrants and
+       * we add all four of their contributions. */
+      for (int y = 1; y < weights_size.y; y++) {
+        for (int x = 1; x < weights_size.x; x++) {
+          float weight = weights.load_pixel<float>(int2(x, y));
+          accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(x, y))) *
+                               weight;
+          accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(-x, y))) *
+                               weight;
+          accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(x, -y))) *
+                               weight;
+          accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(-x, -y))) *
+                               weight;
+        }
+      }
+
+      output.store_pixel(texel, Color(accumulated_color));
+    });
+  }
+
+  void execute_variable_size(const Result &input, const Result &size, Result &output)
+  {
+    if (this->get_extend_bounds()) {
+      Result padded_input = this->context().create_result(input.type());
+      Result padded_size = this->context().create_result(ResultType::Float2);
+
+      const int2 padding_size = int2(math::ceil(this->compute_maximum_blur_size()));
+
+      pad(this->context(), input, padded_input, padding_size, PaddingMethod::Zero);
+      pad(this->context(), size, padded_size, padding_size, PaddingMethod::Extend);
+
+      if (this->context().use_gpu()) {
+        this->execute_variable_size_gpu(padded_input, padded_size, output);
+      }
+      else {
+        this->execute_variable_size_cpu(padded_input, padded_size, output);
+      }
+
+      padded_input.release();
+      padded_size.release();
+    }
+    else {
+      if (this->context().use_gpu()) {
+        this->execute_variable_size_gpu(input, size, output);
+      }
+      else {
+        this->execute_variable_size_cpu(input, size, output);
+      }
+    }
+  }
+
+  void execute_variable_size_gpu(const Result &input, const Result &size_input, Result &output)
+  {
+    const float2 blur_radius = this->compute_maximum_blur_size();
+    const Result &weights = context().cache_manager().symmetric_blur_weights.get(
+        context(), blur_type_to_kernel(this->get_type()), blur_radius);
+
+    gpu::Shader *shader = context().get_shader("compositor_symmetric_blur_variable_size");
+    GPU_shader_bind(shader);
+
+    input.bind_as_texture(shader, "input_tx");
+    weights.bind_as_texture(shader, "weights_tx");
+    size_input.bind_as_texture(shader, "size_tx");
+
+    const Domain domain = input.domain();
+    output.allocate_texture(domain);
+    output.bind_as_image(shader, "output_img");
+
+    compute_dispatch_threads_at_least(shader, domain.data_size);
+
+    GPU_shader_unbind();
+    output.unbind_as_image();
+    input.unbind_as_texture();
+    weights.unbind_as_texture();
+    size_input.unbind_as_texture();
+  }
+
+  void execute_variable_size_cpu(const Result &input, const Result &size_input, Result &output)
+  {
+    const float2 blur_radius = this->compute_maximum_blur_size();
+    const Result &weights = this->context().cache_manager().symmetric_blur_weights.get(
+        this->context(), blur_type_to_kernel(this->get_type()), blur_radius);
+
+    const Domain domain = input.domain();
+    output.allocate_texture(domain);
+
+    parallel_for(domain.data_size, [&](const int2 texel) {
+      float4 accumulated_color = float4(0.0f);
+      float4 accumulated_weight = float4(0.0f);
+
+      const float2 size = math::max(float2(0.0f), size_input.load_pixel_extended<float2>(texel));
+      int2 radius = int2(math::ceil(size));
+      float2 coordinates_scale = float2(1.0f) / (size + float2(1.0f));
+
+      /* First, compute the contribution of the center pixel. */
+      float4 center_color = float4(input.load_pixel_extended<Color>(texel));
+      float center_weight = weights.load_pixel<float>(int2(0));
+      accumulated_color += center_color * center_weight;
+      accumulated_weight += center_weight;
+
+      /* Then, compute the contributions of the pixels along the x axis of the filter, noting that
+       * the weights texture only stores the weights for the positive half, but since the filter is
+       * symmetric, the same weight is used for the negative half and we add both of their
+       * contributions. */
+      for (int x = 1; x <= radius.x; x++) {
+        float weight_coordinates = (x + 0.5f) * coordinates_scale.x;
+        float weight = weights.sample_bilinear_extended<float>(float2(weight_coordinates, 0.0f));
+        accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(x, 0))) * weight;
+        accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(-x, 0))) *
+                             weight;
+        accumulated_weight += weight * 2.0f;
+      }
+
+      /* Then, compute the contributions of the pixels along the y axis of the filter, noting that
+       * the weights texture only stores the weights for the positive half, but since the filter is
+       * symmetric, the same weight is used for the negative half and we add both of their
+       * contributions. */
+      for (int y = 1; y <= radius.y; y++) {
+        float weight_coordinates = (y + 0.5f) * coordinates_scale.y;
+        float weight = weights.sample_bilinear_extended<float>(float2(0.0f, weight_coordinates));
+        accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(0, y))) * weight;
+        accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(0, -y))) *
+                             weight;
+        accumulated_weight += weight * 2.0f;
+      }
+
+      /* Finally, compute the contributions of the pixels in the four quadrants of the filter,
+       * noting that the weights texture only stores the weights for the upper right quadrant, but
+       * since the filter is symmetric, the same weight is used for the rest of the quadrants and
+       * we add all four of their contributions. */
+      for (int y = 1; y <= radius.y; y++) {
+        for (int x = 1; x <= radius.x; x++) {
+          float2 weight_coordinates = (float2(x, y) + float2(0.5f)) * coordinates_scale;
+          float weight = weights.sample_bilinear_extended<float>(weight_coordinates);
+          accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(x, y))) *
+                               weight;
+          accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(-x, y))) *
+                               weight;
+          accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(x, -y))) *
+                               weight;
+          accumulated_color += float4(input.load_pixel_extended<Color>(texel + int2(-x, -y))) *
+                               weight;
+          accumulated_weight += weight * 4.0f;
+        }
+      }
+
+      accumulated_color = math::safe_divide(accumulated_color, accumulated_weight);
+
+      output.store_pixel(texel, Color(accumulated_color));
+    });
+  }
+
+  float2 compute_maximum_blur_size()
+  {
+    return math::max(float2(0.0f), maximum_float2(this->context(), this->get_input("Size")));
+  }
+
+  bool is_identity()
+  {
+    const Result &input = this->get_input("Image");
+    if (input.is_single_value()) {
+      return true;
+    }
+
+    const Result &size = this->get_input("Size");
+    if (!size.is_single_value()) {
+      return false;
+    }
+
+    if (this->get_blur_size() == float2(0.0)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /* The blur node can operate with different filter types, evaluated on the normalized distance to
+   * the center of the filter. Some of those filters are separable and can be computed as such. If
+   * the Separable input is true, then the filter is always computed as separable even if it is not
+   * in fact separable, in which case, the used filter is a cheaper approximation to the actual
+   * filter. Otherwise, the filter is computed as separable if it is in fact separable and as a
+   * normal 2D filter otherwise. */
+  bool use_separable_filter()
+  {
+    if (this->get_separable()) {
+      return true;
+    }
+
+    /* Only Gaussian filters are separable. The rest is not. */
+    switch (this->get_type()) {
+      case CMP_NODE_BLUR_TYPE_GAUSS:
+      case CMP_NODE_BLUR_TYPE_FAST_GAUSS:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  float2 get_blur_size()
+  {
+    BLI_assert(this->get_input("Size").is_single_value());
+    return math::max(float2(0.0f), this->get_input("Size").get_single_value<float2>());
+  }
+
+  bool get_separable()
+  {
+    return this->get_input("Separable").get_single_value_default<bool>();
+  }
+
+  bool get_extend_bounds()
+  {
+    return this->get_input("Extend Bounds").get_single_value_default<bool>();
+  }
+
+  CMPNodeBlurType get_type()
+  {
+    return CMPNodeBlurType(this->get_input("Type").get_single_value_default<MenuValue>().value);
+  }
+};
+
+static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
+{
+  return new BlurOperation(context, node);
+}
+
+static void node_register()
+{
+  static bke::bNodeType ntype;
+
+  cmp_node_type_base(&ntype, "CompositorNodeBlur"_ustr, CMP_NODE_BLUR);
+  ntype.ui_name = "Blur";
+  ntype.ui_description = "Blur an image, using several blur modes";
+  ntype.enum_name_legacy = "BLUR";
+  ntype.nclass = NODE_CLASS_OP_FILTER;
+  ntype.declare = node_declare;
+  ntype.flag |= NODE_PREVIEW;
+  ntype.initfunc = node_init;
+  bke::node_type_storage(
+      ntype, "NodeBlurData", node_free_standard_storage, node_copy_standard_storage);
+  ntype.get_compositor_operation = get_compositor_operation;
+
+  bke::node_register_type(ntype);
+}
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_composite_blur_cc

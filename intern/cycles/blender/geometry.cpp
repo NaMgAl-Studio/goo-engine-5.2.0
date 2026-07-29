@@ -1,0 +1,312 @@
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
+
+#include "scene/curves.h"
+#include "scene/hair.h"
+#include "scene/light.h"
+#include "scene/mesh.h"
+#include "scene/object.h"
+#include "scene/pointcloud.h"
+#include "scene/volume.h"
+
+#include "blender/sync.h"
+#include "blender/util.h"
+
+#include "util/task.h"
+
+#include "BKE_material.hh"
+#include "DNA_light_types.h"
+#include "DNA_material_types.h"
+
+CCL_NAMESPACE_BEGIN
+
+static Geometry::Type determine_geom_type(BObjectInfo &b_ob_info, bool use_particle_hair)
+{
+  if (GS(b_ob_info.object_data->name) == blender::ID_LA) {
+    blender::Light &b_light = *blender::id_cast<blender::Light *>(b_ob_info.object_data);
+    switch (b_light.type) {
+      case blender::LA_LOCAL:
+        return Geometry::POINT_LIGHT;
+      case blender::LA_SPOT:
+        return Geometry::SPOT_LIGHT;
+      case blender::LA_SUN:
+        return Geometry::SUN_LIGHT;
+      case blender::LA_AREA:
+        return Geometry::AREA_LIGHT;
+      default:
+        /* Should be handled in `sync_background_light()`. */
+        assert(false);
+        return Geometry::BACKGROUND_LIGHT;
+    }
+  }
+
+  if (GS(b_ob_info.object_data->name) == blender::ID_CV || use_particle_hair) {
+    return Geometry::HAIR;
+  }
+
+  if (GS(b_ob_info.object_data->name) == blender::ID_PT) {
+    return Geometry::POINTCLOUD;
+  }
+
+  if (GS(b_ob_info.object_data->name) == blender::ID_VO ||
+      (b_ob_info.object_data ==
+           object_get_data(*b_ob_info.real_object, b_ob_info.use_adaptive_subdivision) &&
+       object_fluid_gas_domain_find(*b_ob_info.real_object)))
+  {
+    return Geometry::VOLUME;
+  }
+
+  return Geometry::MESH;
+}
+
+array<Node *> BlenderSync::find_used_shaders(blender::Object &b_ob)
+{
+  array<Node *> used_shaders;
+
+  if (b_ob.type == blender::OB_LAMP) {
+    find_shader(static_cast<blender::ID *>(b_ob.data), used_shaders, scene->default_light);
+    return used_shaders;
+  }
+
+  blender::Material *material_override = view_layer.material_override;
+  Shader *default_shader = (b_ob.type == blender::OB_VOLUME) ? scene->default_volume :
+                                                               scene->default_surface;
+
+  for (const int i : blender::IndexRange(BKE_object_material_count_eval(&b_ob))) {
+    if (material_override) {
+      find_shader(&material_override->id, used_shaders, default_shader);
+    }
+    else {
+      blender::Material *b_material = BKE_object_material_get(&b_ob, i + 1);
+      find_shader(reinterpret_cast<blender::ID *>(b_material), used_shaders, default_shader);
+    }
+  }
+
+  if (used_shaders.size() == 0) {
+    if (material_override) {
+      find_shader(&material_override->id, used_shaders, default_shader);
+    }
+    else {
+      used_shaders.push_back_slow(default_shader);
+    }
+  }
+
+  return used_shaders;
+}
+
+Geometry *BlenderSync::sync_geometry(BObjectInfo &b_ob_info,
+                                     bool object_updated,
+                                     bool use_particle_hair,
+                                     TaskPool *task_pool)
+{
+  /* Test if we can instance or if the object is modified. */
+  const Geometry::Type geom_type = determine_geom_type(b_ob_info, use_particle_hair);
+  blender::ID *const b_key_id = (b_ob_info.is_real_object_data() &&
+                                 BKE_object_is_modified(*b_ob_info.real_object)) ?
+                                    &b_ob_info.real_object->id :
+                                    b_ob_info.object_data;
+  const GeometryKey key(b_key_id, geom_type);
+
+  /* Find shader indices. */
+  array<Node *> used_shaders = find_used_shaders(*b_ob_info.iter_object);
+
+  /* Ensure we only sync instanced geometry once. */
+  Geometry *geom = geometry_map.find(key);
+  if (geom) {
+    if (geometry_synced.contains(geom)) {
+      return geom;
+    }
+  }
+
+  /* Test if we need to sync. */
+  bool sync = true;
+  if (geom == nullptr) {
+    /* Add new geometry if it did not exist yet. */
+    if (geom_type == Geometry::POINT_LIGHT) {
+      geom = scene->create_light_node<PointLight>();
+    }
+    else if (geom_type == Geometry::SPOT_LIGHT) {
+      geom = scene->create_light_node<SpotLight>();
+    }
+    else if (geom_type == Geometry::SUN_LIGHT) {
+      geom = scene->create_light_node<SunLight>();
+    }
+    else if (geom_type == Geometry::AREA_LIGHT) {
+      geom = scene->create_light_node<AreaLight>();
+    }
+    else if (geom_type == Geometry::HAIR) {
+      geom = scene->create_node<Hair>();
+    }
+    else if (geom_type == Geometry::VOLUME) {
+      geom = scene->create_node<Volume>();
+    }
+    else if (geom_type == Geometry::POINTCLOUD) {
+      geom = scene->create_node<PointCloud>();
+    }
+    else {
+      assert(geom_type == Geometry::MESH);
+      geom = scene->create_node<Mesh>();
+    }
+    geometry_map.add(key, geom);
+  }
+  else {
+    /* Test if we need to update existing geometry. */
+    sync = geometry_map.update(geom, b_key_id);
+  }
+
+  if (!sync) {
+    /* If transform was applied to geometry, need full update. */
+    if (object_updated && geom->transform_applied) {
+      ;
+    }
+    /* Test if shaders changed, these can be object level so geometry
+     * does not get tagged for recalc. */
+    else if (geom->get_used_shaders() != used_shaders) {
+      ;
+    }
+    else {
+      /* Even if not tagged for recalc, we may need to sync anyway
+       * because the shader needs different geometry attributes. */
+      bool attribute_recalc = false;
+
+      for (Node *node : geom->get_used_shaders()) {
+        Shader *shader = static_cast<Shader *>(node);
+        if (shader->need_update_geometry()) {
+          attribute_recalc = true;
+        }
+      }
+
+      if (!attribute_recalc) {
+        return geom;
+      }
+    }
+  }
+
+  geometry_synced.insert(geom);
+
+  geom->name = ustring(BKE_id_name(*b_ob_info.object_data));
+
+  /* Store the shaders immediately for the object attribute code. */
+  geom->set_used_shaders(used_shaders);
+
+  auto sync_func = [this, geom_type, b_ob_info, geom]() mutable {
+    if (progress.get_cancel()) {
+      return;
+    }
+
+    progress.set_sync_status("Synchronizing object", BKE_id_name(b_ob_info.real_object->id));
+
+    if (geom->is_light()) {
+      Light *light = static_cast<Light *>(geom);
+      sync_light(b_ob_info, light);
+    }
+    else if (geom_type == Geometry::HAIR) {
+      Hair *hair = static_cast<Hair *>(geom);
+      sync_hair(b_ob_info, hair);
+    }
+    else if (geom_type == Geometry::VOLUME) {
+      Volume *volume = static_cast<Volume *>(geom);
+      sync_volume(b_ob_info, volume);
+    }
+    else if (geom_type == Geometry::POINTCLOUD) {
+      PointCloud *pointcloud = static_cast<PointCloud *>(geom);
+      sync_pointcloud(pointcloud, b_ob_info);
+    }
+    else {
+      Mesh *mesh = static_cast<Mesh *>(geom);
+      sync_mesh(b_ob_info, mesh);
+    }
+  };
+
+  /* Defer the actual geometry sync to the task_pool for multithreading */
+  if (task_pool) {
+    task_pool->push(sync_func);
+  }
+  else {
+    sync_func();
+  }
+
+  return geom;
+}
+
+void BlenderSync::sync_geometry_motion(BObjectInfo &b_ob_info,
+                                       Object *object,
+                                       const float motion_time,
+                                       bool use_particle_hair,
+                                       TaskPool *task_pool)
+{
+  /* Ensure we only sync instanced geometry once. */
+  Geometry *geom = object->get_geometry();
+
+  if (geometry_motion_synced.contains(geom) || geometry_motion_attribute_synced.contains(geom)) {
+    return;
+  }
+
+  geometry_motion_synced.insert(geom);
+
+  /* Ensure we only motion sync geometry that also had geometry synced, to avoid
+   * unnecessary work and to ensure that its attributes were clear. */
+  if (!geometry_synced.contains(geom)) {
+    return;
+  }
+
+  /* Nothing to do for lights. */
+  if (geom->is_light()) {
+    return;
+  }
+
+  /* If the geometry already has motion blur from a velocity attribute, don't
+   * set the geometry motion steps again.
+   *
+   * Otherwise, setting geometry motion steps is done here to avoid concurrency issues.
+   * - It can't be done earlier in sync_object_motion_init because sync_geometry
+   *   runs in parallel, and has_motion_blur would check attributes while
+   *   sync_geometry is potentially creating the attribute from velocity.
+   * - It needs to happen before the parallel motion sync that happens right after
+   *   this, because that can create the attribute from neighboring frames.
+   * Copying the motion steps from the object here solves this. */
+  if (!geom->has_motion_blur()) {
+    geom->set_motion_steps(object->get_motion().size());
+  }
+
+  /* Find time matching motion step required by geometry. */
+  const int motion_step = geom->motion_step(motion_time);
+  if (motion_step < 0) {
+    return;
+  }
+
+  auto sync_func = [this, b_ob_info, use_particle_hair, motion_step, geom]() mutable {
+    if (progress.get_cancel()) {
+      return;
+    }
+
+    if (GS(b_ob_info.object_data->name) == blender::ID_CV || use_particle_hair) {
+      Hair *hair = static_cast<Hair *>(geom);
+      sync_hair_motion(b_ob_info, hair, motion_step);
+    }
+    else if (GS(b_ob_info.object_data->name) == blender::ID_VO ||
+             object_fluid_gas_domain_find(*b_ob_info.real_object))
+    {
+      /* No volume motion blur support yet. */
+    }
+    else if (GS(b_ob_info.object_data->name) == blender::ID_PT) {
+      PointCloud *pointcloud = static_cast<PointCloud *>(geom);
+      sync_pointcloud_motion(pointcloud, b_ob_info, motion_step);
+    }
+    else {
+      Mesh *mesh = static_cast<Mesh *>(geom);
+      sync_mesh_motion(b_ob_info, mesh, motion_step);
+    }
+  };
+
+  /* Defer the actual geometry sync to the task_pool for multithreading */
+  if (task_pool) {
+    task_pool->push(sync_func);
+  }
+  else {
+    sync_func();
+  }
+}
+
+CCL_NAMESPACE_END

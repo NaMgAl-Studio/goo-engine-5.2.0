@@ -1,0 +1,152 @@
+/* SPDX-FileCopyrightText: 2006 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup bke
+ * \brief Generic geometry attributes built on CustomData.
+ */
+
+#pragma once
+
+#include <optional>
+#include <string>
+
+#include "BLI_enum_flags.hh"
+#include "BLI_string_ref.hh"
+#include "BLI_sys_types.h"
+
+#include "DNA_customdata_types.h"
+
+namespace blender {
+
+namespace bke {
+enum class AttrDomain : int8_t;
+class AttributeAccessor;
+class AttributeStorage;
+class MutableAttributeAccessor;
+}  // namespace bke
+struct BMesh;
+struct CustomData;
+struct CustomDataLayer;
+struct ID;
+struct ReportList;
+struct Mesh;
+struct PointCloud;
+struct Curves;
+struct GreasePencil;
+struct GreasePencilDrawing;
+
+enum AttrDomainMask : uint8_t {
+  ATTR_DOMAIN_MASK_POINT = (1 << 0),
+  ATTR_DOMAIN_MASK_EDGE = (1 << 1),
+  ATTR_DOMAIN_MASK_FACE = (1 << 2),
+  ATTR_DOMAIN_MASK_CORNER = (1 << 3),
+  ATTR_DOMAIN_MASK_CURVE = (1 << 4),
+  ATTR_DOMAIN_MASK_GREASE_PENCIL_LAYER = (1 << 6),
+  ATTR_DOMAIN_MASK_ALL = (1 << 7) - 1
+};
+ENUM_OPERATORS(AttrDomainMask);
+
+enum class AttributeOwnerType {
+  Mesh,
+  PointCloud,
+  Curves,
+  GreasePencil,
+  GreasePencilDrawing,
+};
+
+class AttributeOwner {
+  AttributeOwnerType type_;
+  void *ptr_ = nullptr;
+
+ public:
+  AttributeOwner() {};
+  AttributeOwner(AttributeOwnerType type, void *ptr) : type_(type), ptr_(ptr) {};
+
+  static AttributeOwner from_id(ID *id);
+
+  AttributeOwnerType type() const;
+  bool is_valid() const;
+
+  bke::AttributeStorage *get_storage() const;
+  std::optional<bke::MutableAttributeAccessor> get_accessor() const;
+
+  Mesh *get_mesh() const;
+  PointCloud *get_pointcloud() const;
+  Curves *get_curves() const;
+  GreasePencil *get_grease_pencil() const;
+  GreasePencilDrawing *get_grease_pencil_drawing() const;
+};
+
+#define ATTR_DOMAIN_AS_MASK(domain) ((AttrDomainMask)((1 << int(domain))))
+
+/* All domains that support color attributes. */
+#define ATTR_DOMAIN_MASK_COLOR \
+  ((AttrDomainMask)((ATTR_DOMAIN_MASK_POINT | ATTR_DOMAIN_MASK_CORNER)))
+
+/* Attributes. */
+
+/**
+ * Create a new attribute layer.
+ */
+struct CustomDataLayer *BKE_attribute_new(Mesh &mesh,
+                                          BMesh &bm,
+                                          StringRef name,
+                                          eCustomDataType type,
+                                          bke::AttrDomain domain,
+                                          struct ReportList *reports);
+bool BKE_attribute_remove(AttributeOwner &owner, StringRef name, struct ReportList *reports);
+
+bke::AttrDomain BKE_attribute_domain(const Mesh &mesh,
+                                     const BMesh &bm,
+                                     const struct CustomDataLayer *layer);
+int BKE_attribute_domain_size(const AttributeOwner &owner, int domain);
+bool BKE_attribute_required(const AttributeOwner &owner, StringRef name);
+bool BKE_attribute_rename(AttributeOwner &owner,
+                          StringRef old_name,
+                          StringRef new_name,
+                          struct ReportList *reports);
+
+int BKE_attributes_length(const AttributeOwner &owner,
+                          AttrDomainMask domain_mask,
+                          eCustomDataMask mask,
+                          bool include_anonymous = true);
+
+std::optional<StringRefNull> BKE_attributes_active_name_get(AttributeOwner &owner);
+void BKE_attributes_active_set(AttributeOwner &owner, StringRef name);
+void BKE_attributes_active_clear(AttributeOwner &owner);
+int *BKE_attributes_active_index_p(AttributeOwner &owner);
+/**
+ * After changing the active attribute index (e.g after removing an attribute) make sure that index
+ * is valid (is pointing to a non-internal attribute), f it is not, then set it to the first
+ * non-internal attribute.
+ */
+void BKE_attributes_active_index_validate(AttributeOwner &owner);
+
+std::optional<StringRef> BKE_attribute_from_index(AttributeOwner &owner,
+                                                  int lookup_index,
+                                                  AttrDomainMask domain_mask,
+                                                  eCustomDataMask layer_mask,
+                                                  bool include_anonymous = true);
+
+/** Layer is allowed to be nullptr; if so -1 (layer not found) will be returned. */
+int BKE_attribute_to_index(const AttributeOwner &owner,
+                           const StringRef name,
+                           AttrDomainMask domain_mask,
+                           eCustomDataMask layer_mask,
+                           bool include_anonymous = true);
+
+std::optional<StringRef> BKE_id_attributes_active_color_name(const struct ID *id);
+std::optional<StringRef> BKE_id_attributes_default_color_name(const struct ID *id);
+void BKE_id_attributes_active_color_set(struct ID *id, std::optional<StringRef> name);
+void BKE_id_attributes_active_color_clear(struct ID *id);
+void BKE_id_attributes_default_color_set(struct ID *id, std::optional<StringRef> name);
+
+bool BKE_id_attributes_color_find(const struct ID *id, StringRef name);
+
+std::string BKE_attribute_calc_unique_name(const AttributeOwner &owner, StringRef name);
+
+[[nodiscard]] StringRef BKE_uv_map_pin_name_get(StringRef uv_map_name, char *buffer);
+
+}  // namespace blender

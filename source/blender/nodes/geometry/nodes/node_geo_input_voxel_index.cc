@@ -1,0 +1,100 @@
+/* SPDX-FileCopyrightText: 2025 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "node_geometry_util.hh"
+
+#include "BKE_volume_grid_fields.hh"
+
+namespace blender::nodes::node_geo_input_voxel_index_cc {
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  b.use_custom_socket_order();
+  b.allow_any_socket_order();
+  b.add_output<decl::Int>("X"_ustr)
+      .structure_type(StructureType::Field)
+      .description(
+          "X coordinate of the voxel in index space, or the minimum X coordinate of a tile");
+  b.add_output<decl::Int>("Y"_ustr)
+      .structure_type(StructureType::Field)
+      .description(
+          "Y coordinate of the voxel in index space, or the minimum Y coordinate of a tile");
+  b.add_output<decl::Int>("Z"_ustr)
+      .structure_type(StructureType::Field)
+      .description(
+          "Z coordinate of the voxel in index space, or the minimum Z coordinate of a tile");
+  auto &panel = b.add_panel("Tile"_ustr).default_closed(true);
+  panel.add_output<decl::Bool>("Is Tile"_ustr)
+      .structure_type(StructureType::Field)
+      .description(
+          "True if the field is evaluated on a tile, i.e. on multiple voxels at once. If this is "
+          "false, the extent is always 1");
+  panel.add_output<decl::Int>("Extent X"_ustr)
+      .structure_type(StructureType::Field)
+      .description(
+          "Number of voxels in the X direction of the tile, or 1 if the field is evaluated on a "
+          "voxel");
+  panel.add_output<decl::Int>("Extent Y"_ustr)
+      .structure_type(StructureType::Field)
+      .description(
+          "Number of voxels in the Y direction of the tile, or 1 if the field is evaluated on a "
+          "voxel");
+  panel.add_output<decl::Int>("Extent Z"_ustr)
+      .structure_type(StructureType::Field)
+      .description(
+          "Number of voxels in the Z direction of the tile, or 1 if the field is evaluated on a "
+          "voxel");
+}
+
+static void node_geo_exec(GeoNodeExecParams params)
+{
+#ifdef WITH_OPENVDB
+  if (params.output_is_required("X"_ustr)) {
+    params.set_output("X"_ustr,
+                      fn::GField::from_input<bke::VoxelCoordinateFieldInput>(math::Axis::X));
+  }
+  if (params.output_is_required("Y"_ustr)) {
+    params.set_output("Y"_ustr,
+                      fn::GField::from_input<bke::VoxelCoordinateFieldInput>(math::Axis::Y));
+  }
+  if (params.output_is_required("Z"_ustr)) {
+    params.set_output("Z"_ustr,
+                      fn::GField::from_input<bke::VoxelCoordinateFieldInput>(math::Axis::Z));
+  }
+  if (params.output_is_required("Is Tile"_ustr)) {
+    params.set_output("Is Tile"_ustr, fn::GField::from_input<bke::IsTileFieldInput>());
+  }
+  if (params.output_is_required("Extent X"_ustr)) {
+    params.set_output("Extent X"_ustr,
+                      fn::GField::from_input<bke::VoxelExtentFieldInput>(math::Axis::X));
+  }
+  if (params.output_is_required("Extent Y"_ustr)) {
+    params.set_output("Extent Y"_ustr,
+                      fn::GField::from_input<bke::VoxelExtentFieldInput>(math::Axis::Y));
+  }
+  if (params.output_is_required("Extent Z"_ustr)) {
+    params.set_output("Extent Z"_ustr,
+                      fn::GField::from_input<bke::VoxelExtentFieldInput>(math::Axis::Z));
+  }
+#else
+  node_geo_exec_with_missing_openvdb(params);
+#endif
+}
+
+static void node_register()
+{
+  static bke::bNodeType ntype;
+
+  geo_node_type_base(&ntype, "GeometryNodeInputVoxelIndex"_ustr);
+  ntype.ui_name = "Voxel Index";
+  ntype.ui_description =
+      "Retrieve the integer coordinates of the voxel that the field is evaluated on";
+  ntype.nclass = NODE_CLASS_INPUT;
+  ntype.geometry_node_execute = node_geo_exec;
+  ntype.declare = node_declare;
+  bke::node_register_type(ntype);
+}
+NOD_REGISTER_NODE(node_register)
+
+}  // namespace blender::nodes::node_geo_input_voxel_index_cc

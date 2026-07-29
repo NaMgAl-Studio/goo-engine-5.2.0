@@ -1,0 +1,361 @@
+/* SPDX-FileCopyrightText: 2024 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "BLI_bounds.hh"
+
+#include "BKE_grease_pencil.hh"
+#include "BKE_scene.hh"
+
+#include "BLI_math_color.h"
+
+#include "DEG_depsgraph_query.hh"
+
+#include "DNA_grease_pencil_types.h"
+#include "DNA_scene_types.h"
+
+#include "BKE_curves.hh"
+#include "GEO_resample_curves.hh"
+
+#include "grease_pencil_io.hh"
+#include "grease_pencil_io_intern.hh"
+
+#include "hpdf.h"
+
+#include <iostream>
+
+/** \file
+ * \ingroup bgrease_pencil
+ */
+
+namespace blender::io::grease_pencil {
+
+class PDFExporter : public GreasePencilExporter {
+ public:
+  using GreasePencilExporter::GreasePencilExporter;
+
+  HPDF_Doc pdf_;
+  HPDF_Page page_;
+
+  bool export_scene(Scene &scene, StringRefNull filepath);
+  void export_grease_pencil_objects(int frame_number);
+  void export_grease_pencil_layer(const Object &object,
+                                  const bke::greasepencil::Layer &layer,
+                                  const bke::greasepencil::Drawing &drawing);
+
+  bool create_document();
+  bool add_page(Scene &scene);
+
+  void write_path(const float4x4 &transform,
+                  Span<float3> positions,
+                  const OffsetIndices<int> points_by_curve,
+                  const Span<int> shape,
+                  const VArray<bool> &cyclic,
+                  const VArray<int8_t> &types,
+                  const ColorGeometry4f &color,
+                  const float opacity,
+                  std::optional<float> width,
+                  std::optional<float> miter_limit_angle);
+  bool write_to_file(StringRefNull filepath);
+};
+
+bool PDFExporter::export_scene(Scene &scene, StringRefNull filepath)
+{
+  bool result = false;
+  Object *ob_eval = DEG_get_evaluated(context_.depsgraph, params_.object);
+
+  if (!create_document()) {
+    return false;
+  }
+
+  switch (params_.frame_mode) {
+    case ExportParams::FrameMode::Active: {
+      const int frame_number = scene.r.cfra;
+
+      this->prepare_render_params(scene, frame_number);
+      this->add_page(scene);
+      this->export_grease_pencil_objects(frame_number);
+      result = this->write_to_file(filepath);
+      break;
+    }
+    case ExportParams::FrameMode::Selected: {
+      case ExportParams::FrameMode::Scene:
+        const bool only_selected = (params_.frame_mode == ExportParams::FrameMode::Selected);
+        if (only_selected && (!ob_eval || ob_eval->type != OB_GREASE_PENCIL)) {
+          /* For exporting "Selected Frames", the active object is required to be a grease pencil
+           * object, from which we will read selected frames from. */
+          break;
+        }
+        const int orig_frame = scene.r.cfra;
+        for (int frame_number = scene.r.sfra; frame_number <= scene.r.efra; frame_number++) {
+          if (only_selected) {
+            if (!ob_eval) {
+              break;
+            }
+            GreasePencil &grease_pencil = *id_cast<GreasePencil *>(ob_eval->data);
+            if (!this->is_selected_frame(grease_pencil, frame_number)) {
+              continue;
+            }
+          }
+
+          scene.r.cfra = frame_number;
+          BKE_scene_graph_update_for_newframe(context_.depsgraph);
+
+          this->prepare_render_params(scene, frame_number);
+          this->add_page(scene);
+          this->export_grease_pencil_objects(frame_number);
+        }
+
+        result = this->write_to_file(filepath);
+
+        /* Back to original frame. */
+        scene.r.cfra = orig_frame;
+        BKE_scene_camera_switch_update(&scene);
+        BKE_scene_graph_update_for_newframe(context_.depsgraph);
+        break;
+    }
+    default:
+      break;
+  }
+
+  return result;
+}
+
+void PDFExporter::export_grease_pencil_objects(const int frame_number)
+{
+  using bke::greasepencil::Drawing;
+
+  Vector<ObjectInfo> objects = retrieve_objects();
+
+  for (const ObjectInfo &info : objects) {
+    const Object *ob = info.object;
+
+    /* Use evaluated version to get strokes with modifiers. */
+    const Object *ob_eval = DEG_get_evaluated(context_.depsgraph, ob);
+    BLI_assert(ob_eval->type == OB_GREASE_PENCIL);
+    const GreasePencil *grease_pencil_eval = id_cast<const GreasePencil *>(ob_eval->data);
+
+    for (const bke::greasepencil::Layer *layer : grease_pencil_eval->layers()) {
+      if (!layer->is_visible()) {
+        continue;
+      }
+      const Drawing *drawing = grease_pencil_eval->get_drawing_at(*layer, frame_number);
+      if (drawing == nullptr) {
+        continue;
+      }
+
+      const bke::CurvesGeometry &curves = drawing->strokes();
+      if (curves.has_curve_with_type(
+              {CURVE_TYPE_CATMULL_ROM, CURVE_TYPE_BEZIER, CURVE_TYPE_NURBS}))
+      {
+        IndexMaskMemory memory;
+        const IndexMask non_poly_selection = curves.indices_for_curve_type(CURVE_TYPE_POLY, memory)
+                                                 .complement(curves.curves_range(), memory);
+        Drawing export_drawing;
+        export_drawing.strokes_for_write() = geometry::resample_to_evaluated(curves,
+                                                                             non_poly_selection);
+        export_drawing.tag_topology_changed();
+        export_grease_pencil_layer(*ob_eval, *layer, export_drawing);
+      }
+      else {
+        export_grease_pencil_layer(*ob_eval, *layer, *drawing);
+      }
+    }
+  }
+}
+
+void PDFExporter::export_grease_pencil_layer(const Object &object,
+                                             const bke::greasepencil::Layer &layer,
+                                             const bke::greasepencil::Drawing &drawing)
+{
+  using bke::greasepencil::Drawing;
+
+  const float4x4 layer_to_world = layer.to_world_space(object);
+
+  auto write_shape = [&](const Span<float3> positions,
+                         const Span<float3> /*positions_left*/,
+                         const Span<float3> /*positions_right*/,
+                         const OffsetIndices<int> points_by_curve,
+                         const Span<int> shape,
+                         const VArray<bool> &cyclic,
+                         const VArray<int8_t> &types,
+                         const ColorGeometry4f &color,
+                         const float opacity,
+                         const std::optional<float> width,
+                         const std::optional<float> miter_limit_angle,
+                         const bool /*round_cap*/,
+                         const bool /*is_outline*/) {
+    write_path(layer_to_world,
+               positions,
+               points_by_curve,
+               shape,
+               cyclic,
+               types,
+               color,
+               opacity,
+               width,
+               miter_limit_angle);
+  };
+
+  foreach_shape_in_layer(object, layer, drawing, write_shape);
+}
+
+bool PDFExporter::create_document()
+{
+  auto hpdf_error_handler = [](HPDF_STATUS error_no, HPDF_STATUS detail_no, void * /*user_data*/) {
+    printf("ERROR: error_no=%04X, detail_no=%u\n", (HPDF_UINT)error_no, (HPDF_UINT)detail_no);
+  };
+
+  pdf_ = HPDF_New(hpdf_error_handler, nullptr);
+  if (!pdf_) {
+    std::cout << "error: cannot create PdfDoc object\n";
+    return false;
+  }
+  return true;
+}
+
+constexpr double meter_to_inches_factor = 1000.0 / 25.4;
+constexpr double default_pdf_ppi = 72.0;
+
+bool PDFExporter::add_page(Scene &scene)
+{
+  page_ = HPDF_AddPage(pdf_);
+  if (!page_) {
+    std::cout << "error: cannot create PdfPage\n";
+    return false;
+  }
+
+  /* Pixels per meter. */
+  double2 ppm;
+  BKE_scene_ppm_get(&scene.r, ppm);
+
+  /* Covert pixels per meter to pixels per inch. */
+  double2 ppi = ppm / meter_to_inches_factor;
+
+  double2 scale_factor = default_pdf_ppi / ppi;
+  HPDF_Page_Concat(page_, scale_factor.x, 0.0f, 0.0f, scale_factor.y, 0.0f, 0.0f);
+
+  if (camera_persmat_) {
+    HPDF_Page_SetWidth(page_, camera_rect_.size().x * scale_factor.x);
+    HPDF_Page_SetHeight(page_, camera_rect_.size().y * scale_factor.y);
+  }
+  else {
+    HPDF_Page_SetWidth(page_, screen_rect_.size().x * scale_factor.x);
+    HPDF_Page_SetHeight(page_, screen_rect_.size().y * scale_factor.y);
+  }
+
+  return true;
+}
+
+void PDFExporter::write_path(const float4x4 &transform,
+                             const Span<float3> positions,
+                             const OffsetIndices<int> points_by_curve,
+                             const Span<int> shape,
+                             const VArray<bool> &cyclic,
+                             const VArray<int8_t> & /*types*/,
+                             const ColorGeometry4f &color,
+                             const float opacity,
+                             std::optional<float> width,
+                             std::optional<float> miter_limit_angle)
+{
+  if (miter_limit_angle) {
+    if (*miter_limit_angle <= GP_STROKE_MITER_ANGLE_ROUND) {
+      HPDF_Page_SetLineJoin(page_, HPDF_ROUND_JOIN);
+    }
+    else if (*miter_limit_angle >= GP_STROKE_MITER_ANGLE_BEVEL) {
+      HPDF_Page_SetLineJoin(page_, HPDF_BEVEL_JOIN);
+    }
+    else {
+      /* Convert the Miter angle to the Miter limit. */
+      const float miter_limit = 1.0f / math::sin(*miter_limit_angle / 2.0f);
+
+      HPDF_Page_SetLineJoin(page_, HPDF_MITER_JOIN);
+      HPDF_Page_SetMiterLimit(page_, miter_limit);
+    }
+  }
+
+  if (width) {
+    HPDF_Page_SetLineWidth(page_, std::max(*width, 1.0f));
+  }
+
+  const float total_opacity = color.a * opacity;
+
+  HPDF_Page_GSave(page_);
+  HPDF_ExtGState gstate = (total_opacity < 1.0f) ? HPDF_CreateExtGState(pdf_) : nullptr;
+
+  ColorGeometry4f srgb;
+  linearrgb_to_srgb_v3_v3(srgb, color);
+  if (width) {
+    HPDF_Page_SetRGBFill(page_, srgb.r, srgb.g, srgb.b);
+    HPDF_Page_SetRGBStroke(page_, srgb.r, srgb.g, srgb.b);
+    if (gstate) {
+      HPDF_ExtGState_SetAlphaFill(gstate, std::clamp(total_opacity, 0.0f, 1.0f));
+      HPDF_ExtGState_SetAlphaStroke(gstate, std::clamp(total_opacity, 0.0f, 1.0f));
+    }
+  }
+  else {
+    HPDF_Page_SetRGBFill(page_, srgb.r, srgb.g, srgb.b);
+    if (gstate) {
+      HPDF_ExtGState_SetAlphaFill(gstate, std::clamp(total_opacity, 0.0f, 1.0f));
+    }
+  }
+  if (gstate) {
+    HPDF_Page_SetExtGState(page_, gstate);
+  }
+
+  for (const int curve_i : shape) {
+    const IndexRange points = points_by_curve[curve_i];
+    const Span<float3> curve_pos = positions.slice(points);
+
+    for (const int i : curve_pos.index_range()) {
+      const float2 screen_co = this->project_to_screen(transform, curve_pos[i]);
+      if (i == 0) {
+        HPDF_Page_MoveTo(page_, screen_co.x, screen_co.y);
+      }
+      else {
+        HPDF_Page_LineTo(page_, screen_co.x, screen_co.y);
+      }
+    }
+    if (cyclic[curve_i]) {
+      HPDF_Page_ClosePath(page_);
+    }
+  }
+
+  if (width) {
+    HPDF_Page_Stroke(page_);
+  }
+  else {
+    HPDF_Page_Fill(page_);
+  }
+
+  HPDF_Page_GRestore(page_);
+}
+
+bool PDFExporter::write_to_file(StringRefNull filepath)
+{
+  /* Support unicode character paths on Windows. */
+  HPDF_STATUS result = 0;
+
+  /* TODO: It looks `libharu` does not support unicode. */
+#if 0 /* `ifdef WIN32` */
+  wchar_t *filepath_16 = alloc_utf16_from_8(filepath.c_str(), 0);
+  std::wstring wstr(filepath_16);
+  result = HPDF_SaveToFile(pdf_, wstr.c_str());
+  free(filepath_16);
+#else
+  result = HPDF_SaveToFile(pdf_, filepath.c_str());
+#endif
+
+  return (result == 0) ? true : false;
+}
+
+bool export_pdf(const IOContext &context,
+                const ExportParams &params,
+                Scene &scene,
+                StringRefNull filepath)
+{
+  PDFExporter exporter(context, params);
+  return exporter.export_scene(scene, filepath);
+}
+
+}  // namespace blender::io::grease_pencil

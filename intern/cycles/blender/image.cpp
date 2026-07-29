@@ -1,0 +1,262 @@
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
+
+#include <algorithm>
+
+#include "DNA_image_types.h"
+
+#include "IMB_imbuf_types.hh"
+
+#include "BKE_image.hh"
+
+#include "blender/image.h"
+#include "blender/session.h"
+
+#include "util/half.h"
+#include "util/types_float4.h"
+
+CCL_NAMESPACE_BEGIN
+
+/* Packed Images */
+
+BlenderImageLoader::BlenderImageLoader(blender::Image *b_image,
+                                       blender::ImageUser *b_iuser,
+                                       const int frame,
+                                       const int tile_number,
+                                       const bool is_preview_render)
+    : b_image(b_image),
+      b_iuser(*b_iuser),
+      /* Don't free cache for preview render to avoid race condition from #93560, to be fixed
+       * properly later as we are close to release. */
+      free_cache(!is_preview_render && !BKE_image_has_loaded_ibuf(b_image)),
+      cached_update_count(b_image->runtime->update_count)
+{
+  this->b_iuser.framenr = frame;
+  if (b_image->source != blender::IMA_SRC_TILED) {
+    /* Image sequences currently not supported by this image loader. */
+    assert(b_image->source != blender::IMA_SRC_SEQUENCE);
+  }
+  else {
+    /* Set UDIM tile, each can have different resolution. */
+    this->b_iuser.tile = tile_number;
+  }
+}
+
+bool BlenderImageLoader::load_metadata(ImageMetaData &metadata,
+                                       const ImageLoaderParams & /*params*/,
+                                       Progress & /*progress*/)
+{
+  bool is_float = false;
+  bool is_data = false;
+
+  {
+    void *lock;
+    blender::ImBuf *ibuf = BKE_image_acquire_ibuf(b_image, &b_iuser, &lock);
+    if (ibuf) {
+      is_float = ibuf->float_data() != nullptr;
+      is_data = ibuf->colorspace_is_data();
+      metadata.width = ibuf->x;
+      metadata.height = ibuf->y;
+      metadata.channels = (is_float) ? ibuf->channels : 4;
+      metadata.is_unassociated_alpha = !is_float;
+    }
+    else {
+      metadata.width = 0;
+      metadata.height = 0;
+      metadata.channels = 0;
+    }
+    BKE_image_release_ibuf(b_image, ibuf, lock);
+  }
+
+  if (is_float) {
+    if (metadata.channels == 1) {
+      metadata.type = IMAGE_DATA_TYPE_FLOAT;
+    }
+    else {
+      metadata.channels = 4;
+      metadata.type = IMAGE_DATA_TYPE_FLOAT4;
+    }
+
+    /* Float images are already converted on the Blender side,
+     * no need to do anything in Cycles. */
+    metadata.colorspace = (is_data) ? u_colorspace_data : u_colorspace_scene_linear;
+  }
+  else {
+    /* In some cases (e.g. #94135), the colorspace setting in Blender gets updated as part of the
+     * metadata queries in this function, so update the colorspace setting here. */
+    metadata.colorspace = (is_data) ? u_colorspace_data :
+                                      ustring(b_image->colorspace_settings.name);
+    metadata.type = IMAGE_DATA_TYPE_BYTE4;
+  }
+
+  return true;
+}
+
+static void load_float_pixels(const blender::ImBuf *ibuf,
+                              const ImageMetaData &metadata,
+                              float *out_pixels)
+{
+  const size_t num_pixels = ((size_t)metadata.width) * metadata.height;
+  const int out_channels = metadata.channels;
+  const int in_channels = ibuf->channels;
+  const float *in_pixels = ibuf->float_data();
+
+  if (in_pixels && out_channels == in_channels) {
+    /* Straight copy pixel data. */
+    memcpy(out_pixels, in_pixels, num_pixels * out_channels * sizeof(float));
+  }
+  else if (in_pixels && out_channels == 4) {
+    /* Fill channels to 4. */
+    float *out_pixel = out_pixels;
+    const float *in_pixel = in_pixels;
+    for (size_t i = 0; i < num_pixels; i++) {
+      out_pixel[0] = in_pixel[0];
+      out_pixel[1] = (in_channels >= 2) ? in_pixel[1] : 0.0f;
+      out_pixel[2] = (in_channels >= 3) ? in_pixel[2] : 0.0f;
+      out_pixel[3] = (in_channels >= 4) ? in_pixel[3] : 1.0f;
+      out_pixel += out_channels;
+      in_pixel += in_channels;
+    }
+  }
+  else {
+    /* Missing or invalid pixel data. */
+    if (out_channels == 1) {
+      std::fill(out_pixels, out_pixels + num_pixels, 0.0f);
+    }
+    else {
+      std::fill((float4 *)out_pixels,
+                (float4 *)out_pixels + num_pixels,
+                make_float4(1.0f, 0.0f, 1.0f, 1.0f));
+    }
+  }
+}
+
+static void load_half_pixels(const blender::ImBuf *ibuf,
+                             const ImageMetaData &metadata,
+                             half *out_pixels)
+{
+  /* Half float. Blender does not have a half type, but in some cases
+   * we up-sample byte to half to avoid precision loss for colorspace
+   * conversion. */
+  const size_t num_pixels = ((size_t)metadata.width) * metadata.height;
+  const int out_channels = metadata.channels;
+  const uchar *in_pixels = ibuf->byte_data();
+
+  if (in_pixels) {
+    /* Convert uchar to half. */
+    const uchar *in_pixel = in_pixels;
+    half *out_pixel = out_pixels;
+    for (size_t i = 0; i < num_pixels; i++) {
+      for (int c = 0; c < out_channels; c++, in_pixel++, out_pixel++) {
+        *out_pixel = float_to_half_image(util_image_cast_to_float(*in_pixel));
+      }
+    }
+  }
+  else {
+    /* Missing or invalid pixel data. */
+    if (out_channels == 1) {
+      std::fill(out_pixels, out_pixels + num_pixels, float_to_half_image(0.0f));
+    }
+    else {
+      std::fill((half4 *)out_pixels,
+                (half4 *)out_pixels + num_pixels,
+                float4_to_half4_display(make_float4(1.0f, 0.0f, 1.0f, 1.0f)));
+    }
+  }
+}
+
+static void load_byte_pixels(const blender::ImBuf *ibuf,
+                             const ImageMetaData &metadata,
+                             uchar *out_pixels)
+{
+  const size_t num_pixels = ((size_t)metadata.width) * metadata.height;
+  const int out_channels = metadata.channels;
+  const int in_channels = 4;
+  const uchar *in_pixels = ibuf->byte_data();
+
+  if (in_pixels) {
+    /* Straight copy pixel data. */
+    memcpy(out_pixels, in_pixels, num_pixels * in_channels * sizeof(unsigned char));
+  }
+  else {
+    /* Missing or invalid pixel data. */
+    if (out_channels == 1) {
+      std::fill(out_pixels, out_pixels + num_pixels, 0.0f);
+    }
+    else {
+      std::fill(
+          (uchar4 *)out_pixels, (uchar4 *)out_pixels + num_pixels, make_uchar4(255, 0, 255, 255));
+    }
+  }
+}
+
+bool BlenderImageLoader::load_pixels(const ImageMetaData &metadata, void *out_pixels)
+{
+  void *lock;
+  blender::ImBuf *ibuf = BKE_image_acquire_ibuf(b_image, &b_iuser, &lock);
+
+  /* Image changed since we requested metadata, assume we'll get a signal to reload it later. */
+  const bool mismatch = (ibuf == nullptr || ibuf->x != metadata.width ||
+                         ibuf->y != metadata.height);
+
+  if (!mismatch) {
+    if (metadata.type == IMAGE_DATA_TYPE_FLOAT || metadata.type == IMAGE_DATA_TYPE_FLOAT4) {
+      load_float_pixels(ibuf, metadata, (float *)out_pixels);
+    }
+    else if (metadata.type == IMAGE_DATA_TYPE_HALF || metadata.type == IMAGE_DATA_TYPE_HALF4) {
+      load_half_pixels(ibuf, metadata, (half *)out_pixels);
+    }
+    else {
+      load_byte_pixels(ibuf, metadata, (uchar *)out_pixels);
+    }
+  }
+
+  BKE_image_release_ibuf(b_image, ibuf, lock);
+
+  /* Free image buffers to save memory during render. */
+  if (free_cache) {
+    BKE_image_free_buffers_ex(b_image, true);
+  }
+
+  if (!mismatch) {
+    metadata.conform_pixels(out_pixels);
+  }
+
+  return !mismatch;
+}
+
+string BlenderImageLoader::name() const
+{
+  return b_image->id.name + 2;
+}
+
+bool BlenderImageLoader::equals(const ImageLoader &other) const
+{
+  const BlenderImageLoader &other_loader = (const BlenderImageLoader &)other;
+  return b_image == other_loader.b_image && b_iuser.framenr == other_loader.b_iuser.framenr &&
+         b_iuser.tile == other_loader.b_iuser.tile &&
+         cached_update_count == other_loader.cached_update_count;
+}
+
+int BlenderImageLoader::get_tile_number() const
+{
+  return b_iuser.tile;
+}
+
+void BlenderSession::builtin_images_load()
+{
+  /* Force builtin images to be loaded along with Blender data sync. This
+   * is needed because we may be reading from depsgraph evaluated data which
+   * can be freed by Blender before Cycles reads it.
+   *
+   * TODO: the assumption that no further access to builtin image data will
+   * happen is really weak, and likely to break in the future. We should find
+   * a better solution to hand over the data directly to the image manager
+   * instead of through callbacks whose timing is difficult to control. */
+  ImageManager *manager = session->scene->image_manager.get();
+  Device *device = session->device.get();
+  manager->device_load_builtin(device, session->scene.get(), session->progress);
+}
+
+CCL_NAMESPACE_END

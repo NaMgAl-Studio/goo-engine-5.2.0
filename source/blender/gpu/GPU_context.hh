@@ -1,0 +1,214 @@
+/* SPDX-FileCopyrightText: 2016 by Mike Erwin. All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup gpu
+ *
+ * This interface allow GPU to manage VAOs for multiple context and threads.
+ */
+
+#pragma once
+
+#include <cstdint>
+#include <cstdio>
+
+#include "GPU_platform.hh"
+
+struct GHOST_GPUDevice;
+
+class GHOST_IContext;
+class GHOST_ISystem;
+class GHOST_IWindow;
+
+namespace blender {
+
+struct GPUContext;
+
+/* GPU back-ends abstract the differences between different APIs. #GPU_context_create
+ * automatically initializes the back-end, and #GPU_context_discard frees it when there
+ * are no more contexts. */
+
+bool GPU_backend_supported();
+void GPU_backend_type_selection_set(const GPUBackendType backend);
+GPUBackendType GPU_backend_type_selection_get();
+GPUBackendType GPU_backend_get_type();
+const char *GPU_backend_get_name();
+
+/**
+ * Detect the most suited GPUBackendType.
+ *
+ * - The detected backend will be set in `GPU_backend_type_selection_set`.
+ * - When GPU_backend_type_selection_is_overridden it checks the overridden backend.
+ *   When not overridden it checks a default list.
+ * - OpenGL backend will be checked as a fallback for Metal.
+ *
+ * Returns true when detection found a supported backend, otherwise returns false.
+ * When no supported backend is found GPU_backend_type_selection_set is called with
+ * GPU_BACKEND_NONE.
+ */
+bool GPU_backend_type_selection_detect();
+
+/**
+ * Alter the GPU_backend_type_selection_detect to only test a specific backend
+ */
+void GPU_backend_type_selection_set_override(GPUBackendType backend_type);
+
+/**
+ * Check if the GPU_backend_type_selection_detect is overridden to only test a specific backend.
+ */
+bool GPU_backend_type_selection_is_overridden();
+
+/**
+ * Override the user-preference GPU device to use the specified GPU.
+ *
+ * Device selection first tries the device with this (`vendor_id`, `device_id`, `index`),
+ * then falls back to the preferred device unless hard fail debugging is enabled. The
+ * values `vendor_id == uint32_t(-1)` and `device_id == uint32_t(-1)` are sentinels meaning
+ * "wildcard" (don't constrain that field), so passing both as the sentinel selects purely by
+ * enumeration `index`.
+ */
+void GPU_backend_preferred_device_set_override(int index, uint32_t vendor_id, uint32_t device_id);
+/**
+ * Return the preferred GPU device for new contexts.
+ */
+GHOST_GPUDevice GPU_backend_preferred_device_get();
+
+#ifdef WITH_VULKAN_BACKEND
+/**
+ * Print one line per Vulkan device that meets minimum requirements, matching the
+ * `<vendor-hex>/<device-hex>/<index>` identifier used in user preferences. Used by
+ * `--gpu-device help`.
+ */
+void GPU_vulkan_supported_devices_print(FILE *fp);
+#endif
+
+/**
+ * Get the VSync value (when set).
+ */
+int GPU_backend_vsync_get();
+/**
+ * Override the default VSync.
+ *
+ * \param vsync: See #GHOST_TVSyncModes for details.
+ */
+void GPU_backend_vsync_set_override(int vsync);
+bool GPU_backend_vsync_is_overridden();
+
+/** Opaque type hiding gpu::Context. */
+GPUContext *GPU_context_create(GHOST_IWindow *ghost_window, GHOST_IContext *ghost_context);
+/**
+ * To be called after #GPU_context_active_set(ctx_to_destroy).
+ */
+void GPU_context_discard(GPUContext *);
+
+/**
+ * #GPUContext can be null.
+ */
+void GPU_context_active_set(GPUContext *);
+GPUContext *GPU_context_active_get();
+
+/**
+ * Begin and end frame are used to mark the singular boundary representing the lifetime of a whole
+ * frame. This also acts as a divisor for ensuring workload submission and flushing, especially for
+ * background rendering when there is no call to present.
+ * This is required by explicit-API's where there is no implicit workload flushing.
+ */
+void GPU_context_begin_frame(GPUContext *ctx);
+void GPU_context_end_frame(GPUContext *ctx);
+
+/**
+ * Legacy GPU (Intel HD4000 series) do not support sharing GPU objects between GPU
+ * contexts. EEVEE/Workbench can create different contexts for image/preview rendering, baking or
+ * compiling. When a legacy GPU is detected (`GPU_use_main_context_workaround()`) any worker
+ * threads should use the draw manager opengl context and make sure that they are the only one
+ * using it by locking the main context using these two functions.
+ */
+void GPU_context_main_lock();
+void GPU_context_main_unlock();
+
+/**
+ * \brief Enable shader create info pipeline state assert.
+ *
+ * Activates an assert when a shader create info contains pipeline states but using the shader
+ * still require a new pipeline. This helps to identify mismatches between the shader create info
+ * and actual usage.
+ *
+ * The assert can not be enabled by default as there are cases where new pipelines are expected.
+ * This function is used inside unit tests to check if pipeline creation is done when not expected.
+ * \param context: Context where to activate the pipeline creation debug.
+ * \param enable:  #true enables the feature, #false disables the feature.
+ *
+ * \note Currently only supported by Vulkan.
+ */
+void GPU_context_debug_pipeline_creation(GPUContext *context, bool enable);
+
+/** GPU Begin/end work blocks */
+void GPU_render_begin();
+void GPU_render_end();
+
+/**
+ * For operations which need to run exactly once per frame -- even if there are no render updates.
+ */
+void GPU_render_step(bool force_resource_release = false);
+
+/** For when we need access to a system context in order to create a GPU context. */
+void GPU_backend_ghost_system_set(GHOST_ISystem *ghost_system_handle);
+GHOST_ISystem *GPU_backend_ghost_system_get();
+
+namespace gpu {
+
+struct GPUSecondaryContextData {
+  GHOST_IContext *ghost_context = nullptr;
+  GPUContext *gpu_context = nullptr;
+};
+
+/** Creates a secondary off-screen GHOST and GPU contexts. Must be called on the main thread. */
+GPUSecondaryContextData GPU_create_secondary_context();
+
+/** Activates the given secondary GPU context. */
+void GPU_activate_secondary_context(const GPUSecondaryContextData &data);
+
+/** Deactivates the given secondary GPU context. */
+void GPU_deactivate_secondary_context(const GPUSecondaryContextData &data);
+
+/** Destroys the given secondary GPU context. */
+void GPU_destroy_secondary_context(GPUSecondaryContextData &data);
+
+/**
+ * Abstracts secondary GHOST and GPU context creation, activation and deletion.
+ * Must be created from the main thread and destructed from the thread they where activated in.
+ * (See GPUWorker for an usage example)
+ */
+class GPUSecondaryContext {
+ private:
+  GPUSecondaryContextData data_;
+
+ public:
+  GPUSecondaryContext();
+  ~GPUSecondaryContext();
+
+  /** Must be called from a secondary thread. */
+  void activate();
+};
+
+/**
+ * \brief Activate pipeline creation debugging for a certain scope.
+ */
+struct DebugScopePipelineCreation {
+ private:
+  GPUContext *context_ = nullptr;
+
+ public:
+  DebugScopePipelineCreation(GPUContext *context) : context_(context)
+  {
+    GPU_context_debug_pipeline_creation(context, true);
+  }
+  ~DebugScopePipelineCreation()
+  {
+    GPU_context_debug_pipeline_creation(context_, false);
+  }
+};
+
+}  // namespace gpu
+}  // namespace blender

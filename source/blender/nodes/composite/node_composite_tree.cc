@@ -1,0 +1,211 @@
+/* SPDX-FileCopyrightText: 2007 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup nodes
+ */
+
+#include "DNA_node_types.h"
+#include "DNA_scene_types.h"
+#include "DNA_space_types.h"
+
+#include "BLI_listbase.h"
+
+#include "BKE_context.hh"
+#include "BKE_global.hh"
+#include "BKE_image.hh"
+#include "BKE_main.hh"
+#include "BKE_node.hh"
+#include "BKE_node_runtime.hh"
+#include "BKE_node_tree_update.hh"
+#include "BKE_tracking.hh"
+
+#include "UI_resources.hh"
+
+#include "SEQ_modifier.hh"
+#include "SEQ_select.hh"
+#include "SEQ_sequencer.hh"
+
+#include "node_common.h"
+
+#include "RNA_prototypes.hh"
+
+#include "NOD_composite.hh"
+#include "node_composite_util.hh"
+
+namespace blender {
+
+static void composite_get_from_context(const bContext *C,
+                                       bke::bNodeTreeType * /*treetype*/,
+                                       bNodeTree **r_ntree,
+                                       ID **r_id,
+                                       ID **r_from)
+{
+  const SpaceNode *snode = CTX_wm_space_node(C);
+  if (snode->node_tree_sub_type == SNODE_COMPOSITOR_SEQUENCER) {
+    *r_ntree = nullptr;
+    Scene *sequencer_scene = CTX_data_sequencer_scene(C);
+    if (!sequencer_scene) {
+      return;
+    }
+    Strip *strip = seq::select_active_get(sequencer_scene);
+    if (!strip) {
+      return;
+    }
+
+    bNodeTree *node_group = nullptr;
+    if (strip->type == STRIP_TYPE_COMPOSITOR && strip->effectdata) {
+      CompositorEffectVars *comp_data = static_cast<CompositorEffectVars *>(strip->effectdata);
+      node_group = comp_data->node_group;
+    }
+    else {
+      StripModifierData *smd = seq::modifier_get_active(strip);
+      if (smd && smd->type == eSeqModifierType_Compositor) {
+        SequencerCompositorModifierData *scmd =
+            reinterpret_cast<SequencerCompositorModifierData *>(smd);
+        node_group = scmd->node_group;
+      }
+    }
+
+    if (node_group) {
+      *r_from = nullptr;
+      *r_id = &sequencer_scene->id;
+      *r_ntree = node_group;
+    }
+    return;
+  }
+
+  Scene *scene = CTX_data_scene(C);
+
+  *r_from = nullptr;
+  *r_id = &scene->id;
+  *r_ntree = scene->compositing_node_group;
+}
+
+static void foreach_nodeclass(void *calldata, bke::bNodeClassCallback func)
+{
+  func(calldata, NODE_CLASS_INPUT, N_("Input"));
+  func(calldata, NODE_CLASS_OUTPUT, N_("Output"));
+  func(calldata, NODE_CLASS_OP_COLOR, N_("Color"));
+  func(calldata, NODE_CLASS_OP_VECTOR, N_("Vector"));
+  func(calldata, NODE_CLASS_OP_FILTER, N_("Filter"));
+  func(calldata, NODE_CLASS_CONVERTER, N_("Converter"));
+  func(calldata, NODE_CLASS_MATTE, N_("Matte"));
+  func(calldata, NODE_CLASS_DISTORT, N_("Distort"));
+  func(calldata, NODE_CLASS_GROUP, N_("Group"));
+  func(calldata, NODE_CLASS_INTERFACE, N_("Interface"));
+  func(calldata, NODE_CLASS_LAYOUT, N_("Layout"));
+}
+
+static void update(bNodeTree *ntree)
+{
+  bke::node_tree_set_output(*ntree);
+
+  ntree_update_reroute_nodes(ntree);
+}
+
+static bool composite_node_tree_socket_type_valid(bke::bNodeTreeType * /*ntreetype*/,
+                                                  bke::bNodeSocketType *socket_type)
+{
+  return bke::node_is_static_socket_type(*socket_type) && ELEM(socket_type->type,
+                                                               SOCK_FLOAT,
+                                                               SOCK_INT,
+                                                               SOCK_BOOLEAN,
+                                                               SOCK_VECTOR,
+                                                               SOCK_INT_VECTOR,
+                                                               SOCK_RGBA,
+                                                               SOCK_MATRIX,
+                                                               SOCK_MENU,
+                                                               SOCK_ROTATION,
+                                                               SOCK_STRING,
+                                                               SOCK_OBJECT,
+                                                               SOCK_FONT);
+}
+
+/**
+ * Keep consistent with the #is_conversion_supported function in #compositor::ConversionOperation
+ * on the compositor side.
+ */
+static bool composite_validate_link(eNodeSocketDatatype from_type, eNodeSocketDatatype to_type)
+{
+  /* Basic math types can be implicitly converted to each other. */
+  if (ELEM(from_type,
+           SOCK_FLOAT,
+           SOCK_VECTOR,
+           SOCK_INT_VECTOR,
+           SOCK_RGBA,
+           SOCK_BOOLEAN,
+           SOCK_INT) &&
+      ELEM(to_type, SOCK_FLOAT, SOCK_VECTOR, SOCK_INT_VECTOR, SOCK_RGBA, SOCK_BOOLEAN, SOCK_INT))
+  {
+    return true;
+  }
+
+  if (ELEM(from_type, SOCK_FLOAT, SOCK_VECTOR) && to_type == SOCK_ROTATION) {
+    return true;
+  }
+
+  if (from_type == SOCK_MATRIX && to_type == SOCK_ROTATION) {
+    return true;
+  }
+  if (from_type == SOCK_ROTATION && to_type == SOCK_MATRIX) {
+    return true;
+  }
+
+  if (from_type == SOCK_ROTATION && to_type == SOCK_VECTOR) {
+    return true;
+  }
+
+  return from_type == to_type;
+}
+
+bke::bNodeTreeType *ntreeType_Composite;
+
+void register_node_tree_type_cmp()
+{
+  bke::bNodeTreeType *tt = ntreeType_Composite = MEM_new<bke::bNodeTreeType>(__func__);
+
+  tt->type = NTREE_COMPOSIT;
+  tt->idname = "CompositorNodeTree"_ustr;
+  tt->group_idname = "CompositorNodeGroup"_ustr;
+  tt->ui_name = N_("Compositor");
+  tt->ui_icon = ICON_NODE_COMPOSITING;
+  tt->ui_description = N_("Create effects and post-process renders, images, and the 3D Viewport");
+  tt->asset_catalog_path_prefix = "Compositing";
+
+  tt->foreach_nodeclass = foreach_nodeclass;
+  tt->update = update;
+  tt->get_from_context = composite_get_from_context;
+  tt->validate_link = composite_validate_link;
+  tt->valid_socket_type = composite_node_tree_socket_type_valid;
+
+  tt->rna_ext.srna = RNA_CompositorNodeTree;
+
+  bke::node_tree_type_add(*tt);
+}
+
+/* *********************************************** */
+
+void ntreeCompositTagRender(Scene *scene)
+{
+  /* XXX Think using G_MAIN here is valid, since you want to update current file's scene nodes,
+   * not the ones in temp main generated for rendering?
+   * This is still rather weak though,
+   * ideally render struct would store its own main AND original G_MAIN. */
+
+  for (Scene *sce_iter = static_cast<Scene *>(G_MAIN->scenes.first); sce_iter;
+       sce_iter = static_cast<Scene *>(sce_iter->id.next))
+  {
+    if (sce_iter->compositing_node_group) {
+      for (bNode *node : sce_iter->compositing_node_group->all_nodes()) {
+        if (node->id == (ID *)scene) {
+          BKE_ntree_update_tag_node_property(sce_iter->compositing_node_group, node);
+        }
+      }
+    }
+  }
+  BKE_ntree_update(*G_MAIN);
+}
+
+}  // namespace blender

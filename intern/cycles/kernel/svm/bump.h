@@ -1,0 +1,63 @@
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
+
+#pragma once
+
+#include "kernel/globals.h"
+
+#include "kernel/geom/attribute.h"
+#include "kernel/geom/object.h"
+#include "kernel/geom/primitive.h"
+
+#include "kernel/svm/node_types.h"
+#include "kernel/svm/util.h"
+
+#include "kernel/util/differential.h"
+
+CCL_NAMESPACE_BEGIN
+
+/* Bump Eval Nodes */
+
+ccl_device_noinline void svm_node_enter_bump_eval(KernelGlobals kg,
+                                                  ccl_private ShaderData *sd,
+                                                  ccl_private float *stack,
+                                                  const ccl_global SVMNodeEnterBumpEval &node)
+{
+  const uint offset = node.state_offset;
+
+  /* save state */
+  stack_store_float3(stack, offset + 0, sd->P);
+  stack_store_float(stack, offset + 3, sd->dP);
+
+  /* Set position as if undisplaced. */
+  const AttributeDescriptor desc = find_attribute(kg, sd, ATTR_STD_POSITION_UNDISPLACED);
+  if (is_attribute_found(desc)) {
+    dual3 attr = primitive_surface_attribute<dual3>(kg, sd, desc);
+    object_position_transform(kg, sd, &attr);
+
+    sd->P = attr.val;
+    sd->dP = differential_make_compact(attr);
+
+    /* Save the full differential, the compact form isn't enough for svm_node_set_bump. */
+    stack_store_float3(stack, offset + 4, attr.dx);
+    stack_store_float3(stack, offset + 7, attr.dy);
+
+    /* Set normal as if undisplaced. Note this does not need to be restored,
+     * because the bump evaluation will write to sd->N. */
+    primitive_normal_set_undisplaced(kg, sd, desc.offset);
+  }
+}
+
+ccl_device_noinline void svm_node_leave_bump_eval(ccl_private ShaderData *sd,
+                                                  ccl_private float *stack,
+                                                  const ccl_global SVMNodeLeaveBumpEval &node)
+{
+  const uint offset = node.state_offset;
+
+  /* restore state */
+  sd->P = stack_load_float3(stack, offset + 0);
+  sd->dP = stack_load_float(stack, offset + 3);
+}
+
+CCL_NAMESPACE_END

@@ -1,0 +1,90 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+#pragma once
+
+/** \file
+ * \ingroup balembic
+ */
+
+#include "BLI_span.hh"
+
+#include "abc_reader_object.h"
+
+#include <Alembic/AbcGeom/IPolyMesh.h>
+#include <Alembic/AbcGeom/ISubD.h>
+
+namespace blender {
+
+struct Mesh;
+
+namespace io::alembic {
+
+class AbcMeshReader final : public AbcObjectReader {
+  Alembic::AbcGeom::IPolyMeshSchema m_schema;
+
+ public:
+  AbcMeshReader(const AbcReaderConstructorArgs &args);
+
+  bool valid() const override;
+  bool accepts_object_type(const Alembic::AbcCoreAbstract::ObjectHeader &alembic_header,
+                           const Object *const ob,
+                           const char **r_err_str) const override;
+  void readObjectData(Main *bmain, const Alembic::Abc::ISampleSelector &sample_sel) override;
+
+  struct Mesh *read_mesh(struct Mesh *existing_mesh,
+                         const Alembic::Abc::ISampleSelector &sample_sel,
+                         const AbcReadGeometryParams &read_params,
+                         const char **r_err_str);
+
+  void read_geometry(bke::GeometrySet &geometry_set,
+                     const Alembic::Abc::ISampleSelector &sample_sel,
+                     const AbcReadGeometryParams &read_params,
+                     const char **r_err_str) override;
+
+  bool topology_changed(const Mesh *existing_mesh,
+                        const Alembic::Abc::ISampleSelector &sample_sel) override;
+
+ private:
+  void readFaceSetsSample(Main *bmain,
+                          Mesh *mesh,
+                          const Alembic::AbcGeom::ISampleSelector &sample_sel);
+
+  void assign_facesets_to_material_indices(const Alembic::Abc::ISampleSelector &sample_sel,
+                                           MutableSpan<int> material_indices,
+                                           std::map<std::string, int> &r_mat_map);
+};
+
+class AbcSubDReader final : public AbcObjectReader {
+  Alembic::AbcGeom::ISubDSchema m_schema;
+
+ public:
+  AbcSubDReader(const AbcReaderConstructorArgs &args);
+
+  bool valid() const override;
+  bool accepts_object_type(const Alembic::AbcCoreAbstract::ObjectHeader &alembic_header,
+                           const Object *const ob,
+                           const char **r_err_str) const override;
+  void readObjectData(Main *bmain, const Alembic::Abc::ISampleSelector &sample_sel) override;
+
+  void read_geometry(bke::GeometrySet &geometry_set,
+                     const Alembic::Abc::ISampleSelector &sample_sel,
+                     const AbcReadGeometryParams &read_params,
+                     const char **r_err_str) override;
+
+  bool topology_changed(const Mesh *existing_mesh,
+                        const Alembic::Abc::ISampleSelector &sample_sel) override;
+
+ private:
+  struct Mesh *read_mesh(struct Mesh *existing_mesh,
+                         const Alembic::Abc::ISampleSelector &sample_sel,
+                         const AbcReadGeometryParams &read_params,
+                         const char **r_err_str);
+};
+
+void read_mverts(Mesh &mesh,
+                 const Alembic::AbcGeom::P3fArraySamplePtr positions,
+                 const Alembic::AbcGeom::N3fArraySamplePtr normals);
+
+}  // namespace io::alembic
+}  // namespace blender

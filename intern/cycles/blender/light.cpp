@@ -1,0 +1,155 @@
+/* SPDX-FileCopyrightText: 2011-2022 Blender Foundation
+ *
+ * SPDX-License-Identifier: Apache-2.0 */
+
+#include "scene/light.h"
+
+#include "DNA_light_types.h"
+
+#include "DNA_world_types.h"
+#include "blender/sync.h"
+#include "blender/util.h"
+#include "scene/object.h"
+
+CCL_NAMESPACE_BEGIN
+
+void BlenderSync::sync_light(BObjectInfo &b_ob_info, Light *light)
+{
+  blender::Light &b_light = *blender::id_cast<blender::Light *>(b_ob_info.object_data);
+
+  light->name = b_light.id.name + 2;
+
+  if (PointLight *point_light = dynamic_cast<PointLight *>(light)) {
+    point_light->set_radius(b_light.radius);
+    point_light->set_is_sphere(!(b_light.mode & blender::LA_USE_SOFT_FALLOFF));
+  }
+  else if (AreaLight *area_light = dynamic_cast<AreaLight *>(light)) {
+    area_light->set_sizeu(b_light.area_size);
+    area_light->set_spread(b_light.area_spread);
+    if (b_light.area_shape == blender::LA_AREA_SQUARE ||
+        b_light.area_shape == blender::LA_AREA_DISK)
+    {
+      area_light->set_sizev(area_light->get_sizeu());
+    }
+    else {
+      area_light->set_sizev(b_light.area_sizey);
+    }
+    area_light->set_ellipse(b_light.area_shape == blender::LA_AREA_DISK ||
+                            b_light.area_shape == blender::LA_AREA_ELLIPSE);
+  }
+  else if (SunLight *sun_light = dynamic_cast<SunLight *>(light)) {
+    sun_light->set_angle(b_light.sun_angle);
+  }
+  if (SpotLight *spot_light = dynamic_cast<SpotLight *>(light)) {
+    spot_light->set_angle(b_light.spotsize);
+    spot_light->set_smooth(b_light.spotblend);
+  }
+
+  blender::PointerRNA light_rna_ptr = RNA_id_pointer_create(&b_light.id);
+
+  /* Color and strength. */
+  float3 light_color = make_float3(b_light.r, b_light.g, b_light.b);
+  if (b_light.mode & blender::LA_USE_TEMPERATURE) {
+    float color[3];
+    RNA_float_get_array(&light_rna_ptr, "temperature_color", color);
+    light_color *= make_float3(color[0], color[1], color[2]);
+  }
+
+  const float3 strength = light_color * b_light.energy * exp2f(b_light.exposure);
+  light->set_strength(strength);
+
+  /* normalize */
+  light->set_normalize(!(b_light.mode & blender::LA_UNNORMALIZED));
+
+  /* shadow */
+  blender::PointerRNA clight = RNA_pointer_get(&light_rna_ptr, "cycles");
+  light->set_cast_shadow(b_light.mode & blender::LA_SHADOW);
+  light->set_use_mis(get_boolean(clight, "use_multiple_importance_sampling"));
+
+  /* caustics light */
+  light->set_use_caustics(get_boolean(clight, "is_caustics_light"));
+
+  light->set_max_bounces(get_int(clight, "max_bounces"));
+
+  if (AreaLight *area_light = dynamic_cast<AreaLight *>(light)) {
+    area_light->set_is_portal(get_boolean(clight, "is_portal"));
+  }
+
+  /* tag */
+  light->tag_update(scene);
+}
+
+void BlenderSync::sync_background_light(blender::bScreen *b_screen, blender::View3D *b_v3d)
+{
+  blender::World *b_world = view_layer.world_override ? view_layer.world_override : b_scene->world;
+
+  if (b_world) {
+    blender::PointerRNA world_rna_ptr = RNA_id_pointer_create(&b_world->id);
+    blender::PointerRNA cworld = RNA_pointer_get(&world_rna_ptr, "cycles");
+
+    enum SamplingMethod { SAMPLING_NONE = 0, SAMPLING_AUTOMATIC, SAMPLING_MANUAL, SAMPLING_NUM };
+    const int sampling_method = get_enum(
+        cworld, "sampling_method", SAMPLING_NUM, SAMPLING_AUTOMATIC);
+    const bool sample_as_light = (sampling_method != SAMPLING_NONE);
+
+    /* Create object. */
+    Object *object;
+    const ObjectKey object_key(b_world, nullptr, b_world, false);
+    bool update = object_map.add_or_update(&object, &b_world->id, &b_world->id, object_key);
+    if (update) {
+      /* Lights should be shadow catchers by default. */
+      object->set_is_shadow_catcher(true);
+    }
+
+    object->set_lightgroup(
+        ustring((b_world && b_world->lightgroup) ? b_world->lightgroup->name : ""));
+    object->set_asset_name(ustring(b_world->id.name + 2));
+
+    /* Create geometry. */
+    const GeometryKey geom_key{b_world, Geometry::BACKGROUND_LIGHT};
+    Geometry *geom = geometry_map.find(geom_key);
+    if (geom) {
+      update |= geometry_map.update(geom, &b_world->id);
+    }
+    else {
+      geom = scene->create_light_node<BackgroundLight>();
+      geometry_map.add(geom_key, geom);
+      object->set_geometry(geom);
+      update = true;
+    }
+
+    if (update || world_recalc || b_world != world_map) {
+      /* Initialize light geometry. */
+      BackgroundLight *light = static_cast<BackgroundLight *>(geom);
+
+      array<Node *> used_shaders;
+      used_shaders.push_back_slow(scene->default_background);
+      light->set_used_shaders(used_shaders);
+
+      if (sampling_method == SAMPLING_MANUAL) {
+        light->set_map_resolution(get_int(cworld, "sample_map_resolution"));
+      }
+      else {
+        light->set_map_resolution(0);
+      }
+
+      light->set_use_mis(sample_as_light);
+      light->set_max_bounces(get_int(cworld, "max_bounces"));
+
+      /* Caustic light. */
+      light->set_use_caustics(get_boolean(cworld, "is_caustics_light"));
+
+      light->set_cast_shadow(get_boolean(cworld, "use_shadows"));
+
+      light->tag_update(scene);
+
+      geometry_map.set_recalc(b_world);
+    }
+  }
+
+  world_map = b_world;
+  world_recalc = false;
+  viewport_parameters = BlenderViewportParameters(b_screen, b_v3d, use_developer_ui);
+}
+
+CCL_NAMESPACE_END

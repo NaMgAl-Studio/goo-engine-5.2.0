@@ -1,0 +1,85 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup imbuf
+ */
+
+#include "oiio/openimageio_support.hh"
+
+#include "IMB_colormanagement.hh"
+#include "IMB_filetype.hh"
+#include "IMB_imbuf_types.hh"
+
+namespace blender {
+
+const char *imb_file_extensions_png[] = {".png", nullptr};
+
+OIIO_NAMESPACE_USING
+using namespace blender::imbuf;
+
+bool imb_is_a_png(const uchar *mem, size_t size)
+{
+  return imb_oiio_check(mem, size, "png");
+}
+
+ImBuf *imb_load_png(const uchar *mem,
+                    size_t size,
+                    ImBufFlags flags,
+                    ImFileColorSpace &r_colorspace)
+{
+  ImageSpec config, spec;
+  config.attribute("oiio:UnassociatedAlpha", 1);
+
+  ReadContext ctx{mem, size, "png", IMB_FTYPE_PNG, flags};
+
+  ImBuf *ibuf = imb_oiio_read(ctx, config, r_colorspace, spec);
+  if (ibuf) {
+    if (spec.format == TypeDesc::UINT16) {
+      ibuf->foptions.flag |= PNG_16BIT;
+    }
+  }
+
+  /* Both 8 and 16 bit PNGs should be in default byte colorspace. */
+  r_colorspace.is_hdr_float = false;
+
+  return ibuf;
+}
+
+static std::tuple<WriteContext, ImageSpec> prepare_save_png(ImBuf *ibuf, ImBufFlags flags)
+{
+  const bool is_16bit = (ibuf->foptions.flag & PNG_16BIT);
+  const int file_channels = ibuf->color_mode_channels_get();
+  const TypeDesc data_format = is_16bit ? TypeDesc::UINT16 : TypeDesc::UINT8;
+
+  WriteContext ctx = imb_create_write_context("png", ibuf, flags, is_16bit);
+  ImageSpec file_spec = imb_create_write_spec(ctx, file_channels, data_format);
+
+  /* Skip if the float buffer was managed already. */
+  if (is_16bit && (ibuf->float_buffer.colorspace || ibuf->colorspace_is_data())) {
+    file_spec.attribute("oiio:UnassociatedAlpha", 0);
+  }
+  else {
+    file_spec.attribute("oiio:UnassociatedAlpha", 1);
+  }
+
+  int compression = int(float(ibuf->foptions.compress) / 11.1111f);
+  compression = compression < 0 ? 0 : (compression > 9 ? 9 : compression);
+  file_spec.attribute("png:compressionLevel", compression);
+  return {ctx, file_spec};
+}
+
+bool imb_save_png(ImBuf *ibuf, const char *filepath, ImBufFlags flags)
+{
+  const auto [ctx, file_spec] = prepare_save_png(ibuf, flags);
+  return imb_oiio_write(ctx, filepath, file_spec);
+}
+
+Vector<uint8_t> imb_save_buffer_png(ImBuf *ibuf, ImBufFlags flags)
+{
+  const auto [ctx, file_spec] = prepare_save_png(ibuf, flags);
+  return imb_oiio_write_buffer(ctx, file_spec);
+}
+
+}  // namespace blender

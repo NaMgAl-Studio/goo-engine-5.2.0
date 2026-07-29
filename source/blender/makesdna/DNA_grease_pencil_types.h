@@ -1,0 +1,745 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup DNA
+ */
+
+#pragma once
+
+#include "DNA_ID.h"
+#include "DNA_attribute_types.h"
+#include "DNA_curve_types.h"
+#include "DNA_curves_types.h"
+#include "DNA_listBase.h"
+
+#include "BLI_bounds_types.hh"
+#include "BLI_enum_flags.hh"
+#include "BLI_index_mask_fwd.hh"
+#include "BLI_map.hh"
+#include "BLI_math_vector_types.hh"
+#include "BLI_memory_counter_fwd.hh"
+#include "BLI_span.hh"
+
+namespace blender {
+
+namespace bke {
+class AttributeAccessor;
+class MutableAttributeAccessor;
+class GreasePencilRuntime;
+class GreasePencilDrawingRuntime;
+namespace greasepencil {
+class DrawingRuntime;
+class Drawing;
+class DrawingReference;
+class TreeNode;
+class Layer;
+class LayerMask;
+class LayerRuntime;
+class LayerGroup;
+class LayerGroupRuntime;
+}  // namespace greasepencil
+}  // namespace bke
+
+struct Main;
+struct GreasePencil;
+struct Object;
+
+enum GreasePencilStrokeCapType : int8_t {
+  GP_STROKE_CAP_TYPE_ROUND = 0,
+  GP_STROKE_CAP_TYPE_FLAT = 1,
+  /* Keep last. */
+  GP_STROKE_CAP_TYPE_MAX,
+};
+
+#define GP_STROKE_MITER_ANGLE_ROUND 0.0f
+#define GP_STROKE_MITER_ANGLE_BEVEL DEG2RADF(180.0f)
+
+/**
+ * Type of drawing data.
+ * If `GP_DRAWING` the node is a `GreasePencilDrawing`,
+ * if `GP_DRAWING_REFERENCE` the node is a `GreasePencilDrawingReference`.
+ */
+enum GreasePencilDrawingType : int8_t {
+  GP_DRAWING = 0,
+  GP_DRAWING_REFERENCE = 1,
+};
+
+/**
+ * Flag for drawings and drawing references. #GreasePencilDrawingBase.flag
+ */
+enum GreasePencilDrawingBaseFlag : uint32_t {
+  /* TODO */
+  GreasePencilDrawingBaseFlag_TODO
+};
+ENUM_OPERATORS(GreasePencilDrawingBaseFlag)
+
+/**
+ * Flag for grease pencil frames. #GreasePencilFrame.flag
+ */
+enum GreasePencilFrameFlag : uint32_t {
+  GP_FRAME_SELECTED = (1 << 0),
+  /* When set, the frame is implicitly held until the next frame. E.g. it doesn't have a fixed
+   * duration. */
+  GP_FRAME_IMPLICIT_HOLD = (1 << 1),
+};
+ENUM_OPERATORS(GreasePencilFrameFlag)
+
+enum GreasePencilLayerFramesMapStorageFlag : int {
+  GP_LAYER_FRAMES_STORAGE_DIRTY = (1 << 0),
+};
+ENUM_OPERATORS(GreasePencilLayerFramesMapStorageFlag)
+
+/**
+ * Flag for layer masks. #GreasePencilLayerMask.flag
+ */
+enum GreasePencilLayerMaskFlag : uint16_t {
+  GP_LAYER_MASK_HIDE = (1 << 0),
+  GP_LAYER_MASK_INVERT = (1 << 1),
+};
+ENUM_OPERATORS(GreasePencilLayerMaskFlag)
+
+/**
+ * Layer blending modes. #GreasePencilLayer.blend_mode
+ */
+enum GreasePencilLayerBlendMode : int8_t {
+  GP_LAYER_BLEND_NONE = 0,
+  GP_LAYER_BLEND_HARDLIGHT = 1,
+  GP_LAYER_BLEND_ADD = 2,
+  GP_LAYER_BLEND_SUBTRACT = 3,
+  GP_LAYER_BLEND_MULTIPLY = 4,
+  GP_LAYER_BLEND_DIVIDE = 5,
+};
+
+/**
+ * Type of layer node.
+ * If `GP_LAYER_TREE_LEAF` the node is a `GreasePencilLayerTreeLeaf`,
+ * if `GP_LAYER_TREE_GROUP` the node is a `GreasePencilLayerTreeGroup`.
+ */
+enum GreasePencilLayerTreeNodeType : int8_t {
+  GP_LAYER_TREE_LEAF = 0,
+  GP_LAYER_TREE_GROUP = 1,
+};
+
+/**
+ * Flags for layer tree nodes. #GreasePencilLayerTreeNode.flag
+ */
+enum GreasePencilLayerTreeNodeFlag : uint32_t {
+  GP_LAYER_TREE_NODE_HIDE = (1 << 0),
+  GP_LAYER_TREE_NODE_LOCKED = (1 << 1),
+  GP_LAYER_TREE_NODE_SELECT = (1 << 2),
+  GP_LAYER_TREE_NODE_MUTE = (1 << 3),
+  GP_LAYER_TREE_NODE_USE_LIGHTS = (1 << 4),
+  GP_LAYER_TREE_NODE_HIDE_ONION_SKINNING = (1 << 5),
+  GP_LAYER_TREE_NODE_EXPANDED = (1 << 6),
+  GP_LAYER_TREE_NODE_HIDE_MASKS = (1 << 7),
+  GP_LAYER_TREE_NODE_DISABLE_MASKS_IN_VIEWLAYER = (1 << 8),
+  GP_LAYER_TREE_NODE_IGNORE_LOCKED_MATERIALS = (1 << 9),
+};
+ENUM_OPERATORS(GreasePencilLayerTreeNodeFlag)
+
+enum GroupColorTag : int8_t {
+  LAYERGROUP_COLOR_NONE = -1,
+  LAYERGROUP_COLOR_01,
+  LAYERGROUP_COLOR_02,
+  LAYERGROUP_COLOR_03,
+  LAYERGROUP_COLOR_04,
+  LAYERGROUP_COLOR_05,
+  LAYERGROUP_COLOR_06,
+  LAYERGROUP_COLOR_07,
+  LAYERGROUP_COLOR_08,
+};
+
+/**
+ * Flag for the grease pencil data-block. #GreasePencil.flag
+ */
+enum GreasePencilFlag : uint32_t {
+  GREASE_PENCIL_ANIM_CHANNEL_EXPANDED = (1 << 0),
+  GREASE_PENCIL_AUTOLOCK_LAYERS = (1 << 1),
+  GREASE_PENCIL_STROKE_ORDER_3D = (1 << 2),
+};
+ENUM_OPERATORS(GreasePencilFlag)
+
+/**
+ * Onion skinning mode. #GreasePencilOnionSkinningSettings.mode
+ */
+enum GreasePencilOnionSkinningMode : int8_t {
+  GP_ONION_SKINNING_MODE_ABSOLUTE = 0,
+  GP_ONION_SKINNING_MODE_RELATIVE = 1,
+  GP_ONION_SKINNING_MODE_SELECTED = 2,
+};
+
+enum GreasePencilOnionSkinningFlag : uint8_t {
+  /* Use custom colors (per object-data) for onion skinning. */
+  GP_ONION_SKINNING_USE_CUSTOM_COLORS = (1 << 0),
+  /* Fade the opacity of ghost frames further away from the current frame. */
+  GP_ONION_SKINNING_USE_FADE = (1 << 1),
+  /* Show looping frames in onion skinning. */
+  GP_ONION_SKINNING_SHOW_LOOP = (1 << 2),
+};
+ENUM_OPERATORS(GreasePencilOnionSkinningFlag)
+
+/**
+ * Flag for filtering the onion skinning per keyframe type.
+ * #GreasePencilOnionSkinningSettings.filter
+ * \note needs to match order of `eBezTriple_KeyframeType`.
+ */
+enum GreasePencilOnionSkinningFilter : uint8_t {
+  GP_ONION_SKINNING_FILTER_KEYTYPE_KEYFRAME = (1 << 0),
+  GP_ONION_SKINNING_FILTER_KEYTYPE_EXTREME = (1 << 1),
+  GP_ONION_SKINNING_FILTER_KEYTYPE_BREAKDOWN = (1 << 2),
+  GP_ONION_SKINNING_FILTER_KEYTYPE_JITTER = (1 << 3),
+  GP_ONION_SKINNING_FILTER_KEYTYPE_MOVEHOLD = (1 << 4),
+};
+ENUM_OPERATORS(GreasePencilOnionSkinningFilter)
+
+#define GREASE_PENCIL_ONION_SKINNING_FILTER_ALL \
+  (GP_ONION_SKINNING_FILTER_KEYTYPE_KEYFRAME | GP_ONION_SKINNING_FILTER_KEYTYPE_EXTREME | \
+   GP_ONION_SKINNING_FILTER_KEYTYPE_BREAKDOWN | GP_ONION_SKINNING_FILTER_KEYTYPE_JITTER | \
+   GP_ONION_SKINNING_FILTER_KEYTYPE_MOVEHOLD)
+
+/**
+ * Base class for drawings and drawing references (drawings from other objects).
+ */
+struct GreasePencilDrawingBase {
+  /**
+   * Indicates if this is an actual drawing or a drawing referenced from another object.
+   */
+  GreasePencilDrawingType type = GP_DRAWING;
+  char _pad[3] = {};
+  /**
+   * Flag. Used to set e.g. the selection status.
+   */
+  GreasePencilDrawingBaseFlag flag = {};
+};
+
+/**
+ * A grease pencil drawing is a set of strokes. The data is stored using the `CurvesGeometry` data
+ * structure and the custom attributes within it.
+ */
+struct GreasePencilDrawing {
+  GreasePencilDrawingBase base;
+  /**
+   * The stroke data for this drawing.
+   */
+  CurvesGeometry geometry;
+  /**
+   * Runtime data on the drawing.
+   */
+  bke::greasepencil::DrawingRuntime *runtime = nullptr;
+#ifdef __cplusplus
+  bke::greasepencil::Drawing &wrap();
+  const bke::greasepencil::Drawing &wrap() const;
+#endif
+};
+
+struct GreasePencilDrawingReference {
+  GreasePencilDrawingBase base;
+  /**
+   * A reference to another GreasePencil data-block.
+   * If the data-block has multiple drawings, this drawing references all of them sequentially.
+   * See the note in `GreasePencilLayer->frames()` for a detailed explanation of this.
+   */
+  struct GreasePencil *id_reference = nullptr;
+#ifdef __cplusplus
+  bke::greasepencil::DrawingReference &wrap();
+  const bke::greasepencil::DrawingReference &wrap() const;
+#endif
+};
+
+/**
+ * A GreasePencilFrame is a single keyframe in the timeline.
+ * It references a drawing by index into the drawing array.
+ */
+struct GreasePencilFrame {
+  /**
+   * Index into the GreasePencil->drawings array.
+   */
+  int drawing_index = 0;
+  /**
+   * Flag. Used to set e.g. the selection.
+   */
+  GreasePencilFrameFlag flag = {};
+  /**
+   * Keyframe type. See `eBezTriple_KeyframeType`.
+   */
+  int8_t type = 0;
+  char _pad[3] = {};
+#ifdef __cplusplus
+  static GreasePencilFrame end();
+  bool is_end() const;
+  bool is_implicit_hold() const;
+  bool is_selected() const;
+#endif
+};
+
+/**
+ * Storage for the Map in `bke::greasepencil::Layer`.
+ * See the description there for more detail.
+ */
+struct GreasePencilLayerFramesMapStorage {
+  /* Array of `frames` keys (sorted in ascending order). */
+  int *keys = nullptr;
+  /* Array of `frames` values (order matches the keys array). */
+  GreasePencilFrame *values = nullptr;
+  /* Size of the map (number of key-value pairs). */
+  int num = 0;
+  /* Flag for the status of the storage. */
+  GreasePencilLayerFramesMapStorageFlag flag = {};
+};
+
+/**
+ * A grease pencil layer mask stores the name of a layer that is the mask.
+ */
+struct GreasePencilLayerMask {
+  struct GreasePencilLayerMask *next = nullptr, *prev = nullptr;
+  /**
+   * The name of the layer that is the mask.
+   */
+  char *layer_name = nullptr;
+  /**
+   * Layer mask flag.
+   */
+  GreasePencilLayerMaskFlag flag = {};
+  char _pad[6] = {};
+#ifdef __cplusplus
+  bke::greasepencil::LayerMask &wrap();
+  const bke::greasepencil::LayerMask &wrap() const;
+#endif
+};
+
+struct GreasePencilLayerTreeGroup;
+struct GreasePencilLayerTreeNode {
+  /* ListBaseT pointers. */
+  struct GreasePencilLayerTreeNode *next = nullptr, *prev = nullptr;
+  /* Parent pointer. Can be null. */
+  struct GreasePencilLayerTreeGroup *parent = nullptr;
+  /**
+   * Name of the layer/group. Dynamic length.
+   */
+  char *name = nullptr;
+  /**
+   * Indicates the type of struct this element is.
+   */
+  GreasePencilLayerTreeNodeType type = GP_LAYER_TREE_LEAF;
+  char _pad[7] = {};
+  /**
+   * Channel color for dope-sheet.
+   */
+  float color[3] = {};
+  /**
+   * Flag. Used to set e.g. the selection, visibility, ... status.
+   */
+  GreasePencilLayerTreeNodeFlag flag = {};
+#ifdef __cplusplus
+  bke::greasepencil::TreeNode &wrap();
+  const bke::greasepencil::TreeNode &wrap() const;
+#endif
+};
+
+/**
+ * A grease pencil layer is a collection of drawings mapped to a specific time on the timeline.
+ */
+struct GreasePencilLayer {
+  GreasePencilLayerTreeNode base;
+  /* Only used for storage in the .blend file. */
+  GreasePencilLayerFramesMapStorage frames_storage;
+  /**
+   * Layer blend mode.
+   */
+  GreasePencilLayerBlendMode blend_mode = GP_LAYER_BLEND_NONE;
+  char _pad[3] = {};
+  /**
+   * Opacity of the layer.
+   */
+  float opacity = 0;
+  ListBaseT<GreasePencilLayerMask> masks = {nullptr, nullptr};
+  int active_mask_index = 0;
+  char _pad2[4] = {};
+  /**
+   * Layer parent object. Can be an armature in which case the `parsubstr` is the bone name.
+   */
+  struct Object *parent = nullptr;
+  char *parsubstr = nullptr;
+  /**
+   * Stores the inverse of the parent during parenting to keep the layer in its position.
+   * Also referred to as the "keep transform" parenting elsewhere.
+   */
+  float parentinv[4][4] = {};
+  /**
+   * Layer transform UI settings. These should *not* be used to do any computation.
+   * Use the functions is the `bke::greasepencil::Layer` class instead.
+   */
+  float translation[3] = {}, rotation[3] = {}, scale[3] = {1.0f, 1.0f, 1.0f};
+  char _pad3[4] = {};
+  /** Name of the view layer used to filter render output. */
+  char *viewlayername = nullptr;
+  /**
+   * Runtime struct pointer.
+   */
+  bke::greasepencil::LayerRuntime *runtime = nullptr;
+#ifdef __cplusplus
+  bke::greasepencil::Layer &wrap();
+  const bke::greasepencil::Layer &wrap() const;
+#endif
+};
+
+struct GreasePencilLayerTreeGroup {
+  GreasePencilLayerTreeNode base;
+  ListBaseT<GreasePencilLayerTreeNode> children = {nullptr, nullptr};
+  /**
+   * Icon color tag.
+   */
+  GroupColorTag color_tag = LAYERGROUP_COLOR_01;
+  char _pad[7] = {};
+  /**
+   * Runtime struct pointer.
+   */
+  bke::greasepencil::LayerGroupRuntime *runtime = nullptr;
+#ifdef __cplusplus
+  bke::greasepencil::LayerGroup &wrap();
+  const bke::greasepencil::LayerGroup &wrap() const;
+#endif
+};
+
+/**
+ * Per data-block Grease Pencil onion skinning settings.
+ */
+struct GreasePencilOnionSkinningSettings {
+  /**
+   * Opacity for the ghost frames.
+   */
+  float opacity = 0.5f;
+  GreasePencilOnionSkinningMode mode = GP_ONION_SKINNING_MODE_RELATIVE;
+  GreasePencilOnionSkinningFlag flag = (GP_ONION_SKINNING_USE_FADE |
+                                        GP_ONION_SKINNING_USE_CUSTOM_COLORS);
+  GreasePencilOnionSkinningFilter filter = GREASE_PENCIL_ONION_SKINNING_FILTER_ALL;
+  char _pad[1] = {};
+  /**
+   * Number of ghost frames shown before.
+   */
+  int16_t num_frames_before = 1;
+  /**
+   * Number of ghost frames shown after.
+   */
+  int16_t num_frames_after = 1;
+  /**
+   * Color of the ghost frames before.
+   */
+  float color_before[3] = {0.145098f, 0.419608f, 0.137255f};
+  /**
+   * Color of the ghost frames after.
+   */
+  float color_after[3] = {0.125490f, 0.082353f, 0.529412f};
+  char _pad2[4] = {};
+};
+
+/**
+ * The grease pencil data-block.
+ */
+struct GreasePencil {
+#ifdef __cplusplus
+  /** See #ID_Type comment for why this is here. */
+  static constexpr ID_Type id_type = ID_GP;
+#endif
+
+  ID id;
+  /** Animation data. */
+  struct AnimData *adt = nullptr;
+
+  /**
+   * An array of pointers to drawings. The drawing can own its data or reference it from another
+   * data-block. Note that the order of this array is arbitrary. The mapping of drawings to frames
+   * is done by the layers. See the `Layer` class in `BKE_grease_pencil.hh`.
+   */
+  GreasePencilDrawingBase **drawing_array = nullptr;
+  int drawing_array_num = 0;
+  char _pad[4] = {};
+
+  /* Root group of the layer tree. */
+  GreasePencilLayerTreeGroup *root_group_ptr = nullptr;
+
+  /** Used only for backward compatibility with old files. */
+  CustomData layers_data_legacy;
+
+  /**
+   * Layer domain attributes.
+   */
+  struct AttributeStorage attribute_storage;
+
+  /**
+   * The index of the active attribute in the UI.
+   *
+   * Set to -1 when none is active.
+   */
+  int attributes_active_index = 0;
+  char _pad2[4] = {};
+
+  /**
+   * Pointer to the active node. Can be NULL.
+   * This pointer does not own the data.
+   */
+  GreasePencilLayerTreeNode *active_node = nullptr;
+
+  /**
+   * An array of materials.
+   */
+  struct Material **material_array = nullptr;
+  short material_array_num = 0;
+  char _pad3[2] = {};
+  /**
+   * Global flag on the data-block.
+   */
+  GreasePencilFlag flag = GREASE_PENCIL_ANIM_CHANNEL_EXPANDED;
+
+  ListBaseT<bDeformGroup> vertex_group_names = {nullptr, nullptr};
+  int vertex_group_active_index = 0;
+  char _pad4[4] = {};
+
+  /**
+   * Onion skinning settings.
+   */
+  GreasePencilOnionSkinningSettings onion_skinning_settings;
+  /**
+   * Runtime struct pointer.
+   */
+  bke::GreasePencilRuntime *runtime = nullptr;
+#ifdef __cplusplus
+  /* Root group. */
+  const bke::greasepencil::LayerGroup &root_group() const;
+  bke::greasepencil::LayerGroup &root_group();
+
+  /* Drawings read/write access. */
+  Span<const GreasePencilDrawingBase *> drawings() const;
+  MutableSpan<GreasePencilDrawingBase *> drawings();
+  const GreasePencilDrawingBase *drawing(int64_t index) const;
+  GreasePencilDrawingBase *drawing(int64_t index);
+
+  /* Layers, layer groups and nodes read/write access. */
+  Span<const bke::greasepencil::Layer *> layers() const;
+  Span<bke::greasepencil::Layer *> layers_for_write();
+  const bke::greasepencil::Layer &layer(int64_t index) const;
+  bke::greasepencil::Layer &layer(int64_t index);
+
+  Span<const bke::greasepencil::LayerGroup *> layer_groups() const;
+  Span<bke::greasepencil::LayerGroup *> layer_groups_for_write();
+
+  Span<const bke::greasepencil::TreeNode *> nodes() const;
+  Span<bke::greasepencil::TreeNode *> nodes_for_write();
+
+  /* Return the index of the layer if it's found, otherwise `std::nullopt`. */
+  std::optional<int> get_layer_index(const bke::greasepencil::Layer &layer) const;
+
+  /* Active layer functions. */
+  bool has_active_layer() const;
+  const bke::greasepencil::Layer *get_active_layer() const;
+  bke::greasepencil::Layer *get_active_layer();
+  void set_active_layer(bke::greasepencil::Layer *layer);
+  bool is_layer_active(const bke::greasepencil::Layer *layer) const;
+  void autolock_inactive_layers();
+
+  /* Active group functions. */
+  bool has_active_group() const;
+  const bke::greasepencil::LayerGroup *get_active_group() const;
+  bke::greasepencil::LayerGroup *get_active_group();
+
+  /* Active node functions. */
+  const bke::greasepencil::TreeNode *get_active_node() const;
+  bke::greasepencil::TreeNode *get_active_node();
+  void set_active_node(bke::greasepencil::TreeNode *node);
+
+  /* Adding layers and layer groups. */
+  /** Adds a new layer with the given name to the top of root group. */
+  bke::greasepencil::Layer &add_layer(StringRef name, bool check_name_is_unique = true);
+  /** Adds a new layer with the given name to the top of the given group. */
+  bke::greasepencil::Layer &add_layer(bke::greasepencil::LayerGroup &parent_group,
+                                      StringRef name,
+                                      bool check_name_is_unique = true);
+  /** Duplicates a layer from the same object to the top of the root group. */
+  bke::greasepencil::Layer &duplicate_layer(const bke::greasepencil::Layer &duplicate_layer,
+                                            bool duplicate_frames = false,
+                                            bool duplicate_drawings = false);
+  /** Duplicates a layer from the same object to the top of the given group. */
+  bke::greasepencil::Layer &duplicate_layer(bke::greasepencil::LayerGroup &parent_group,
+                                            const bke::greasepencil::Layer &duplicate_layer,
+                                            bool duplicate_frames = false,
+                                            bool duplicate_drawings = false);
+  /** Add new layer group into the root group. */
+  bke::greasepencil::LayerGroup &add_layer_group(StringRef name, bool check_name_is_unique = true);
+  bke::greasepencil::LayerGroup &add_layer_group(bke::greasepencil::LayerGroup &parent_group,
+                                                 StringRef name,
+                                                 bool check_name_is_unique = true);
+
+  /**
+   *  Adds multiple layers with an empty name.
+   *  NOTE: Evaluated Grease Pencil geometry is allowed to have layers with the same name.
+   */
+  void add_layers_for_eval(int num_new_layers);
+
+  /* Moving nodes. */
+  void move_node_up(bke::greasepencil::TreeNode &node, int step = 1);
+  void move_node_down(bke::greasepencil::TreeNode &node, int step = 1);
+  void move_node_top(bke::greasepencil::TreeNode &node);
+  void move_node_bottom(bke::greasepencil::TreeNode &node);
+
+  void move_node_after(bke::greasepencil::TreeNode &node,
+                       bke::greasepencil::TreeNode &target_node);
+  void move_node_before(bke::greasepencil::TreeNode &node,
+                        bke::greasepencil::TreeNode &target_node);
+  void move_node_into(bke::greasepencil::TreeNode &node,
+                      bke::greasepencil::LayerGroup &parent_group);
+
+  /* Search functions. */
+  const bke::greasepencil::TreeNode *find_node_by_name(StringRef name) const;
+  bke::greasepencil::TreeNode *find_node_by_name(StringRef name);
+  IndexMask layer_selection_by_name(StringRef name, IndexMaskMemory &memory) const;
+
+  void rename_node(Main &bmain, bke::greasepencil::TreeNode &node, StringRef new_name);
+
+  void remove_layer(bke::greasepencil::Layer &layer);
+  void remove_group(bke::greasepencil::LayerGroup &group, bool keep_children = false);
+
+  std::string unique_layer_name(StringRef name);
+
+  /* Frames API functions. */
+
+  /**
+   * Insert a new keyframe in \a layer. If successful, this will also create a new drawing.
+   *
+   * \param frame_number: The frame number at which the keyframe is inserted (the start frame).
+   * \param duration: Duration of the keyframe. If set to 0, then the keyframe is implicitly held
+   * (until the next keyframe).
+   * \param keytype: The keyframe type (used to render different colored keys).
+   *
+   * \returns A pointer to a drawing if the keyframe was inserted, otherwise nullptr.
+   */
+  bke::greasepencil::Drawing *insert_frame(
+      bke::greasepencil::Layer &layer,
+      int frame_number,
+      int duration = 0,
+      eBezTriple_KeyframeType keytype = BEZT_KEYTYPE_KEYFRAME);
+
+  /**
+   * Same as #insert_frame but insert a new keyframe in each layer in \a layers. This will also
+   * create a new drawing for each of the created keyframes.
+   */
+  void insert_frames(Span<bke::greasepencil::Layer *> layers,
+                     int frame_number,
+                     int duration = 0,
+                     eBezTriple_KeyframeType keytype = BEZT_KEYTYPE_KEYFRAME);
+  /**
+   * Removes all the frames with \a frame_numbers in the \a layer.
+   * \returns true if any frame was removed.
+   */
+  bool remove_frames(bke::greasepencil::Layer &layer, Span<int> frame_numbers);
+
+  void copy_frames_from_layer(bke::greasepencil::Layer &dst_layer,
+                              const GreasePencil &src_grease_pencil,
+                              const bke::greasepencil::Layer &src_layer,
+                              const std::optional<int> frame_select = std::nullopt);
+  /**
+   * Adds multiple layers each with its own empty drawing. This can be more efficient than adding
+   * every layer and drawing one by one.
+   */
+  void add_layers_with_empty_drawings_for_eval(int num);
+
+  /**
+   * Low-level resizing of drawings array. Only allocates new entries in the array, no drawings are
+   * created in case of size increase. In case of size decrease, the removed drawings are deleted.
+   */
+  void resize_drawings(int new_num);
+  /** Add `add_num` new empty geometry drawings. */
+  void add_empty_drawings(int add_num);
+  void add_duplicate_drawings(int duplicate_num, const bke::greasepencil::Drawing &drawing);
+  bool insert_duplicate_frame(bke::greasepencil::Layer &layer,
+                              int src_frame_number,
+                              int dst_frame_number,
+                              bool do_instance);
+
+  /**
+   * Move a set of frames in a \a layer.
+   *
+   * \param frame_number_destinations: describes all transformations that should be applied on the
+   * frame keys.
+   *
+   * If a transformation overlaps another frames, the frame will be overwritten, and the
+   * corresponding drawing may be removed, if it no longer has users.
+   */
+  void move_frames(bke::greasepencil::Layer &layer,
+                   const Map<int, int> &frame_number_destinations);
+
+  /**
+   * Moves and/or inserts duplicates of a set of frames in a \a layer.
+   *
+   * \param frame_number_destinations: describes all transformations that should be applied on the
+   * frame keys.
+   * \param duplicate_frames: the frames that should be duplicated instead of moved.
+   * Keys of the map are the keys of the corresponding source frames.
+   * Frames will be inserted at the key given by the map \a frame_number_destination.
+   *
+   * If a transformation overlaps another frames, the frame will be overwritten, and the
+   * corresponding drawing may be removed, if it no longer has users.
+   */
+  void move_duplicate_frames(bke::greasepencil::Layer &layer,
+                             const Map<int, int> &frame_number_destinations,
+                             const Map<int, GreasePencilFrame> &duplicate_frames);
+
+  /**
+   * Removes all the drawings that have no users. Will free the drawing data and shrink the
+   * drawings array.
+   */
+  void remove_drawings_with_no_users();
+  /**
+   * Makes sure all the drawings that the layer points to have a user.
+   */
+  void update_drawing_users_for_layer(const bke::greasepencil::Layer &layer);
+
+  /**
+   * Returns a drawing on \a layer at frame \a frame_number or `nullptr` if no such
+   * drawing exists.
+   */
+  const bke::greasepencil::Drawing *get_drawing_at(const bke::greasepencil::Layer &layer,
+                                                   int frame_number) const;
+  bke::greasepencil::Drawing *get_drawing_at(const bke::greasepencil::Layer &layer,
+                                             int frame_number);
+  /**
+   * Returns an editable drawing on \a layer at frame \a frame_number or `nullptr` if no such
+   * drawing exists.
+   */
+  bke::greasepencil::Drawing *get_editable_drawing_at(const bke::greasepencil::Layer &layer,
+                                                      int frame_number);
+
+  /**
+   * Returns a drawing on \a layer at the frame this grease pencil was evaluated at or `nullptr` if
+   * no such drawing exists.
+   */
+  const bke::greasepencil::Drawing *get_eval_drawing(const bke::greasepencil::Layer &layer) const;
+  bke::greasepencil::Drawing *get_eval_drawing(const bke::greasepencil::Layer &layer);
+
+  std::optional<Bounds<float3>> bounds_min_max(int frame, bool use_radius = true) const;
+  std::optional<Bounds<float3>> bounds_min_max_eval(bool use_radius = true) const;
+
+  bke::AttributeAccessor attributes() const;
+  bke::MutableAttributeAccessor attributes_for_write();
+
+  /**
+   * Get the largest material index used by all the drawings or `nullopt` if there are no drawings.
+   */
+  std::optional<int> material_index_max() const;
+
+  void count_memory(MemoryCounter &memory) const;
+
+  /**
+   * Compute the user counts of the drawings by iterating through the keyframes of all the layers
+   * and counting the number of references to each drawing.
+   */
+  Array<int> count_frame_users_for_drawings() const;
+
+  /* For debugging purposes. */
+  void print_layer_tree();
+  void validate_drawing_user_counts();
+#endif
+};
+
+}  // namespace blender

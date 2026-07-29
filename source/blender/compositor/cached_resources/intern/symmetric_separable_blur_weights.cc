@@ -1,0 +1,126 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include <cstdint>
+#include <memory>
+
+#include "BLI_hash.hh"
+#include "BLI_index_range.hh"
+#include "BLI_math_base.hh"
+
+#include "COM_context.hh"
+#include "COM_result.hh"
+#include "COM_symmetric_separable_blur_weights.hh"
+
+namespace blender::compositor {
+
+/* --------------------------------------------------------------------
+ * Symmetric Separable Blur Weights Key.
+ */
+
+SymmetricSeparableBlurWeightsKey::SymmetricSeparableBlurWeightsKey(math::FilterKernel type,
+                                                                   float radius)
+    : type(type), radius(radius)
+{
+}
+
+uint64_t SymmetricSeparableBlurWeightsKey::hash() const
+{
+  return get_default_hash(type, radius);
+}
+
+bool operator==(const SymmetricSeparableBlurWeightsKey &a,
+                const SymmetricSeparableBlurWeightsKey &b)
+{
+  return a.type == b.type && a.radius == b.radius;
+}
+
+/* --------------------------------------------------------------------
+ * Symmetric Separable Blur Weights.
+ */
+
+SymmetricSeparableBlurWeights::SymmetricSeparableBlurWeights(Context &context,
+                                                             math::FilterKernel type,
+                                                             float radius)
+    : weights(context.create_result(ResultType::Float))
+{
+  Result weights_cpu = context.create_result(ResultType::Float);
+
+  /* The size of filter is double the radius plus 1, but since the filter is symmetric, we only
+   * compute half of it and no doubling happens. We add 1 to make sure the filter size is always
+   * odd and there is a center weight. */
+  weights_cpu.allocate_texture(
+      Domain(int2(math::ceil(radius) + 1, 1)), false, ResultStorageType::CPU);
+
+  float sum = 0.0f;
+
+  /* First, compute the center weight. */
+  const float center_weight = math::filter_kernel_value(type, 0.0f);
+  weights_cpu.store_pixel(int2(0, 0), center_weight);
+  sum += center_weight;
+
+  /* Second, compute the other weights in the positive direction, making sure to add double the
+   * weight to the sum of weights because the filter is symmetric and we only loop over half of
+   * it. Skip the center weight already computed by dropping the front index. */
+  const float scale = radius > 0.0f ? 1.0f / radius : 0.0f;
+  for (const int i : IndexRange(weights_cpu.domain().data_size.x).drop_front(1)) {
+    const float weight = math::filter_kernel_value(type, i * scale);
+    weights_cpu.store_pixel(int2(i, 0), weight);
+    sum += weight * 2.0f;
+  }
+
+  /* Finally, normalize the weights. */
+  for (const int i : IndexRange(weights_cpu.domain().data_size.x)) {
+    const int2 texel = int2(i, 0);
+    weights_cpu.store_pixel(texel, weights_cpu.load_pixel<float>(texel) / sum);
+  }
+
+  if (context.use_gpu()) {
+    Result weights_gpu = weights_cpu.upload_to_gpu(false);
+    this->weights.share_data(weights_gpu);
+    weights_gpu.release();
+  }
+  else {
+    this->weights.share_data(weights_cpu);
+  }
+
+  weights_cpu.release();
+}
+
+SymmetricSeparableBlurWeights::~SymmetricSeparableBlurWeights()
+{
+  this->weights.release();
+}
+
+/* --------------------------------------------------------------------
+ * Symmetric Separable Blur Weights Container.
+ */
+
+void SymmetricSeparableBlurWeightsContainer::reset()
+{
+  /* First, delete all resources that are no longer needed. */
+  map_.remove_if([](auto item) { return !item.value->needed; });
+
+  /* Second, reset the needed status of the remaining resources to false to ready them to track
+   * their needed status for the next evaluation. */
+  for (auto &value : map_.values()) {
+    value->needed = false;
+  }
+}
+
+Result &SymmetricSeparableBlurWeightsContainer::get(Context &context,
+                                                    math::FilterKernel type,
+                                                    float radius)
+{
+  const SymmetricSeparableBlurWeightsKey key(type, radius);
+
+  auto &weights = *map_.lookup_or_add_cb(key, [&]() {
+    return std::make_unique<SymmetricSeparableBlurWeights>(context, type, radius);
+  });
+
+  weights.needed = true;
+  return weights.weights;
+}
+
+}  // namespace blender::compositor

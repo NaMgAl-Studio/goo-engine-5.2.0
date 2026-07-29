@@ -1,0 +1,193 @@
+/* SPDX-FileCopyrightText: 2025 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "BLI_string_utf8.h"
+
+#include "BKE_gtest_base.hh"
+#include "BKE_idprop.hh"
+
+#include "testing/testing.h"
+
+namespace blender::bke::tests {
+
+class IDPropertyTest : public BlenderGTestBase {};
+
+/* U+1D400 is four bytes (0xF0 0x9D 0x90 0x80). */
+static const char *idp_utf8_4byte =
+    "\U0001D400\U0001D400\U0001D400\U0001D400\U0001D400"; /* 5 x 4 bytes = 20 bytes. */
+
+static bool idp_string_is_valid_utf8(const IDProperty *prop)
+{
+  return BLI_str_utf8_invalid_byte(IDP_string_get(prop), size_t(prop->len - 1)) == -1;
+}
+
+TEST_F(IDPropertyTest, NewStringMaxSizeUtf8Truncate)
+{
+  /* A truncated property must never be left as invalid UTF-8. */
+
+  IDProperty *prop = IDP_NewStringMaxSize(idp_utf8_4byte, 8, "test");
+  EXPECT_TRUE(idp_string_is_valid_utf8(prop));
+  EXPECT_STREQ(IDP_string_get(prop), "\U0001D400");
+  EXPECT_EQ(prop->len, 5);
+  IDP_FreeProperty(prop);
+
+  /* A code-point ending exactly at the limit must not be needlessly dropped. */
+  prop = IDP_NewStringMaxSize(idp_utf8_4byte, 9, "test");
+  EXPECT_TRUE(idp_string_is_valid_utf8(prop));
+  EXPECT_STREQ(IDP_string_get(prop), "\U0001D400\U0001D400");
+  EXPECT_EQ(prop->len, 9);
+  IDP_FreeProperty(prop);
+}
+
+TEST_F(IDPropertyTest, AssignStringMaxSizeUtf8Truncate)
+{
+  /* Re-assignment has its own storage path that must equally avoid invalid UTF-8. */
+  IDProperty *prop = IDP_NewString("", "test");
+  IDP_AssignStringMaxSize(prop, idp_utf8_4byte, 8);
+  EXPECT_TRUE(idp_string_is_valid_utf8(prop));
+  EXPECT_STREQ(IDP_string_get(prop), "\U0001D400");
+  EXPECT_EQ(prop->len, 5);
+  IDP_FreeProperty(prop);
+}
+
+TEST_F(IDPropertyTest, AssignStringMaxSizeBytesIgnoreUtf8)
+{
+  /* Binary data must survive truncation byte-for-byte, never truncated as UTF-8 code-points. */
+  IDPropertyTemplate val = {};
+  val.string.subtype = IDP_STRING_SUB_BYTE;
+  IDProperty *prop = IDP_New(IDP_STRING, &val, "test");
+  ASSERT_EQ(prop->subtype, IDP_STRING_SUB_BYTE);
+
+  IDP_AssignStringMaxSize(prop, idp_utf8_4byte, 4);
+  EXPECT_EQ(prop->len, 3);
+  EXPECT_NE(BLI_str_utf8_invalid_byte(IDP_string_get(prop), size_t(prop->len)), -1);
+
+  IDP_FreeProperty(prop);
+}
+
+TEST_F(IDPropertyTest, CreateGroup)
+{
+  IDProperty *prop = idprop::create_group("test").release();
+  IDP_FreeProperty(prop);
+}
+
+TEST_F(IDPropertyTest, AddToGroup)
+{
+  IDProperty *group = idprop::create_group("test").release();
+  EXPECT_EQ(IDP_GetPropertyFromGroup(group, "a"), nullptr);
+  EXPECT_TRUE(IDP_AddToGroup(group, idprop::create("a", 3.0f).release()));
+  EXPECT_TRUE(IDP_AddToGroup(group, idprop::create("b", 5).release()));
+  EXPECT_EQ(IDP_float_get(IDP_GetPropertyFromGroup(group, "a")), 3.0f);
+  EXPECT_EQ(IDP_int_get(IDP_GetPropertyFromGroup(group, "b")), 5);
+  IDProperty *duplicate_prop = idprop::create("a", 10).release();
+  EXPECT_FALSE(IDP_AddToGroup(group, duplicate_prop));
+  EXPECT_EQ(IDP_float_get(IDP_GetPropertyFromGroup(group, "a")), 3.0f);
+  EXPECT_EQ(IDP_GetPropertyFromGroup(group, "c"), nullptr);
+  IDP_FreeProperty(duplicate_prop);
+  IDP_FreeProperty(group);
+}
+
+TEST_F(IDPropertyTest, ReplaceInGroup)
+{
+  IDProperty *group = idprop::create_group("test").release();
+  EXPECT_TRUE(IDP_AddToGroup(group, idprop::create("a", 3.0f).release()));
+  EXPECT_EQ(IDP_float_get(IDP_GetPropertyFromGroup(group, "a")), 3.0f);
+  IDP_ReplaceInGroup(group, idprop::create("a", 5.0f).release());
+  EXPECT_EQ(IDP_float_get(IDP_GetPropertyFromGroup(group, "a")), 5.0f);
+  IDP_ReplaceInGroup(group, idprop::create("b", 5).release());
+  EXPECT_EQ(IDP_int_get(IDP_GetPropertyFromGroup(group, "b")), 5);
+  IDP_FreeProperty(group);
+}
+
+TEST_F(IDPropertyTest, RemoveFromGroup)
+{
+  IDProperty *group = idprop::create_group("test").release();
+  EXPECT_EQ(IDP_GetPropertyFromGroup(group, "a"), nullptr);
+  IDProperty *prop_a = idprop::create("a", 3.0f).release();
+  EXPECT_TRUE(IDP_AddToGroup(group, prop_a));
+  EXPECT_EQ(IDP_float_get(IDP_GetPropertyFromGroup(group, "a")), 3.0f);
+  IDP_RemoveFromGroup(group, prop_a);
+  EXPECT_EQ(IDP_GetPropertyFromGroup(group, "a"), nullptr);
+  IDP_FreeProperty(prop_a);
+  IDP_FreeProperty(group);
+}
+
+TEST_F(IDPropertyTest, ReplaceGroupInGroup)
+{
+  IDProperty *group1 = idprop::create_group("test").release();
+  IDP_AddToGroup(group1, idprop::create("a", 1).release());
+  IDP_AddToGroup(group1, idprop::create("b", 2).release());
+  IDProperty *group2 = idprop::create_group("test2").release();
+  IDP_AddToGroup(group2, idprop::create("b", 3).release());
+  IDP_AddToGroup(group2, idprop::create("c", 4).release());
+
+  IDP_ReplaceGroupInGroup(group1, group2);
+  EXPECT_EQ(IDP_int_get(IDP_GetPropertyFromGroup(group1, "a")), 1);
+  EXPECT_EQ(IDP_int_get(IDP_GetPropertyFromGroup(group1, "b")), 3);
+  EXPECT_EQ(IDP_int_get(IDP_GetPropertyFromGroup(group1, "c")), 4);
+
+  IDP_FreeProperty(group1);
+  IDP_FreeProperty(group2);
+}
+
+TEST_F(IDPropertyTest, SyncGroupValues)
+{
+  IDProperty *group1 = idprop::create_group("test").release();
+  IDProperty *group2 = idprop::create_group("test").release();
+  IDP_AddToGroup(group1, idprop::create("a", 1).release());
+  IDP_AddToGroup(group1, idprop::create("b", 2).release());
+  IDP_AddToGroup(group1, idprop::create("x", 2).release());
+  IDP_AddToGroup(group2, idprop::create("a", 3).release());
+  IDP_AddToGroup(group2, idprop::create("c", 4).release());
+  IDP_AddToGroup(group2, idprop::create("x", "value").release());
+
+  IDP_SyncGroupValues(group1, group2);
+  EXPECT_EQ(IDP_int_get(IDP_GetPropertyFromGroup(group1, "a")), 3);
+  EXPECT_EQ(IDP_int_get(IDP_GetPropertyFromGroup(group1, "b")), 2);
+  EXPECT_EQ(IDP_int_get(IDP_GetPropertyFromGroup(group1, "x")), 2);
+  EXPECT_EQ(IDP_GetPropertyFromGroup(group1, "c"), nullptr);
+
+  IDP_FreeProperty(group1);
+  IDP_FreeProperty(group2);
+}
+
+TEST_F(IDPropertyTest, ReprGroup)
+{
+  auto repr_fn = [](IDProperty *prop) -> std::string {
+    uint result_len;
+    char *c_str = IDP_reprN(prop, &result_len);
+    std::string result = std::string(c_str, result_len);
+    MEM_delete(c_str);
+    return result;
+  };
+
+  IDProperty *group = idprop::create_group("test").release();
+
+  EXPECT_EQ(repr_fn(group), "{}");
+
+  IDP_AddToGroup(group, idprop::create("a", 1).release());
+  IDP_AddToGroup(group, idprop::create("b", 0.5f).release());
+  IDP_AddToGroup(group, idprop::create_bool("c", true).release());
+  IDP_AddToGroup(group, idprop::create_bool("d", false).release());
+  IDP_AddToGroup(group, idprop::create("e", "ABC (escape \" \\)").release());
+  IDP_AddToGroup(group, idprop::create("f", Span<int32_t>({-1, 0, 1})).release());
+  IDP_AddToGroup(group, idprop::create("g", Span<float>({-0.5f, 0.0f, 0.5f})).release());
+  IDP_AddToGroup(group, idprop::create_group("h").release());
+
+  EXPECT_EQ(repr_fn(group),
+            "{"
+            "\"a\": 1, "
+            "\"b\": 0.5, "
+            "\"c\": True, "
+            "\"d\": False, "
+            "\"e\": \"ABC (escape \\\" \\\\)\", "
+            "\"f\": [-1, 0, 1], "
+            "\"g\": [-0.5, 0, 0.5], "
+            "\"h\": {}"
+            "}");
+
+  IDP_FreeProperty(group);
+}
+
+}  // namespace blender::bke::tests

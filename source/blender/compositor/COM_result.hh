@@ -1,0 +1,780 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#pragma once
+
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <variant>
+
+#include "BLI_assert.h"
+#include "BLI_color_types.hh"
+#include "BLI_compiler_compat.h"
+#include "BLI_cpp_type.hh"
+#include "BLI_generic_pointer.hh"
+#include "BLI_generic_span.hh"
+#include "BLI_implicit_sharing_ptr.hh"
+#include "BLI_math_interp.hh"
+#include "BLI_math_matrix_types.hh"
+#include "BLI_math_quaternion_types.hh"
+#include "BLI_math_vector.h"
+#include "BLI_math_vector.hh"
+#include "BLI_math_vector_types.hh"
+#include "BLI_memory_utils.hh"
+#include "BLI_string_ref.hh"
+
+#include "GPU_shader.hh"
+#include "GPU_texture.hh"
+
+#include "NOD_menu_value.hh"
+
+#include "COM_domain.hh"
+#include "COM_meta_data.hh"
+
+namespace blender {
+struct Object;
+struct Image;
+struct VFont;
+struct Scene;
+struct Text;
+struct Mask;
+}  // namespace blender
+
+namespace blender::compositor {
+
+class Context;
+class DerivedResources;
+
+/* Make sure to update the format related static methods in the Result class. */
+enum class ResultType : uint8_t {
+  Float,
+  Float2,
+  Float3,
+  Float4,
+  Color,
+  Int,
+  Int2,
+  Int3,
+  Int4,
+  Bool,
+  Float4x4,
+  Menu,
+  Quaternion,
+
+  /* Single value only types. See Result::is_single_value_only_type. */
+  String,
+  Object,
+  Image,
+  Font,
+  Scene,
+  Text,
+  Mask,
+};
+
+/* The precision of the data. CPU data is always stored using full precision at the moment. */
+enum class ResultPrecision : uint8_t {
+  Full,
+  Half,
+};
+
+/* The type of storage used to hold the result data. */
+enum class ResultStorageType : uint8_t {
+  /* Stored as a gpu::Texture on the GPU. */
+  GPU,
+  /* Stored as a buffer on the CPU. */
+  CPU,
+};
+
+using Color = ColorSceneLinear4f<eAlpha::Premultiplied>;
+
+/* ------------------------------------------------------------------------------------------------
+ * Result
+ *
+ * A result represents the computed value of an output of an operation. A result can either
+ * represent an image or a single value. A result is typed, and can be of types like color, vector,
+ * or float. Single value results are stored in 1x1 textures to make them easily accessible in
+ * shaders. But the same value is also stored in the value union member of the result for any
+ * host-side processing. The GPU texture of the result can either be allocated from the texture
+ * pool of the context referenced by the result or it can be allocated directly from the GPU
+ * module, see the allocation method for more information.
+ *
+ * Results are reference counted and their data are released once their reference count reaches
+ * zero. After constructing a result, the set_reference_count method is called to declare the
+ * number of operations that needs this result. Once each operation that needs the result no longer
+ * needs it, the release method is called and the reference count is decremented, until it reaches
+ * zero, where the result's data is then released.
+ *
+ * A result not only represents an image, but also the area it occupies in the virtual compositing
+ * space. This area is called the Domain of the result, see the discussion in COM_domain.hh for
+ * more information.
+ *
+ * The result data can be shared by multiple results or shared with some external entity outside of
+ * the compositor. This is achieved by managing the data in an ImplicitSharingInfo, which is heap
+ * allocated and shared by all results that share the same data. See the sharing_info_ and the
+ * share_data method for more information.
+ *
+ * A result may store resources that are computed and cached in case they are needed by multiple
+ * operations. Those are called Derived Resources and can be accessed using the derived_resources
+ * method. */
+class Result {
+ private:
+  /* The context that the result was created within, this should be initialized during
+   * construction. */
+  Context *context_ = nullptr;
+  /* The base type of the result's image or single value. */
+  ResultType type_ = ResultType::Float;
+  /* The precision of the result's data. Only relevant for GPU textures. CPU buffers and single
+   * values are always stored using full precision. */
+  ResultPrecision precision_ = ResultPrecision::Half;
+  /* If true, the result is a single value, otherwise, the result is an image. */
+  bool is_single_value_ = false;
+  /* The type of storage used to hold the data. Used to correctly interpret the data union. */
+  ResultStorageType storage_type_ = ResultStorageType::GPU;
+  /* Stores a reference to the result's pixel data managed by the sharing info, either stored in a
+   * GPU texture or a buffer that is wrapped in a GSpan on CPU. This will represent a 1x1 image if
+   * the result is a single value, the value of which will be identical to that of the value
+   * member. See class description for more information. */
+  union {
+    /* This will be a 2D texture for most types, but can be a 2D texture array for large types like
+     * float4x4 where each column will be stored in a layer. */
+    gpu::Texture *gpu_texture_ = nullptr;
+    GSpan cpu_data_;
+  };
+  /* Implicit sharing info manages the result's data, allowing it to be shared between multiple
+   * results and eventually freeing it when it is no longer needed. It is heap allocated during
+   * data allocation, it gains new users through calls to share_data, and its users get removed
+   * and its data potentially deleted in the free method. Notice that implicit sharing in Blender
+   * allows copying shared data to make it mutable, this is not allowed in the compositor, and it
+   * does not implement a copy-on-write mechanism, so copying needs to be done explicitly. The
+   * result may contain data with a nullptr sharing info, this is a special case where the data is
+   * considered external and needn't be managed/freed by the result. */
+  ImplicitSharingPtr<> sharing_info_ = nullptr;
+  /* The number of users that currently needs this result. Operations initializes this by calling
+   * the set_reference_count method before evaluation. Once each operation that needs the result no
+   * longer needs it, the release method is called and the reference count is decremented, until it
+   * reaches zero, where the result's data is then released. */
+  int reference_count_ = 1;
+  /* If the result is a single value, this member stores the value of the result, the value of
+   * which will be identical to that stored in the data_ member. The active variant member depends
+   * on the type of the result. This member is uninitialized and should not be used if the result
+   * is not a single value. */
+  std::variant<float,
+               float2,
+               float3,
+               float4,
+               Color,
+               int32_t,
+               int2,
+               int3,
+               int4,
+               bool,
+               float4x4,
+               nodes::MenuValue,
+               math::Quaternion,
+               std::string,
+               Object *,
+               Image *,
+               VFont *,
+               Scene *,
+               Text *,
+               Mask *>
+      single_value_ = 0.0f;
+  /* The domain of the result. This only matters if the result was not a single value. See the
+   * discussion in COM_domain.hh for more information. */
+  Domain domain_ = Domain::identity();
+  /* Stores resources that are derived from this result. Lazily allocated if needed. See the class
+   * description for more information. */
+  DerivedResources *derived_resources_ = nullptr;
+
+ public:
+  /* Stores extra information about the result such as image meta data that can eventually be
+   * written to file. */
+  MetaData meta_data;
+
+  /* Construct a result within the given context. */
+  Result(Context &context);
+
+  /* Construct a result of the given type and precision within the given context. */
+  Result(Context &context, ResultType type, ResultPrecision precision);
+
+  /* Construct a result of an appropriate type and precision based on the given GPU texture format
+   * within the given context. */
+  Result(Context &context, gpu::TextureFormat format);
+
+  /* Returns true if the given type can only be used with single value results. Consequently, it is
+   * always allocated on the CPU and GPU code paths needn't support the type. */
+  static bool is_single_value_only_type(ResultType type);
+
+  /* Returns the appropriate GPU texture format based on the given result type and precision. A
+   * special case is given to Float3 and Int3, because 3-component textures can't be used as write
+   * targets in shaders, so we need to allocate 4-component textures for them, and ignore the
+   * fourth channel during processing. */
+  static gpu::TextureFormat gpu_texture_format(ResultType type, ResultPrecision precision);
+
+  /* Returns the GPU data format that corresponds to the give result type. */
+  static eGPUDataFormat gpu_data_format(const ResultType type);
+
+  /* Returns the GPU texture format that corresponds to the give one, but whose precision is the
+   * given precision. */
+  static gpu::TextureFormat gpu_texture_format(gpu::TextureFormat format,
+                                               ResultPrecision precision);
+
+  /* Returns the precision of the given GPU texture format. */
+  static ResultPrecision precision(gpu::TextureFormat format);
+
+  /* Returns the type of the given GPU texture format. */
+  static ResultType type(gpu::TextureFormat format);
+
+  /* Returns the CPP type corresponding to the given result type. */
+  static const CPPType &cpp_type(const ResultType type);
+
+  /* Returns a string representation of the given result type. */
+  static const char *type_name(const ResultType type);
+
+  /* Implicit conversion to the internal GPU texture. */
+  operator gpu::Texture *() const;
+
+  /* Returns the CPP type of the result. */
+  const CPPType &get_cpp_type() const;
+
+  /* Returns the appropriate texture format based on the result's type and precision. This is
+   * identical to the gpu_texture_format static method. This will match the format of the allocated
+   * texture, with one exception. Results of type Float3 or Int3 that share external textures might
+   * hold a 3-component texture as opposed to a 4-component one, which would have been created by
+   * uploading data from CPU. */
+  gpu::TextureFormat get_gpu_texture_format() const;
+
+  /* Identical to gpu_data_format but assumes the result's type. */
+  eGPUDataFormat get_gpu_data_format() const;
+
+  /* Declare the result to be a texture result, allocate a texture of an appropriate type with
+   * the size of the given domain, and set the domain of the result to the given domain.
+   *
+   * See the allocate_data method for more information on the from_pool and storage_type
+   * parameters. */
+  void allocate_texture(const Domain domain,
+                        const bool from_pool = true,
+                        const std::optional<ResultStorageType> storage_type = std::nullopt);
+
+  /* Declare the result to be a single value result, allocate a texture of an appropriate type with
+   * size 1x1 from the texture pool, and set the domain to be an identity domain. The value is zero
+   * initialized. See class description for more information. */
+  void allocate_single_value();
+
+  /* Allocate a single value result whose value is zero. This is called for results whose value
+   * can't be computed and are considered invalid. */
+  void allocate_invalid();
+
+  /* Creates and allocates a new result that matches the type and precision of this result and
+   * uploads the CPU data that exist in this result. The result is assumed to be allocated on the
+   * CPU. See the allocate_data method for more information on the from_pool parameters. */
+  Result upload_to_gpu(const bool from_pool) const;
+
+  /* Creates and allocates a new result that matches the type and precision of this result and
+   * downloads the GPU data that exist in this result. The result is assumed to be allocated on the
+   * GPU. */
+  Result download_to_cpu() const;
+
+  /* Bind the GPU texture of the result to the texture image unit with the given name in the
+   * currently bound given shader. This also inserts a memory barrier for texture fetches to ensure
+   * any prior writes to the texture are reflected before reading from it. */
+  void bind_as_texture(gpu::Shader *shader, const char *texture_name) const;
+
+  /* Bind the GPU texture of the result to the image unit with the given name in the currently
+   * bound given shader. If read is true, a memory barrier will be inserted for image reads to
+   * ensure any prior writes to the images are reflected before reading from it. */
+  void bind_as_image(gpu::Shader *shader, const char *image_name, bool read = false) const;
+
+  /* Unbind the GPU texture which was previously bound using bind_as_texture. */
+  void unbind_as_texture() const;
+
+  /* Unbind the GPU texture which was previously bound using bind_as_image. */
+  void unbind_as_image() const;
+
+  /* Share the data of the given source result. This is done by simply adding a new user to the
+   * sharing info of the result. The source data is expect to be allocated and have the same type
+   * and precision as this result. */
+  void share_data(const Result &source);
+
+  /* Share the data of a GPU texture that is managed by the given implicit sharing info. If no
+   * implicit sharing info is provided, the texture is assumed to be external, has a lifetime that
+   * covers the entire evaluation of the compositor, and will thus not be freed. The domain will be
+   * set to have the data and display size as the texture size. The given texture should have a
+   * format that is compatible with the result. */
+  void share_data(gpu::Texture *texture, ImplicitSharingPtr<> sharing_info = nullptr);
+
+  /* Share the data of a GPU buffer that is managed by the given implicit sharing info. If no
+   * implicit sharing info is provided, the buffer is assumed to be external, has a lifetime that
+   * covers the entire evaluation of the compositor, and will thus not be freed. The domain will be
+   * set to have the data and display size as the given size. The given buffer should have a format
+   * that is compatible with the result. */
+  void share_data(const void *data, int2 size, ImplicitSharingPtr<> sharing_info = nullptr);
+
+  /* Sets the transformation of the domain of the result to the given transformation. */
+  void set_transformation(const float3x3 &transformation);
+
+  /* Transform the result by the given transformation. This effectively pre-multiply the given
+   * transformation by the current transformation of the domain of the result. */
+  void transform(const float3x3 &transformation);
+
+  /* Get a reference to the realization options of this result. See the RealizationOptions struct
+   * for more information. */
+  RealizationOptions &get_realization_options();
+  const RealizationOptions &get_realization_options() const;
+
+  /* Set the value of reference_count_, see that member for more details. This should be called
+   * after constructing the result to declare the number of operations that needs it. */
+  void set_reference_count(int count);
+
+  /* Decrement the reference count of the result by the given count. */
+  void decrement_reference_count(int count = 1);
+
+  /* Decrement the reference count of the result and free its data if it reaches zero. */
+  void release();
+
+  /* Remove a user from the result's data and frees the data if there are no more owners. If the
+   * result is not allocated, this will do nothing. */
+  void free();
+
+  /* Returns true if this result should be computed and false otherwise. The result should be
+   * computed if its reference count is not zero, that is, its result is used by at least one
+   * operation. */
+  bool should_compute();
+
+  /* Returns a reference to the derived resources of the result, which is allocated if it was not
+   * allocated already. */
+  DerivedResources &derived_resources();
+
+  /* Returns the type of the result. */
+  ResultType type() const;
+
+  /* Returns the precision of the result. */
+  ResultPrecision precision() const;
+
+  /* Sets the type of the result. */
+  void set_type(ResultType type);
+
+  /* Sets the precision of the result. */
+  void set_precision(ResultPrecision precision);
+
+  /* Returns true if the result is a single value and false of it is an image. */
+  bool is_single_value() const;
+
+  /* Returns true if the result is allocated. */
+  bool is_allocated() const;
+
+  /* Returns the reference count of the result. */
+  int reference_count() const;
+
+  /* Returns a reference to the domain of the result. See the Domain class. */
+  Domain &domain();
+  const Domain &domain() const;
+
+  /* Computes the number of channels of the result based on its type. */
+  int64_t channels_count() const;
+
+  /* Computes the size of the result's data in bytes. */
+  int64_t size_in_bytes() const;
+
+  gpu::Texture *gpu_texture() const;
+
+  GSpan cpu_data() const;
+  GMutableSpan cpu_data_for_write();
+
+  const ImplicitSharingPtr<> &sharing_info() const;
+
+  /* It is important to call update_single_value_data after adjusting the single value. See that
+   * method for more information. */
+  GPointer single_value() const;
+  GMutablePointer single_value();
+
+  /* Gets the single value stored in the result. Assumes the result stores a value of the given
+   * template type. */
+  template<typename T> const T &get_single_value() const;
+
+  /* Gets the single value stored in the result, if the result is not a single value, the default
+   * identity value of the type is returned. Assumes the result stores a value of the same type as
+   * the template type. */
+  template<typename T> T get_single_value_default() const;
+
+  /* Sets the single value of the result to the given value, which also involves setting the single
+   * pixel in the image to that value. See the class description for more information. Assumes
+   * the result stores a value of the given template type. */
+  template<typename T> void set_single_value(const T &value);
+
+  /* Updates the single pixel in the image to the current single value in the result. This is
+   * called implicitly in the set_single_value method, but calling this explicitly is useful when
+   * the single value was adjusted through its data pointer returned by the single_value method.
+   * See the class description for more information. */
+  void update_single_value_data();
+
+  /* Loads the pixel at the given texel coordinates. Assumes the result stores a value of the given
+   * template type. If the CouldBeSingleValue template argument is true and the result is a single
+   * value result, then that single value is returned for all texel coordinates. */
+  template<typename T, bool CouldBeSingleValue = false> T load_pixel(const int2 &texel) const;
+
+  /* Identical to load_pixel but with the specified boundary extensions. */
+  template<typename T, bool CouldBeSingleValue = false>
+  T load_pixel(const int2 &texel,
+               const Extension &extension_mode_x,
+               const Extension &extension_mode_y) const;
+
+  /* Identical to load_pixel but with extended boundary extension. */
+  template<typename T, bool CouldBeSingleValue = false>
+  T load_pixel_extended(const int2 &texel) const;
+
+  /* Identical to load_pixel but with a fallback value for out of bound access. */
+  template<typename T, bool CouldBeSingleValue = false>
+  T load_pixel_fallback(const int2 &texel, const T &fallback) const;
+
+  /* Identical to load_pixel but with zero boundary extension. */
+  template<typename T, bool CouldBeSingleValue = false> T load_pixel_zero(const int2 &texel) const;
+
+  /* Stores the given pixel value in the pixel at the given texel coordinates. Assumes the result
+   * stores a value of the given template type. */
+  template<typename T> void store_pixel(const int2 &texel, const T &pixel_value);
+
+  /* Samples the result at the given normalized coordinates with the given interpolation and
+   * boundary extension. The interpolation is ignored for non float types that do not support
+   * interpolation. The jacobian represents the change of the given coordinates across space, if
+   * provided, the function will do area sampling for the area spanned by the jacobian, but if not
+   * provided, standard point sampling will be done. Assumes the result stores a value of the given
+   * template type. If the CouldBeSingleValue template argument is true and the result is a single
+   * value result, then that single value is returned for all coordinates. */
+  template<typename T, bool CouldBeSingleValue = false>
+  T sample(const float2 &coordinates,
+           const Interpolation &interpolation,
+           const Extension &extension_mode_x,
+           const Extension &extension_mode_y,
+           std::optional<float2x2> jacobian = std::nullopt) const;
+
+  /* Shorthand for sample() with bilinear interpolation and zero boundary extension. */
+  template<typename T, bool CouldBeSingleValue = false>
+  T sample_bilinear_zero(const float2 &coordinates) const;
+
+  /* Shorthand for sample() with bilinear interpolation and extended boundary extension. */
+  template<typename T, bool CouldBeSingleValue = false>
+  T sample_bilinear_extended(const float2 &coordinates) const;
+
+ private:
+  /* Allocates the image data for the given size.
+   *
+   * The data is allocated on the CPU or GPU depending on the given storage_type. A nullopt may be
+   * passed to storage_type, in which case, the data will be allocated on the device of the
+   * result's context as specified by context.use_gpu().
+   *
+   * If from_pool is true, GPU textures will be allocated from the texture pool of the context,
+   * otherwise, a new texture will be allocated. Pooling should not be used for persistent results
+   * that might span more than one evaluation, like cached resources. While pooling should be used
+   * for most other cases where the result will be allocated then later released in the same
+   * evaluation. Some types do not support pooling, since they require array textures which are not
+   * supported by the texture pool. */
+  void allocate_data(const int2 size,
+                     const bool from_pool = true,
+                     const std::optional<ResultStorageType> storage_type = std::nullopt);
+
+  /* Same as get_pixel_index but can be used when the type of the result is not known at compile
+   * time. */
+  int64_t get_pixel_index(const int2 &texel) const;
+};
+
+StringRefNull to_string(const ResultPrecision &precision);
+
+/* -------------------------------------------------------------------- */
+/* Inline Methods.
+ */
+
+BLI_INLINE_METHOD Domain &Result::domain()
+{
+  return domain_;
+}
+
+BLI_INLINE_METHOD const Domain &Result::domain() const
+{
+  return domain_;
+}
+
+BLI_INLINE_METHOD gpu::Texture *Result::gpu_texture() const
+{
+  BLI_assert(storage_type_ == ResultStorageType::GPU);
+  return gpu_texture_;
+}
+
+BLI_INLINE_METHOD GSpan Result::cpu_data() const
+{
+  BLI_assert(storage_type_ == ResultStorageType::CPU);
+  return cpu_data_;
+}
+
+inline const ImplicitSharingPtr<> &Result::sharing_info() const
+{
+  return sharing_info_;
+}
+
+BLI_INLINE_METHOD GMutableSpan Result::cpu_data_for_write()
+{
+  BLI_assert(storage_type_ == ResultStorageType::CPU);
+  BLI_assert(sharing_info_ && sharing_info_->is_mutable());
+  return GMutableSpan(cpu_data_.type(), const_cast<void *>(cpu_data_.data()), cpu_data_.size());
+}
+
+template<typename T> BLI_INLINE_METHOD const T &Result::get_single_value() const
+{
+  BLI_assert(this->is_single_value());
+
+  return std::get<T>(single_value_);
+}
+
+template<typename T> BLI_INLINE_METHOD T Result::get_single_value_default() const
+{
+  if (this->is_single_value()) {
+    return this->get_single_value<T>();
+  }
+  return *static_cast<const T *>(this->get_cpp_type().default_value());
+}
+
+template<typename T> BLI_INLINE_METHOD void Result::set_single_value(const T &value)
+{
+  BLI_assert(this->is_allocated());
+  BLI_assert(this->is_single_value());
+
+  single_value_ = value;
+  this->update_single_value_data();
+}
+
+template<typename T, bool CouldBeSingleValue>
+BLI_INLINE_METHOD T Result::load_pixel(const int2 &texel) const
+{
+  if constexpr (CouldBeSingleValue) {
+    if (is_single_value_) {
+      return this->get_single_value<T>();
+    }
+  }
+  else {
+    BLI_assert(!this->is_single_value());
+  }
+
+  return this->cpu_data().typed<T>()[this->get_pixel_index(texel)];
+}
+
+BLI_INLINE math::InterpWrapMode map_extension_mode_to_wrap_mode(const Extension &mode)
+{
+  switch (mode) {
+    case Extension::Clip:
+      return math::InterpWrapMode::Border;
+    case Extension::Repeat:
+      return math::InterpWrapMode::Repeat;
+    case Extension::Extend:
+      return math::InterpWrapMode::Extend;
+  }
+  BLI_assert_unreachable();
+  return math::InterpWrapMode::Border;
+}
+
+template<typename T, bool CouldBeSingleValue>
+BLI_INLINE_METHOD T Result::load_pixel(const int2 &texel,
+                                       const Extension &extension_mode_x,
+                                       const Extension &extension_mode_y) const
+{
+  if constexpr (CouldBeSingleValue) {
+    if (is_single_value_) {
+      return this->get_single_value<T>();
+    }
+  }
+  else {
+    BLI_assert(!this->is_single_value());
+  }
+
+  const math::InterpWrapMode wrap_mode_x = map_extension_mode_to_wrap_mode(extension_mode_x);
+  const math::InterpWrapMode wrap_mode_y = map_extension_mode_to_wrap_mode(extension_mode_y);
+  const int x = wrap_coord(texel.x, domain_.data_size.x, wrap_mode_x);
+  const int y = wrap_coord(texel.y, domain_.data_size.y, wrap_mode_y);
+  if (x < 0 || y < 0) {
+    return T{};
+  }
+  return this->load_pixel<T>(int2(x, y));
+}
+
+template<typename T, bool CouldBeSingleValue>
+BLI_INLINE_METHOD T Result::load_pixel_extended(const int2 &texel) const
+{
+  if constexpr (CouldBeSingleValue) {
+    if (is_single_value_) {
+      return this->get_single_value<T>();
+    }
+  }
+  else {
+    BLI_assert(!this->is_single_value());
+  }
+
+  const int2 clamped_texel = math::clamp(texel, int2(0), domain_.data_size - int2(1));
+  return this->cpu_data().typed<T>()[this->get_pixel_index(clamped_texel)];
+}
+
+template<typename T, bool CouldBeSingleValue>
+BLI_INLINE_METHOD T Result::load_pixel_fallback(const int2 &texel, const T &fallback) const
+{
+  if constexpr (CouldBeSingleValue) {
+    if (is_single_value_) {
+      return this->get_single_value<T>();
+    }
+  }
+  else {
+    BLI_assert(!this->is_single_value());
+  }
+
+  if (texel.x < 0 || texel.y < 0 || texel.x >= domain_.data_size.x ||
+      texel.y >= domain_.data_size.y)
+  {
+    return fallback;
+  }
+
+  return this->cpu_data().typed<T>()[this->get_pixel_index(texel)];
+}
+
+template<typename T, bool CouldBeSingleValue>
+BLI_INLINE_METHOD T Result::load_pixel_zero(const int2 &texel) const
+{
+  return this->load_pixel_fallback<T, CouldBeSingleValue>(texel, T(0));
+}
+
+template<typename T>
+BLI_INLINE_METHOD void Result::store_pixel(const int2 &texel, const T &pixel_value)
+{
+  this->cpu_data_for_write().typed<T>()[this->get_pixel_index(texel)] = pixel_value;
+}
+
+struct EWASamplingData {
+  const Result &result;
+  const Extension extension_mode_x;
+  const Extension extension_mode_y;
+};
+
+/* Given a result and its extension modes as the userdata argument with the type EWASamplingData,
+ * load the pixel at the given texel coordinates with the given extension modes and write the pixel
+ * to the result argument. */
+static inline void sample_ewa_read_callback(void *userdata, int x, int y, float result[4])
+{
+  const EWASamplingData *sampling_data = static_cast<const EWASamplingData *>(userdata);
+  const Color sampled_result = sampling_data->result.load_pixel<Color>(
+      int2(x, y), sampling_data->extension_mode_x, sampling_data->extension_mode_y);
+  copy_v4_v4(result, sampled_result);
+}
+
+template<typename T, bool CouldBeSingleValue>
+BLI_INLINE_METHOD T Result::sample(const float2 &coordinates,
+                                   const Interpolation &interpolation,
+                                   const Extension &extension_mode_x,
+                                   const Extension &extension_mode_y,
+                                   std::optional<float2x2> jacobian) const
+{
+  if constexpr (CouldBeSingleValue) {
+    if (is_single_value_) {
+      return this->get_single_value<T>();
+    }
+  }
+
+  const int2 size = domain_.data_size;
+  const float2 texel_coordinates = coordinates * float2(size);
+
+  if constexpr (is_same_any_v<T, float, float2, float3, float4, Color, math::Quaternion>) {
+    T pixel_value;
+    const float *buffer = static_cast<const float *>(this->cpu_data().data());
+    float *output = nullptr;
+    if constexpr (std::is_same_v<T, float>) {
+      output = &pixel_value;
+    }
+    else {
+      output = pixel_value;
+    }
+
+    const math::InterpWrapMode wrap_mode_x = map_extension_mode_to_wrap_mode(extension_mode_x);
+    const math::InterpWrapMode wrap_mode_y = map_extension_mode_to_wrap_mode(extension_mode_y);
+    switch (interpolation) {
+      case Interpolation::Nearest:
+        math::interpolate_nearest_wrapmode_fl(buffer,
+                                              output,
+                                              size.x,
+                                              size.y,
+                                              sizeof(T) / sizeof(float),
+                                              texel_coordinates.x,
+                                              texel_coordinates.y,
+                                              wrap_mode_x,
+                                              wrap_mode_y);
+        break;
+      case Interpolation::Bilinear:
+        math::interpolate_bilinear_wrapmode_fl(buffer,
+                                               output,
+                                               size.x,
+                                               size.y,
+                                               sizeof(T) / sizeof(float),
+                                               texel_coordinates.x - 0.5f,
+                                               texel_coordinates.y - 0.5f,
+                                               wrap_mode_x,
+                                               wrap_mode_y);
+        break;
+      case Interpolation::Bicubic:
+        math::interpolate_cubic_bspline_wrapmode_fl(buffer,
+                                                    output,
+                                                    size.x,
+                                                    size.y,
+                                                    sizeof(T) / sizeof(float),
+                                                    texel_coordinates.x - 0.5f,
+                                                    texel_coordinates.y - 0.5f,
+                                                    wrap_mode_x,
+                                                    wrap_mode_y);
+        break;
+      case Interpolation::Anisotropic:
+        BLI_assert(type_ == ResultType::Color);
+        const float2 x_gradient = jacobian.has_value() ? jacobian.value()[0] :
+                                                         float2(1.0f / size.x, 0.0f);
+        const float2 y_gradient = jacobian.has_value() ? jacobian.value()[1] :
+                                                         float2(0.0f, 1.0f / size.y);
+        EWASamplingData sampling_data = EWASamplingData{*this, extension_mode_x, extension_mode_y};
+        BLI_ewa_filter(size.x,
+                       size.y,
+                       false,
+                       true,
+                       coordinates,
+                       x_gradient,
+                       y_gradient,
+                       sample_ewa_read_callback,
+                       &sampling_data,
+                       output,
+                       extension_mode_x == Extension::Clip && extension_mode_y == Extension::Clip);
+        break;
+    }
+
+    return pixel_value;
+  }
+  else {
+    return this->load_pixel<T>(int2(texel_coordinates), extension_mode_x, extension_mode_y);
+  }
+}
+
+template<typename T, bool CouldBeSingleValue>
+BLI_INLINE_METHOD T Result::sample_bilinear_zero(const float2 &coordinates) const
+{
+  return this->sample<T, CouldBeSingleValue>(
+      coordinates, Interpolation::Bilinear, Extension::Clip, Extension::Clip);
+}
+
+template<typename T, bool CouldBeSingleValue>
+BLI_INLINE_METHOD T Result::sample_bilinear_extended(const float2 &coordinates) const
+{
+  return this->sample<T, CouldBeSingleValue>(
+      coordinates, Interpolation::Bilinear, Extension::Extend, Extension::Extend);
+}
+
+BLI_INLINE_METHOD int64_t Result::get_pixel_index(const int2 &texel) const
+{
+  BLI_assert(!is_single_value_);
+  BLI_assert(this->is_allocated());
+  BLI_assert(texel.x >= 0 && texel.y >= 0 && texel.x < domain_.data_size.x &&
+             texel.y < domain_.data_size.y);
+  return int64_t(texel.y) * domain_.data_size.x + texel.x;
+}
+
+}  // namespace blender::compositor

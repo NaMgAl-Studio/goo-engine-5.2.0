@@ -1,0 +1,46 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup spoutliner
+ *
+ * Tree element classes for the tree elements directly representing an ID (#TSE_SOME_ID).
+ */
+
+#pragma once
+
+#include "tree_element.hh"
+
+namespace blender {
+
+struct AnimData;
+struct ID;
+
+namespace ed::outliner {
+
+class TreeElementID : public AbstractTreeElement {
+ protected:
+  ID &id_;
+
+ public:
+  TreeElementID(TreeElement &legacy_te, ID &id);
+
+  static std::unique_ptr<TreeElementID> create_from_id(TreeElement &legacy_te, ID &id);
+
+  bool expand_poll(const SpaceOutliner & /*soops*/) const override;
+
+  void expand(SpaceOutliner & /*soops*/) const override;
+
+  ID &get_ID()
+  {
+    return id_;
+  }
+
+ protected:
+  /* ID types with animation data can use this. */
+  void expand_animation_data(AnimData *) const;
+};
+
+}  // namespace ed::outliner
+}  // namespace blender

@@ -1,0 +1,1217 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "NOD_geometry_nodes_closure_signature.hh"
+#include "NOD_node_declaration.hh"
+#include "NOD_socket_declarations.hh"
+#include "NOD_socket_declarations_geometry.hh"
+#include "NOD_socket_usage_inference.hh"
+
+#include "BLI_assert.h"
+#include "BLI_listbase.h"
+#include "BLI_utildefines.h"
+
+#include "BKE_geometry_fields.hh"
+#include "BKE_node.hh"
+#include "BKE_node_runtime.hh"
+#include "BKE_node_socket_value.hh"
+#include "BKE_node_tree_reference_lifetimes.hh"
+
+#include "RNA_access.hh"
+
+namespace blender::nodes {
+
+static void reset_declaration(NodeDeclaration &declaration)
+{
+  std::destroy_at(&declaration);
+  new (&declaration) NodeDeclaration();
+}
+
+void build_node_declaration(const bke::bNodeType &typeinfo,
+                            NodeDeclaration &r_declaration,
+                            const bNodeTree *ntree,
+                            const bNode *node)
+{
+  reset_declaration(r_declaration);
+  NodeDeclarationBuilder node_decl_builder{typeinfo, r_declaration, ntree, node};
+  typeinfo.declare(node_decl_builder);
+  node_decl_builder.finalize();
+}
+
+void NodeDeclarationBuilder::build_remaining_anonymous_attribute_relations()
+{
+  using bke::node_tree_reference_lifetimes::can_contain_referenced_data;
+
+  Vector<int> data_inputs;
+  for (const int i : declaration_.inputs.index_range()) {
+    if (can_contain_referenced_data(declaration_.inputs[i]->socket_type)) {
+      data_inputs.append(i);
+    }
+  }
+  Vector<int> data_outputs;
+  for (const int i : declaration_.outputs.index_range()) {
+    if (can_contain_referenced_data(declaration_.outputs[i]->socket_type)) {
+      data_outputs.append(i);
+    }
+  }
+
+  for (BaseSocketDeclarationBuilder *socket_builder : input_socket_builders_) {
+    if (socket_builder->input_reference_used_on_all_data_) {
+      rl::RelationsInNode &relations = this->get_reference_lifetime_relations();
+      const int reference_input = socket_builder->decl_base_->index;
+      for (const int data_input : data_inputs) {
+        relations.use_relations.append({reference_input, data_input});
+      }
+    }
+  }
+  for (BaseSocketDeclarationBuilder *socket_builder : output_socket_builders_) {
+    if (socket_builder->output_reference_available_on_all_data_) {
+      rl::RelationsInNode &relations = this->get_reference_lifetime_relations();
+      const int reference_output = socket_builder->decl_base_->index;
+      for (const int data_output : data_outputs) {
+        relations.available_relations.append({reference_output, data_output});
+      }
+    }
+    if (socket_builder->propagate_all_input_references_) {
+      rl::RelationsInNode &relations = this->get_reference_lifetime_relations();
+      const int reference_output = socket_builder->decl_base_->index;
+      for (const int input_i : declaration_.inputs.index_range()) {
+        SocketDeclaration &input_socket_decl = *declaration_.inputs[input_i];
+        if (ELEM(input_socket_decl.structure_type, StructureType::Field, StructureType::Dynamic) ||
+            ELEM(input_socket_decl.socket_type, SOCK_GEOMETRY, SOCK_BUNDLE, SOCK_CLOSURE))
+        {
+          relations.reference_propagations.append({input_i, reference_output});
+        }
+      }
+    }
+    if (socket_builder->propagate_all_input_data_) {
+      rl::RelationsInNode &relations = this->get_reference_lifetime_relations();
+      const int data_output = socket_builder->decl_base_->index;
+      for (const int data_input : data_inputs) {
+        relations.data_propagations.append({data_input, data_output});
+        relations.reference_propagations.append({data_input, data_output});
+      }
+    }
+    if (socket_builder->propagate_all_input_data_from_geometry_) {
+      rl::RelationsInNode &relations = this->get_reference_lifetime_relations();
+      const int data_output = socket_builder->decl_base_->index;
+      for (const int i : declaration_.inputs.index_range()) {
+        if (declaration_.inputs[i]->socket_type == SOCK_GEOMETRY) {
+          relations.data_propagations.append({i, data_output});
+          relations.reference_propagations.append({i, data_output});
+        }
+      }
+    }
+  }
+}
+
+void NodeDeclarationBuilder::finalize()
+{
+  this->build_remaining_anonymous_attribute_relations();
+#ifndef NDEBUG
+  declaration_.assert_valid();
+#endif
+}
+
+NodeDeclarationBuilder::NodeDeclarationBuilder(const bke::bNodeType &typeinfo,
+                                               NodeDeclaration &declaration,
+                                               const bNodeTree *ntree,
+                                               const bNode *node)
+    : DeclarationListBuilder(*this, declaration.root_items),
+      typeinfo_(typeinfo),
+      declaration_(declaration),
+      ntree_(ntree),
+      node_(node)
+{
+  /* Unused in release builds, but used for BLI_assert() in debug builds. */
+  UNUSED_VARS(typeinfo_);
+}
+
+void NodeDeclarationBuilder::use_custom_socket_order(bool enable)
+{
+  declaration_.use_custom_socket_order = enable;
+}
+
+void NodeDeclarationBuilder::allow_any_socket_order(bool enable)
+{
+  BLI_assert(declaration_.use_custom_socket_order);
+  declaration_.allow_any_socket_order = enable;
+}
+
+Span<SocketDeclaration *> NodeDeclaration::sockets(eNodeSocketInOut in_out) const
+{
+  if (in_out == SOCK_IN) {
+    return inputs;
+  }
+  return outputs;
+}
+
+namespace reference_lifetimes {
+
+std::ostream &operator<<(std::ostream &stream, const RelationsInNode &relations)
+{
+  stream << "Propagate Relations: " << relations.data_propagations.size() << "\n";
+  for (const DataPropagation &relation : relations.data_propagations) {
+    stream << "  " << relation.from_input << " -> " << relation.to_output << "\n";
+  }
+  stream << "Reference Relations: " << relations.reference_propagations.size() << "\n";
+  for (const ReferencePropagation &relation : relations.reference_propagations) {
+    stream << "  " << relation.from_input << " -> " << relation.to_output << "\n";
+  }
+  stream << "Eval Relations: " << relations.use_relations.size() << "\n";
+  for (const UseRelation &relation : relations.use_relations) {
+    stream << "  eval " << relation.reference_input << " on " << relation.data_input << "\n";
+  }
+  stream << "Available Relations: " << relations.available_relations.size() << "\n";
+  for (const AvailableRelation &relation : relations.available_relations) {
+    stream << "  " << relation.reference_output << " available on " << relation.data_output
+           << "\n";
+  }
+  stream << "Available on None: " << relations.available_on_none.size() << "\n";
+  for (const int i : relations.available_on_none) {
+    stream << "  output " << i << " available on none\n";
+  }
+  return stream;
+}
+
+}  // namespace reference_lifetimes
+
+static void assert_valid_panels_recursive(const NodeDeclaration &node_decl,
+                                          const Span<const ItemDeclaration *> items,
+                                          Vector<const SocketDeclaration *> &r_flat_inputs,
+                                          Vector<const SocketDeclaration *> &r_flat_outputs)
+{
+  /* Expected item order unless any order is allowed: outputs, inputs, panels. */
+  bool found_input = false;
+  bool found_panel = false;
+
+  for (const ItemDeclaration *item_decl : items) {
+    if (const auto *socket_decl = dynamic_cast<const SocketDeclaration *>(item_decl)) {
+      if (socket_decl->in_out == SOCK_IN) {
+        BLI_assert(node_decl.allow_any_socket_order || !found_panel);
+        /* Panel toggles are always the first socket, breaking expected outputs-inputs ordering. */
+        if (!socket_decl->is_panel_toggle) {
+          found_input = true;
+        }
+        r_flat_inputs.append(socket_decl);
+      }
+      else {
+        BLI_assert(node_decl.allow_any_socket_order || (!found_input && !found_panel));
+        r_flat_outputs.append(socket_decl);
+      }
+    }
+    else if (const auto *panel_decl = dynamic_cast<const PanelDeclaration *>(item_decl)) {
+      found_panel = true;
+      assert_valid_panels_recursive(node_decl, panel_decl->items, r_flat_inputs, r_flat_outputs);
+    }
+  }
+  UNUSED_VARS(found_input, found_panel);
+}
+
+void NodeDeclaration::assert_valid() const
+{
+  if (!this->use_custom_socket_order) {
+    /* Skip validation for conventional socket layouts. Those are reordered in drawing code. */
+    return;
+  }
+
+  Vector<const SocketDeclaration *> flat_inputs;
+  Vector<const SocketDeclaration *> flat_outputs;
+  assert_valid_panels_recursive(*this, this->root_items, flat_inputs, flat_outputs);
+
+  BLI_assert(this->inputs.as_span() == flat_inputs);
+  BLI_assert(this->outputs.as_span() == flat_outputs);
+}
+
+bool NodeDeclaration::matches(const bNode &node) const
+{
+  const bNodeSocket *current_input = static_cast<bNodeSocket *>(node.inputs.first);
+  const bNodeSocket *current_output = static_cast<bNodeSocket *>(node.outputs.first);
+  const bNodePanelState *current_panel = node.panel_states_array;
+  for (const ItemDeclarationPtr &item_decl : this->all_items) {
+    if (const SocketDeclaration *socket_decl = dynamic_cast<const SocketDeclaration *>(
+            item_decl.get()))
+    {
+      switch (socket_decl->in_out) {
+        case SOCK_IN:
+          if (current_input == nullptr || !socket_decl->matches(*current_input)) {
+            return false;
+          }
+          current_input = current_input->next;
+          break;
+        case SOCK_OUT:
+          if (current_output == nullptr || !socket_decl->matches(*current_output)) {
+            return false;
+          }
+          current_output = current_output->next;
+          break;
+      }
+    }
+    else if (const PanelDeclaration *panel_decl = dynamic_cast<const PanelDeclaration *>(
+                 item_decl.get()))
+    {
+      if (!node.panel_states().contains_ptr(current_panel) || !panel_decl->matches(*current_panel))
+      {
+        return false;
+      }
+      ++current_panel;
+    }
+    else if (dynamic_cast<const SeparatorDeclaration *>(item_decl.get()) ||
+             dynamic_cast<const LayoutDeclaration *>(item_decl.get()))
+    {
+      /* Ignored because they don't have corresponding data in DNA. */
+    }
+    else {
+      /* Unknown item type. */
+      BLI_assert_unreachable();
+    }
+  }
+  /* If items are left over, some were removed from the declaration. */
+  if (current_input != nullptr || current_output != nullptr ||
+      node.panel_states().contains_ptr(current_panel))
+  {
+    return false;
+  }
+  return true;
+}
+
+bNodeSocket &SocketDeclaration::update_or_build(bNodeTree &ntree,
+                                                bNode &node,
+                                                bNodeSocket &socket) const
+{
+  /* By default just rebuild. */
+  BLI_assert(socket.in_out == this->in_out);
+  UNUSED_VARS_NDEBUG(socket);
+  return this->build(ntree, node);
+}
+
+void SocketDeclaration::set_common_flags(bNodeSocket &socket) const
+{
+  SET_FLAG_FROM_TEST(socket.flag, hide_value, SOCK_HIDE_VALUE);
+  SET_FLAG_FROM_TEST(socket.flag, is_multi_input, SOCK_MULTI_INPUT);
+  SET_FLAG_FROM_TEST(socket.flag, !is_available, SOCK_UNAVAIL);
+}
+
+bool SocketDeclaration::matches_common_data(const bNodeSocket &socket) const
+{
+  if (socket.name != this->name) {
+    return false;
+  }
+  if (socket.identifier != this->identifier) {
+    return false;
+  }
+  if (((socket.flag & SOCK_HIDE_VALUE) != 0) != this->hide_value) {
+    return false;
+  }
+  if (((socket.flag & SOCK_MULTI_INPUT) != 0) != this->is_multi_input) {
+    return false;
+  }
+  if (((socket.flag & SOCK_UNAVAIL) != 0) != !this->is_available) {
+    return false;
+  }
+  return true;
+}
+
+template<typename Fn>
+static bool socket_type_to_static_decl_type(const eNodeSocketDatatype socket_type, Fn &&fn)
+{
+  switch (socket_type) {
+    case SOCK_FLOAT:
+      fn.template operator()<decl::Float>();
+      return true;
+    case SOCK_VECTOR:
+      fn.template operator()<decl::Vector>();
+      return true;
+    case SOCK_RGBA:
+      fn.template operator()<decl::Color>();
+      return true;
+    case SOCK_SHADER:
+      fn.template operator()<decl::Shader>();
+      return true;
+    case SOCK_BOOLEAN:
+      fn.template operator()<decl::Bool>();
+      return true;
+    case SOCK_ROTATION:
+      fn.template operator()<decl::Rotation>();
+      return true;
+    case SOCK_MATRIX:
+      fn.template operator()<decl::Matrix>();
+      return true;
+    case SOCK_INT:
+      fn.template operator()<decl::Int>();
+      return true;
+    case SOCK_STRING:
+      fn.template operator()<decl::String>();
+      return true;
+    case SOCK_GEOMETRY:
+      fn.template operator()<decl::Geometry>();
+      return true;
+    case SOCK_OBJECT:
+      fn.template operator()<decl::Object>();
+      return true;
+    case SOCK_IMAGE:
+      fn.template operator()<decl::Image>();
+      return true;
+    case SOCK_COLLECTION:
+      fn.template operator()<decl::Collection>();
+      return true;
+    case SOCK_MATERIAL:
+      fn.template operator()<decl::Material>();
+      return true;
+    case SOCK_FONT:
+      fn.template operator()<decl::Font>();
+      return true;
+    case SOCK_SCENE:
+      fn.template operator()<decl::Scene>();
+      return true;
+    case SOCK_TEXT_ID:
+      fn.template operator()<decl::Text>();
+      return true;
+    case SOCK_MASK:
+      fn.template operator()<decl::Mask>();
+      return true;
+    case SOCK_SOUND:
+      fn.template operator()<decl::Sound>();
+      return true;
+    case SOCK_MENU:
+      fn.template operator()<decl::Menu>();
+      return true;
+    case SOCK_BUNDLE:
+      fn.template operator()<decl::Bundle>();
+      return true;
+    case SOCK_CLOSURE:
+      fn.template operator()<decl::Closure>();
+      return true;
+    case SOCK_INT_VECTOR:
+      fn.template operator()<decl::IntVector>();
+      return true;
+    default:
+      return false;
+  }
+}
+
+std::unique_ptr<SocketDeclaration> make_declaration_for_socket_type(
+    const eNodeSocketDatatype socket_type)
+{
+  std::unique_ptr<SocketDeclaration> decl;
+  socket_type_to_static_decl_type(socket_type, [&]<std::derived_from<SocketDeclaration> DeclT>() {
+    decl = std::make_unique<DeclT>();
+  });
+  return decl;
+}
+
+BaseSocketDeclarationBuilder &DeclarationListBuilder::add_input(
+    const eNodeSocketDatatype socket_type, const UString name, const UString identifier)
+{
+  BaseSocketDeclarationBuilder *decl = nullptr;
+  socket_type_to_static_decl_type(socket_type, [&]<std::derived_from<SocketDeclaration> DeclT>() {
+    decl = &this->add_input<DeclT>(name, identifier);
+  });
+  if (!decl) {
+    BLI_assert_unreachable();
+    decl = &this->add_input<decl::Float>(""_ustr, ""_ustr);
+  }
+  return *decl;
+}
+
+BaseSocketDeclarationBuilder &DeclarationListBuilder::add_input(const eCustomDataType data_type,
+                                                                const UString name,
+                                                                const UString identifier)
+{
+  return this->add_input(*bke::custom_data_type_to_socket_type(data_type), name, identifier);
+}
+
+BaseSocketDeclarationBuilder &DeclarationListBuilder::add_output(
+    const eNodeSocketDatatype socket_type, const UString name, const UString identifier)
+{
+  BaseSocketDeclarationBuilder *decl = nullptr;
+  socket_type_to_static_decl_type(socket_type, [&]<std::derived_from<SocketDeclaration> DeclT>() {
+    decl = &this->add_output<DeclT>(name, identifier);
+  });
+  if (!decl) {
+    BLI_assert_unreachable();
+    decl = &this->add_output<decl::Float>(""_ustr, ""_ustr);
+  }
+  return *decl;
+}
+
+BaseSocketDeclarationBuilder &DeclarationListBuilder::add_output(const eCustomDataType data_type,
+                                                                 const UString name,
+                                                                 const UString identifier)
+{
+  return this->add_output(*bke::custom_data_type_to_socket_type(data_type), name, identifier);
+}
+
+void DeclarationListBuilder::add_separator()
+{
+  auto decl_ptr = std::make_unique<SeparatorDeclaration>();
+  SeparatorDeclaration &decl = *decl_ptr;
+  this->node_decl_builder.declaration_.all_items.append(std::move(decl_ptr));
+  this->items.append(&decl);
+}
+
+void DeclarationListBuilder::add_default_layout()
+{
+  BLI_assert(this->node_decl_builder.typeinfo_.draw_buttons);
+  this->add_layout([](ui::Layout &layout, bContext *C, PointerRNA *ptr) {
+    const bNode &node = *static_cast<bNode *>(ptr->data);
+    node.typeinfo->draw_buttons(layout, C, ptr);
+  });
+  static_cast<LayoutDeclaration &>(*this->items.last()).is_default = true;
+}
+
+void DeclarationListBuilder::add_layout(
+    std::function<void(ui::Layout &, bContext *, PointerRNA *)> draw)
+{
+  auto decl_ptr = std::make_unique<LayoutDeclaration>();
+  LayoutDeclaration &decl = *decl_ptr;
+  decl.draw = std::move(draw);
+  this->node_decl_builder.declaration_.all_items.append(std::move(decl_ptr));
+  this->items.append(&decl);
+}
+
+PanelDeclarationBuilder &DeclarationListBuilder::add_panel(const UString name, int identifier)
+{
+  auto panel_decl_ptr = std::make_unique<PanelDeclaration>();
+  PanelDeclaration &panel_decl = *panel_decl_ptr;
+  auto panel_decl_builder_ptr = std::make_unique<PanelDeclarationBuilder>(this->node_decl_builder,
+                                                                          panel_decl);
+  PanelDeclarationBuilder &panel_decl_builder = *panel_decl_builder_ptr;
+
+  if (identifier >= 0) {
+    panel_decl.identifier = identifier;
+  }
+  else {
+    /* Use index as identifier. */
+    panel_decl.identifier = this->node_decl_builder.declaration_.all_items.size();
+  }
+  panel_decl.name = name;
+  panel_decl.parent_panel = this->parent_panel_decl;
+  panel_decl.index = this->node_decl_builder.declaration_.panels.append_and_get_index(&panel_decl);
+  this->node_decl_builder.declaration_.all_items.append(std::move(panel_decl_ptr));
+  this->node_decl_builder.panel_builders_.append_and_get_index(std::move(panel_decl_builder_ptr));
+  this->items.append(&panel_decl);
+  return panel_decl_builder;
+}
+
+void PanelDeclaration::build(bNodePanelState &panel) const
+{
+  panel = {0};
+  panel.identifier = this->identifier;
+  SET_FLAG_FROM_TEST(panel.flag, this->default_collapsed, NODE_PANEL_COLLAPSED);
+}
+
+bool PanelDeclaration::matches(const bNodePanelState &panel) const
+{
+  return panel.identifier == this->identifier;
+}
+
+void PanelDeclaration::update_or_build(const bNodePanelState &old_panel,
+                                       bNodePanelState &new_panel) const
+{
+  build(new_panel);
+  /* Copy existing state to the new panel */
+  SET_FLAG_FROM_TEST(new_panel.flag, old_panel.is_collapsed(), NODE_PANEL_COLLAPSED);
+}
+
+int PanelDeclaration::depth() const
+{
+  int count = 0;
+  for (const PanelDeclaration *parent = this->parent_panel; parent; parent = parent->parent_panel)
+  {
+    count++;
+  }
+  return count;
+}
+
+const nodes::SocketDeclaration *PanelDeclaration::panel_input_decl() const
+{
+  if (this->items.is_empty()) {
+    return nullptr;
+  }
+  const nodes::ItemDeclaration *item_decl = this->items.first();
+  if (const auto *socket_decl = dynamic_cast<const nodes::SocketDeclaration *>(item_decl)) {
+    if (socket_decl->is_panel_toggle && (socket_decl->in_out & SOCK_IN) &&
+        (socket_decl->socket_type & SOCK_BOOLEAN))
+    {
+      return socket_decl;
+    }
+  }
+  return nullptr;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::inferred_structure_type()
+{
+  BLI_assert(this->is_output());
+  decl_base_->structure_type = StructureType::Dynamic;
+  decl_base_->structure_type_output_dependency.variant = OutputStructureTypeDependency::All{};
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::inferred_structure_type(
+    const Span<int> input_indices)
+{
+  BLI_assert(this->is_output());
+  decl_base_->structure_type = StructureType::Dynamic;
+  decl_base_->structure_type_output_dependency.variant = OutputStructureTypeDependency::Partial{
+      input_indices};
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::propagate_references()
+{
+  BLI_assert(this->is_output());
+  /* The #ReferencePropagation relations are build after all sockets are known. */
+  propagate_all_input_references_ = true;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::propagate_references(
+    const Span<int> input_indices)
+{
+  BLI_assert(this->is_output());
+  rl::RelationsInNode &relations = node_decl_builder_->get_reference_lifetime_relations();
+  for (const int from_input : input_indices) {
+    rl::ReferencePropagation relation;
+    relation.from_input = from_input;
+    relation.to_output = decl_base_->index;
+    relations.reference_propagations.append(relation);
+  }
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::propagate_all()
+{
+  BLI_assert(this->is_output());
+  /* The #ReferencePropagation and #DataPropagation relations are build after all sockets are
+   * known. */
+  propagate_all_input_references_ = true;
+  propagate_all_input_data_ = true;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::propagate_all_geometry()
+{
+  /* The relations are build after all sockets are known. */
+  propagate_all_input_data_from_geometry_ = true;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::propagate_all(
+    const Span<int> input_indices)
+{
+  rl::RelationsInNode &relations = node_decl_builder_->get_reference_lifetime_relations();
+  for (const int from_input : input_indices) {
+    {
+      rl::DataPropagation relation;
+      relation.from_input = from_input;
+      relation.to_output = decl_base_->index;
+      relations.data_propagations.append(relation);
+    }
+    {
+      rl::ReferencePropagation relation;
+      relation.from_input = from_input;
+      relation.to_output = decl_base_->index;
+      relations.reference_propagations.append(relation);
+    }
+  }
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::optional_label(bool value)
+{
+  decl_base_->optional_label = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::hide_value(bool value)
+{
+  decl_base_->hide_value = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::multi_input(bool value)
+{
+  BLI_assert(this->is_input());
+  decl_base_->is_multi_input = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::compact(bool value)
+{
+  decl_base_->compact = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::label_fn(CustomSocketLabelFn fn)
+{
+  decl_base_->label_fn = std::make_unique<CustomSocketLabelFn>(std::move(fn));
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::short_label(std::string value)
+{
+  decl_base_->short_label = std::move(value);
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::description(std::string value)
+{
+  decl_base_->description = std::move(value);
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::translation_context(
+    std::optional<std::string> value)
+{
+  decl_base_->translation_context = std::move(value);
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::no_muted_links(bool value)
+{
+  decl_base_->no_mute_links = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::available(bool value)
+{
+  decl_base_->is_available = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::is_attribute_name(bool value)
+{
+  decl_base_->is_attribute_name = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::is_default_link_socket(bool value)
+{
+  decl_base_->is_default_link_socket = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::default_input_type(
+    const NodeDefaultInputType value)
+{
+  decl_base_->default_input_type = value;
+  if (value != NodeDefaultInputType::NODE_DEFAULT_INPUT_VALUE) {
+    this->hide_value();
+  }
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::evaluated_geometry_field()
+{
+  BLI_assert(this->is_input());
+  /* The corresponding relations are build after all socket declarations are known. */
+  input_reference_used_on_all_data_ = true;
+  decl_base_->structure_type = StructureType::Field;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::evaluated_geometry_field(
+    const Span<int> geometry_input_indices)
+{
+  BLI_assert(this->is_input());
+  rl::RelationsInNode &relations = node_decl_builder_->get_reference_lifetime_relations();
+  for (const int index : geometry_input_indices) {
+    rl::UseRelation relation;
+    relation.data_input = index;
+    relation.reference_input = decl_base_->index;
+    relations.use_relations.append(relation);
+  }
+  decl_base_->structure_type = StructureType::Field;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::anonymous_attribute_output()
+{
+  BLI_assert(this->is_output());
+  decl_base_->is_anonymous_attribute_output = true;
+  this->references_other_outputs();
+  decl_base_->structure_type = StructureType::Field;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::anonymous_attribute_output(
+    const Span<int> geometry_output_indices)
+{
+  BLI_assert(this->is_output());
+  decl_base_->is_anonymous_attribute_output = true;
+  this->references_other_outputs(geometry_output_indices);
+  decl_base_->structure_type = StructureType::Field;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::references_other_outputs()
+{
+  BLI_assert(this->is_output());
+  /* The corresponding relations are build after all socket declarations are known. */
+  output_reference_available_on_all_data_ = true;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::references_other_outputs(
+    const Span<int> output_indices)
+{
+  BLI_assert(this->is_output());
+  rl::RelationsInNode &relations = node_decl_builder_->get_reference_lifetime_relations();
+  for (const int index : output_indices) {
+    rl::AvailableRelation relation;
+    relation.data_output = index;
+    relation.reference_output = decl_base_->index;
+    relations.available_relations.append(relation);
+  }
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::compositor_realization_mode(
+    CompositorInputRealizationMode value)
+{
+  decl_base_->compositor_realization_mode_ = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::compositor_domain_priority(
+    int priority)
+{
+  BLI_assert(priority >= 0);
+  decl_base_->compositor_domain_priority_ = priority;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::make_available(
+    std::function<void(bNode &)> fn)
+{
+  decl_base_->make_available_fn_ = std::move(fn);
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::custom_draw(CustomSocketDrawFn fn)
+{
+  decl_base_->custom_draw_fn = std::make_unique<CustomSocketDrawFn>(std::move(fn));
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::usage_inference(
+    SocketUsageInferenceFn fn)
+{
+  decl_base_->usage_inference_fn = std::make_unique<SocketUsageInferenceFn>(std::move(fn));
+  return *this;
+}
+
+static const bNodeSocket &find_single_menu_input(const bNode &node)
+{
+#ifndef NDEBUG
+  int menu_input_count = 0;
+  /* Topology cache may not be available here and this function may be called while doing tree
+   * modifications. */
+  for (bNodeSocket &socket : node.inputs) {
+    if (socket.type == SOCK_MENU) {
+      menu_input_count++;
+    }
+  }
+  BLI_assert(menu_input_count == 1);
+#endif
+
+  for (bNodeSocket &socket : node.inputs) {
+    if (!socket.is_available()) {
+      continue;
+    }
+    if (socket.type != SOCK_MENU) {
+      continue;
+    }
+    return socket;
+  }
+  BLI_assert_unreachable();
+  return node.input_socket(0);
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::usage_by_single_menu(
+    const int menu_value)
+{
+  this->make_available([menu_value](bNode &node) {
+    bNodeSocket &socket = const_cast<bNodeSocket &>(find_single_menu_input(node));
+    bNodeSocketValueMenu *value = socket.default_value_typed<bNodeSocketValueMenu>();
+    value->value = menu_value;
+  });
+  this->usage_inference([menu_value](const socket_usage_inference::SocketUsageParams &params)
+                            -> std::optional<bool> {
+    const bNodeSocket &socket = find_single_menu_input(params.node);
+    if (params.socket.is_input()) {
+      if (const std::optional<bool> any_output_used = params.any_output_is_used()) {
+        if (!*any_output_used) {
+          /* If no output is used, none of the inputs is used either. */
+          return false;
+        }
+      }
+      else {
+        /* It's not known if any output is used yet. This function will be called again once new
+         * information about output usages is available. */
+        return std::nullopt;
+      }
+    }
+    return params.menu_input_may_be(socket.identifier_ustr(), menu_value);
+  });
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::usage_by_menu(
+    const UString menu_input_identifier, const int menu_value)
+{
+  Array<int> menu_values = {menu_value};
+  this->usage_by_menu(menu_input_identifier, menu_values);
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::usage_by_menu(
+    const UString menu_input_identifier, const Array<int> menu_values)
+{
+  this->make_available([menu_input_identifier, menu_values](bNode &node) {
+    bNodeSocket &menu_socket = *bke::node_find_socket(node, SOCK_IN, menu_input_identifier);
+    const SocketDeclaration &socket_declaration = *menu_socket.runtime->declaration;
+    socket_declaration.make_available(node);
+    bNodeSocketValueMenu *value = menu_socket.default_value_typed<bNodeSocketValueMenu>();
+    value->value = menu_values[0];
+  });
+  this->usage_inference(
+      [menu_input_identifier, menu_values](
+          const socket_usage_inference::SocketUsageParams &params) -> std::optional<bool> {
+        if (params.socket.is_input()) {
+          if (const std::optional<bool> any_output_used = params.any_output_is_used()) {
+            if (!*any_output_used) {
+              /* If no output is used, none of the inputs is used either. */
+              return false;
+            }
+          }
+          else {
+            /* It's not known if any output is used yet. This function will be called again once
+             * new information about output usages is available. */
+            return std::nullopt;
+          }
+        }
+
+        /* Check if the menu might be any of the given values. */
+        bool menu_might_be_any_value = false;
+        for (const int menu_value : menu_values) {
+          menu_might_be_any_value = params.menu_input_may_be(menu_input_identifier, menu_value);
+          if (menu_might_be_any_value) {
+            break;
+          }
+        }
+
+        const bNodeSocket &menu_socket = *bke::node_find_socket(
+            params.node, SOCK_IN, UString(menu_input_identifier.ref()));
+        const SocketDeclaration &menu_socket_declaration = *menu_socket.runtime->declaration;
+        if (!menu_socket_declaration.usage_inference_fn) {
+          return menu_might_be_any_value;
+        }
+
+        /* If the menu socket has a usage inference function, check if it might be used. */
+        const std::optional<bool> menu_might_be_used =
+            (*menu_socket_declaration.usage_inference_fn)(params);
+        if (!menu_might_be_used.has_value()) {
+          return menu_might_be_any_value;
+        }
+
+        /* The input is only used if the menu might be any of the values and the menu itself is
+         * used. */
+        return *menu_might_be_used && menu_might_be_any_value;
+      });
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::usage_by_bool(
+    const UString bool_input_identifier, const bool value)
+{
+  this->make_available([bool_input_identifier, value](bNode &node) {
+    bNodeSocket &bool_socket = *bke::node_find_socket(node, SOCK_IN, bool_input_identifier);
+    const SocketDeclaration &socket_declaration = *bool_socket.runtime->declaration;
+    socket_declaration.make_available(node);
+    bool_socket.default_value_typed<bNodeSocketValueBoolean>()->value = value;
+  });
+  this->usage_inference(
+      [bool_input_identifier,
+       value](const socket_usage_inference::SocketUsageParams &params) -> std::optional<bool> {
+        if (params.socket.is_input()) {
+          if (std::optional<bool> any_output_used = params.any_output_is_used()) {
+            if (!*any_output_used) {
+              /* If no output is used, none of the inputs is used either. */
+              return false;
+            }
+          }
+          else {
+            /* It's not known if any output is used yet. This function will be called again once
+             * new information about output usages is available. */
+            return std::nullopt;
+          }
+        }
+        const bool might_be_value = params.bool_input_may_be(bool_input_identifier, value);
+        const bNodeSocket &bool_socket = *bke::node_find_socket(
+            params.node, SOCK_IN, bool_input_identifier);
+        const SocketDeclaration &bool_socket_declaration = *bool_socket.runtime->declaration;
+        if (!bool_socket_declaration.usage_inference_fn) {
+          return might_be_value;
+        }
+        const std::optional<bool> bool_might_be_used =
+            (*bool_socket_declaration.usage_inference_fn)(params);
+        if (!bool_might_be_used.has_value()) {
+          return might_be_value;
+        }
+        return *bool_might_be_used && might_be_value;
+      });
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::usage_by_panel_toggle()
+{
+  if (const SocketDeclaration *panel_toggle_decl = decl_base_->parent->panel_input_decl()) {
+    this->usage_by_bool(panel_toggle_decl->identifier, true);
+  }
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::align_with_previous(const bool value)
+{
+  decl_base_->align_with_previous_socket = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::structure_type(
+    const StructureType structure_type)
+{
+  BLI_assert(NodeSocketInterfaceStructureType(structure_type) !=
+             NodeSocketInterfaceStructureType::Auto);
+  decl_base_->structure_type = structure_type;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder ::socket_name_ptr(
+    const PointerRNA ptr, const StringRef property_name)
+{
+  decl_base_->socket_name_rna = std::make_unique<SocketNameRNA>();
+  decl_base_->socket_name_rna->owner = ptr;
+  decl_base_->socket_name_rna->property_name = property_name;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::socket_name_ptr(
+    const ID *id, const StructRNA *srna, const void *data, StringRef property_name)
+{
+  /* Doing const-casts here because this data is generally only available as const when creating
+   * the declaration, but it's still valid to modify later. */
+  return this->socket_name_ptr(RNA_pointer_create_discrete(const_cast<ID *>(id),
+                                                           const_cast<StructRNA *>(srna),
+                                                           const_cast<void *>(data)),
+                               property_name);
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::panel_toggle(const bool value)
+{
+  decl_base_->is_panel_toggle = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::is_layer_name(const bool value)
+{
+  decl_base_->is_layer_name = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::is_volume_grid_name(const bool value)
+{
+  decl_base_->is_volume_grid_name = value;
+  return *this;
+}
+
+BaseSocketDeclarationBuilder &BaseSocketDeclarationBuilder::try_copy_ui_data(
+    const SocketDeclaration & /*other_decl*/)
+{
+  /* Can't copy any value by default. */
+  return *this;
+}
+
+const CompositorInputRealizationMode &SocketDeclaration::compositor_realization_mode() const
+{
+  return compositor_realization_mode_;
+}
+
+int SocketDeclaration::compositor_domain_priority() const
+{
+  return compositor_domain_priority_;
+}
+
+void SocketDeclaration::make_available(bNode &node) const
+{
+  if (make_available_fn_) {
+    make_available_fn_(node);
+  }
+}
+
+PanelDeclarationBuilder &PanelDeclarationBuilder::description(std::string value)
+{
+  decl_->description = std::move(value);
+  return *this;
+}
+
+PanelDeclarationBuilder &PanelDeclarationBuilder::translation_context(
+    std::optional<std::string> value)
+{
+  decl_->translation_context = value;
+  return *this;
+}
+
+PanelDeclarationBuilder &PanelDeclarationBuilder::default_closed(bool closed)
+{
+  decl_->default_collapsed = closed;
+  return *this;
+}
+
+namespace implicit_field_inputs {
+
+static void position(const bNode & /*node*/, void *r_value)
+{
+  bke::SocketValueVariant::ConstructIn(r_value,
+                                       bke::AttributeFieldInput::get_field<float3, "position">());
+}
+
+static void normal(const bNode & /*node*/, void *r_value)
+{
+  bke::SocketValueVariant::ConstructIn(r_value, bke::NormalFieldInput::get_field());
+}
+
+static void index(const bNode & /*node*/, void *r_value)
+{
+  bke::SocketValueVariant::ConstructIn(r_value, fn::IndexFieldInput::get_field());
+}
+
+static void id_or_index(const bNode & /*node*/, void *r_value)
+{
+  bke::SocketValueVariant::ConstructIn(r_value, bke::IDAttributeFieldInput::get_field());
+}
+
+static void instance_transform(const bNode & /*node*/, void *r_value)
+{
+  bke::SocketValueVariant::ConstructIn(
+      r_value, bke::AttributeFieldInput::get_field<float4x4, "instance_transform">());
+}
+
+static void handle_left(const bNode & /*node*/, void *r_value)
+{
+  bke::SocketValueVariant::ConstructIn(
+      r_value, bke::AttributeFieldInput::get_field<float3, "handle_left">());
+}
+
+static void handle_right(const bNode & /*node*/, void *r_value)
+{
+  bke::SocketValueVariant::ConstructIn(
+      r_value, bke::AttributeFieldInput::get_field<float3, "handle_right">());
+}
+
+}  // namespace implicit_field_inputs
+
+std::optional<ImplicitInputValueFn> get_implicit_input_value_fn(const NodeDefaultInputType type)
+{
+  switch (type) {
+    case NODE_DEFAULT_INPUT_VALUE:
+      return std::nullopt;
+    case NODE_DEFAULT_INPUT_INDEX_FIELD:
+      return std::make_optional(implicit_field_inputs::index);
+    case NODE_DEFAULT_INPUT_ID_INDEX_FIELD:
+      return std::make_optional(implicit_field_inputs::id_or_index);
+    case NODE_DEFAULT_INPUT_NORMAL_FIELD:
+      return std::make_optional(implicit_field_inputs::normal);
+    case NODE_DEFAULT_INPUT_POSITION_FIELD:
+      return std::make_optional(implicit_field_inputs::position);
+    case NODE_DEFAULT_INPUT_INSTANCE_TRANSFORM_FIELD:
+      return std::make_optional(implicit_field_inputs::instance_transform);
+    case NODE_DEFAULT_INPUT_HANDLE_LEFT_FIELD:
+      return std::make_optional(implicit_field_inputs::handle_left);
+    case NODE_DEFAULT_INPUT_HANDLE_RIGHT_FIELD:
+      return std::make_optional(implicit_field_inputs::handle_right);
+    case NODE_DEFAULT_INPUT_SCENE_FRAME:
+      return std::nullopt;
+    case NODE_DEFAULT_INPUT_UNIFORM_IMAGE_COORDINATES:
+      return std::nullopt;
+    case NODE_DEFAULT_INPUT_SELF_OBJECT:
+      return std::nullopt;
+  }
+  return std::nullopt;
+}
+
+bool socket_type_supports_default_input_type(const bke::bNodeSocketType &socket_type,
+                                             const NodeDefaultInputType input_type)
+{
+  const eNodeSocketDatatype stype = socket_type.type;
+  switch (input_type) {
+    case NODE_DEFAULT_INPUT_VALUE:
+      return true;
+    case NODE_DEFAULT_INPUT_SCENE_FRAME:
+      return ELEM(stype, SOCK_FLOAT, SOCK_INT);
+    case NODE_DEFAULT_INPUT_ID_INDEX_FIELD:
+    case NODE_DEFAULT_INPUT_INDEX_FIELD:
+      return stype == SOCK_INT;
+    case NODE_DEFAULT_INPUT_NORMAL_FIELD:
+    case NODE_DEFAULT_INPUT_POSITION_FIELD:
+    case NODE_DEFAULT_INPUT_HANDLE_LEFT_FIELD:
+    case NODE_DEFAULT_INPUT_HANDLE_RIGHT_FIELD:
+      return stype == SOCK_VECTOR;
+    case NODE_DEFAULT_INPUT_INSTANCE_TRANSFORM_FIELD:
+      return stype == SOCK_MATRIX;
+    case NODE_DEFAULT_INPUT_UNIFORM_IMAGE_COORDINATES:
+      return stype == SOCK_VECTOR;
+    case NODE_DEFAULT_INPUT_SELF_OBJECT:
+      return stype == SOCK_OBJECT;
+  }
+  return false;
+}
+
+bool node_tree_type_supports_default_input_type(eNodeTree_Type node_tree_type,
+                                                NodeDefaultInputType input_type)
+{
+  switch (input_type) {
+    case NODE_DEFAULT_INPUT_VALUE:
+      return true;
+    case NODE_DEFAULT_INPUT_ID_INDEX_FIELD:
+    case NODE_DEFAULT_INPUT_INDEX_FIELD:
+    case NODE_DEFAULT_INPUT_NORMAL_FIELD:
+    case NODE_DEFAULT_INPUT_POSITION_FIELD:
+    case NODE_DEFAULT_INPUT_HANDLE_LEFT_FIELD:
+    case NODE_DEFAULT_INPUT_HANDLE_RIGHT_FIELD:
+    case NODE_DEFAULT_INPUT_INSTANCE_TRANSFORM_FIELD:
+    case NODE_DEFAULT_INPUT_SELF_OBJECT:
+      return node_tree_type == NTREE_GEOMETRY;
+    case NODE_DEFAULT_INPUT_SCENE_FRAME:
+      return ELEM(node_tree_type, NTREE_COMPOSIT, NTREE_GEOMETRY);
+    case NODE_DEFAULT_INPUT_UNIFORM_IMAGE_COORDINATES:
+      return node_tree_type == NTREE_COMPOSIT;
+  }
+  return false;
+}
+
+bool default_input_type_is_field(const NodeDefaultInputType input_type)
+{
+  return ELEM(input_type,
+              NODE_DEFAULT_INPUT_INDEX_FIELD,
+              NODE_DEFAULT_INPUT_ID_INDEX_FIELD,
+              NODE_DEFAULT_INPUT_NORMAL_FIELD,
+              NODE_DEFAULT_INPUT_POSITION_FIELD,
+              NODE_DEFAULT_INPUT_INSTANCE_TRANSFORM_FIELD,
+              NODE_DEFAULT_INPUT_HANDLE_LEFT_FIELD,
+              NODE_DEFAULT_INPUT_HANDLE_RIGHT_FIELD);
+}
+
+void CustomSocketDrawParams::draw_standard(ui::Layout &layout,
+                                           const std::optional<StringRefNull> label_override)
+{
+  this->socket.typeinfo->draw(const_cast<bContext *>(&this->C),
+                              &layout,
+                              &this->socket_ptr,
+                              &this->node_ptr,
+                              label_override.has_value() ? *label_override : this->label);
+}
+
+}  // namespace blender::nodes

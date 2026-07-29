@@ -1,0 +1,79 @@
+/* SPDX-FileCopyrightText: 2005 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "node_shader_util.hh"
+
+#include "UI_interface_layout.hh"
+#include "UI_resources.hh"
+
+namespace blender {
+
+namespace nodes::node_shader_bsdf_toon_cc {
+
+static void node_declare(NodeDeclarationBuilder &b)
+{
+  const bNodeTree *ntree = b.tree_or_null();
+  const bool is_gpu_internal = ntree && (ntree->flag & NTREE_IS_GPU_SHADER_INTERNAL);
+
+  b.add_input<decl::Color>("Color"_ustr).default_value({0.8f, 0.8f, 0.8f, 1.0f});
+  b.add_input<decl::Float>("Size"_ustr)
+      .default_value(0.5f)
+      .min(0.0f)
+      .max(1.0f)
+      .subtype(PROP_FACTOR);
+  b.add_input<decl::Float>("Smooth"_ustr)
+      .default_value(0.0f)
+      .min(0.0f)
+      .max(1.0f)
+      .subtype(PROP_FACTOR);
+  b.add_input<decl::Vector>("Normal"_ustr).hide_value();
+  b.add_input<decl::Float>("Weight"_ustr).available(is_gpu_internal);
+  b.add_output<decl::Shader>("BSDF"_ustr);
+}
+
+static void node_shader_buts_toon(ui::Layout &layout, bContext * /*C*/, PointerRNA *ptr)
+{
+  layout.prop(ptr, "component", ui::ITEM_R_SPLIT_EMPTY_NAME, "", ICON_NONE);
+}
+
+static int node_shader_gpu_bsdf_toon(GPUMaterial *mat,
+                                     bNode *node,
+                                     bNodeExecData * /*execdata*/,
+                                     GPUNodeStack *in,
+                                     GPUNodeStack *out)
+{
+  if (!in[3].link) {
+    GPU_link(mat, "world_normals_get", &in[3].link);
+  }
+
+  GPU_material_flag_set(mat, GPU_MATFLAG_DIFFUSE);
+
+  return GPU_stack_link(mat, node, "node_bsdf_toon", in, out);
+}
+
+}  // namespace nodes::node_shader_bsdf_toon_cc
+
+/* node type definition */
+void register_node_type_sh_bsdf_toon()
+{
+  namespace file_ns = nodes::node_shader_bsdf_toon_cc;
+
+  static bke::bNodeType ntype;
+
+  sh_node_type_base(&ntype, "ShaderNodeBsdfToon"_ustr, SH_NODE_BSDF_TOON);
+  ntype.ui_name = "Toon BSDF";
+  ntype.ui_description = "Diffuse and Glossy shaders with cartoon light effects";
+  ntype.enum_name_legacy = "BSDF_TOON";
+  ntype.nclass = NODE_CLASS_SHADER;
+  ntype.declare = file_ns::node_declare;
+  ntype.gather_link_search_ops = search_link_ops_for_shader_bsdf_node;
+  ntype.add_ui_poll = object_cycles_shader_nodes_poll;
+  ntype.draw_buttons = file_ns::node_shader_buts_toon;
+  ntype.default_width = bke::NodeWidth::_160;
+  ntype.gpu_fn = file_ns::node_shader_gpu_bsdf_toon;
+
+  bke::node_register_type(ntype);
+}
+
+}  // namespace blender

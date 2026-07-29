@@ -1,0 +1,107 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup imbuf
+ */
+
+#include "oiio/openimageio_support.hh"
+
+#include "IMB_colormanagement.hh"
+#include "IMB_filetype.hh"
+#include "IMB_imbuf_types.hh"
+
+namespace blender {
+
+const char *imb_file_extensions_dpx[] = {".dpx", nullptr};
+const char *imb_file_extensions_cineon[] = {".cin", nullptr};
+
+OIIO_NAMESPACE_USING
+using namespace blender::imbuf;
+
+bool imb_is_a_dpx(const uchar *mem, size_t size)
+{
+  return imb_oiio_check(mem, size, "dpx");
+}
+
+ImBuf *imb_load_dpx(const uchar *mem,
+                    size_t size,
+                    ImBufFlags flags,
+                    ImFileColorSpace &r_colorspace)
+{
+  ImageSpec config, spec;
+
+  ReadContext ctx{mem, size, "dpx", IMB_FTYPE_DPX, flags};
+
+  ImBuf *ibuf = imb_oiio_read(ctx, config, r_colorspace, spec);
+  if (ibuf) {
+    if (flag_is_set(flags, ImBufFlags::AlphaDetect)) {
+      ibuf->flags |= ImBufFlags::AlphaPremul;
+    }
+  }
+
+  r_colorspace.is_hdr_float = true;
+
+  return ibuf;
+}
+
+static std::tuple<WriteContext, ImageSpec> prepare_save_dpx(ImBuf *ibuf, ImBufFlags flags)
+{
+  int bits_per_sample = 8;
+  if (ibuf->foptions.flag & CINEON_10BIT) {
+    bits_per_sample = 10;
+  }
+  else if (ibuf->foptions.flag & CINEON_12BIT) {
+    bits_per_sample = 12;
+  }
+  else if (ibuf->foptions.flag & CINEON_16BIT) {
+    bits_per_sample = 16;
+  }
+
+  const int file_channels = ibuf->color_mode_channels_get();
+  const TypeDesc data_format = bits_per_sample == 8 ? TypeDesc::UINT8 : TypeDesc::UINT16;
+
+  WriteContext ctx = imb_create_write_context("dpx", ibuf, flags);
+  ImageSpec file_spec = imb_create_write_spec(ctx, file_channels, data_format);
+
+  const float max_value = powf(2, bits_per_sample) - 1.0f;
+  file_spec.attribute("oiio:BitsPerSample", bits_per_sample);
+  file_spec.attribute("dpx:WhiteLevel", 685.0f / 1023.0f * max_value);
+  file_spec.attribute("dpx:BlackLevel", 95.0f / 1023.0f * max_value);
+  file_spec.attribute("dpx:HighData", max_value);
+  file_spec.attribute("dpx:LowData", 0);
+  file_spec.attribute("dpx:LowQuantity", 0.0f);
+
+  if (ibuf->foptions.flag & CINEON_LOG) {
+    /* VERIFY: This matches previous code but seems odd. Needs a comment if confirmed. */
+    file_spec.attribute("dpx:Transfer", "Printing density");
+    file_spec.attribute("dpx:HighQuantity", 2.048f);
+  }
+  else {
+    file_spec.attribute("dpx:Transfer", "Linear");
+    file_spec.attribute("dpx:HighQuantity", max_value);
+  }
+
+  if (ELEM(bits_per_sample, 8, 16)) {
+    file_spec.attribute("dpx:Packing", "Packed");
+  }
+  else {
+    file_spec.attribute("dpx:Packing", "Filled, method A");
+  }
+  return {ctx, file_spec};
+}
+
+bool imb_save_dpx(ImBuf *ibuf, const char *filepath, ImBufFlags flags)
+{
+  const auto [ctx, file_spec] = prepare_save_dpx(ibuf, flags);
+  return imb_oiio_write(ctx, filepath, file_spec);
+}
+
+Vector<uint8_t> imb_save_buffer_dpx(ImBuf *ibuf, ImBufFlags flags)
+{
+  const auto [ctx, file_spec] = prepare_save_dpx(ibuf, flags);
+  return imb_oiio_write_buffer(ctx, file_spec);
+}
+
+}  // namespace blender

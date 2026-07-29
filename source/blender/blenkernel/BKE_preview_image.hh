@@ -1,0 +1,218 @@
+/* SPDX-FileCopyrightText: 2006-2007 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+/** \file
+ * \ingroup bke
+ */
+
+#pragma once
+
+#include <array>
+#include <memory>
+#include <optional>
+
+#include "DNA_ID_enums.h"
+
+namespace blender {
+
+struct BlendDataReader;
+struct BlendWriter;
+class StringRefNull;
+namespace gpu {
+class Texture;
+}
+struct ID;
+struct ImBuf;
+struct PreviewImage;
+
+enum ThumbSource : int8_t;
+
+namespace bke {
+
+struct PreviewDeferredLoadingData;
+
+struct PreviewImageRuntime {
+  /** Used by previews outside of ID context. */
+  int icon_id = 0;
+  int16_t tag[NUM_ICON_SIZES] = {};
+
+  /** This is only needed/used in rare cases (asset previews). Multiple libraries may contain the
+   * same asset, so they will request the same preview. In that case, the user count can be used to
+   * avoid freeing too early. */
+  int user_count = 0;
+
+  std::array<gpu::Texture *, NUM_ICON_SIZES> gputexture = {};
+
+  /** Used to store data to defer the loading of the preview. If empty, loading is not deferred. */
+  std::unique_ptr<PreviewDeferredLoadingData> deferred_loading_data;
+  PreviewImageRuntime();
+  PreviewImageRuntime(const PreviewImageRuntime &other);
+  ~PreviewImageRuntime();
+};
+
+}  // namespace bke
+
+void BKE_preview_images_init();
+void BKE_preview_images_free();
+
+/**
+ * Free the preview image.
+ */
+void BKE_previewimg_free(PreviewImage **prv);
+
+/**
+ * Clear the preview image or icon, but does not free it.
+ */
+void BKE_previewimg_clear(PreviewImage *prv);
+
+/**
+ * Clear the preview image or icon at a specific size.
+ */
+void BKE_previewimg_clear_single(PreviewImage *prv, enum eIconSizes size);
+
+/**
+ * Get the preview from any pointer.
+ */
+PreviewImage **BKE_previewimg_id_get_p(const ID *id);
+PreviewImage *BKE_previewimg_id_get(const ID *id);
+
+bool BKE_previewimg_id_supports_jobs(const ID *id);
+
+/**
+ * Trigger deferred loading of a custom image file into the preview buffer.
+ */
+void BKE_previewimg_id_custom_set(ID *id, const char *filepath);
+
+/**
+ * Free the preview image belonging to the id.
+ */
+void BKE_previewimg_id_free(ID *id);
+
+/**
+ * Create a new preview image.
+ */
+PreviewImage *BKE_previewimg_create();
+
+/**
+ * Create a copy of the preview image.
+ */
+PreviewImage *BKE_previewimg_copy(const PreviewImage *prv);
+
+/**
+ * Duplicate preview image from \a id and clear icon_id,
+ * to be used by data-block copy functions.
+ */
+void BKE_previewimg_id_copy(ID *new_id, const ID *old_id);
+
+/**
+ * Retrieve existing or create new preview image.
+ */
+PreviewImage *BKE_previewimg_id_ensure(ID *id);
+
+/**
+ * Handle deferred (lazy) loading/generation of preview image, if needed.
+ * For now, only used with file thumbnails.
+ */
+void BKE_previewimg_ensure(PreviewImage *prv, int size);
+
+/**
+ * Returns true if the preview image might need downloading before loading.
+ *
+ * This is the case if the preview was created with #BKE_previewimg_online_thumbnail_read().
+ *
+ * Note that the preview might be available on disk already. This is just a hint for the loading.
+ * Managing the downloading and loading is done externally, e.g. with #PreviewLoadJob.
+ */
+bool BKE_previewimg_is_online(const PreviewImage *prv);
+/**
+ * Get the file path associated with a deferred preview (a preview that needs loading from disk and
+ * potentially downloading before that). For previews with #THB_SOURCE_DIRECT (see
+ * #BKE_previewimg_deferred_thumb_source_get()), this is the path to the preview directly. For
+ * others, this is a path to the previewed item, such as an image file or data-block inside a
+ * .blend file. The #PreviewLoadJob and the `IMB_thumbs.hh` API handle the actual loading with this
+ * path.
+ * \return The file path associated with the preview, or no value if the preview is not a deferred
+ *   preview (meaning it doesn't have a file path associated).
+ */
+std::optional<StringRefNull> BKE_previewimg_deferred_filepath_get(const PreviewImage *prv);
+/**
+ * Get the #ThumbSource for this deferred preview (a preview that needs loading from disk and
+ * potentially downloading before that), indicating what external resource the preview is created
+ * from.
+ * \return The #ThumbSource for this preview, or no value if the preview is not a deferred preview
+ *   (meaning it isn't loaded from an external source).
+ */
+std::optional<int> BKE_previewimg_deferred_thumb_source_get(const PreviewImage *prv);
+
+/**
+ * Create an #ImBuf holding a copy of the preview image buffer in \a prv.
+ * \note The returned image buffer has to be freed (#IMB_freeImBuf()).
+ */
+ImBuf *BKE_previewimg_to_imbuf(const PreviewImage *prv, int size);
+
+/*
+ * Preview rendering.
+ */
+enum PreviewImageRenderEndStatus {
+  PRV_RENDER_STATUS_FINISHED,
+  PRV_RENDER_STATUS_FAILED,
+  PRV_RENDER_STATUS_CANCELLED,
+};
+
+void BKE_previewimg_render_start(PreviewImage *prv, int size, bool using_job);
+void BKE_previewimg_render_end(PreviewImage *prv, int size, PreviewImageRenderEndStatus status);
+bool BKE_previewimg_render_restart(PreviewImage *prv, int size);
+bool BKE_previewimg_is_rendering(const PreviewImage *prv, int size);
+bool BKE_previewimg_is_finished(const PreviewImage *prv, int size);
+
+/**
+ * Deferred preview images may fail to load, e.g. because the image couldn't be found on disk.
+ * \return true of a deferred preview image could not be loaded.
+ */
+bool BKE_previewimg_is_invalid(const PreviewImage *prv, int size);
+
+PreviewImage *BKE_previewimg_cached_get(const char *name);
+
+/**
+ * Generate an empty #PreviewImage, if not yet existing.
+ */
+PreviewImage *BKE_previewimg_cached_ensure(const char *name);
+
+/* TODO rename this. */
+/**
+ * Generate a #PreviewImage from given `filepath`, using thumbnails management, if not yet
+ * existing. Does not actually generate the preview, #BKE_previewimg_ensure() must be called for
+ * that.
+ *
+ * \param count_users: This must be applied consistently to all previews of their kind (for
+ *     example, to all asset previews, to *no* BPY defined previews, etc.).
+ */
+PreviewImage *BKE_previewimg_cached_thumbnail_read(const char *name,
+                                                   const char *filepath,
+                                                   int source,
+                                                   bool force_update,
+                                                   bool count_users = false);
+/* TODO rename this. */
+/**
+ * Create a #PreviewImage that is marked as "needs downloading" to \a dst_filepath before loading
+ * from disk. Unlike the name suggests, this does not actually generate, load or read the preview.
+ * Call #BKE_previewimg_ensure() for that (blocking), or attach the preview to a UI button as
+ * preview icon (non-blocking, on-demand load). Also see #PreviewLoadJob for non-blocking loading.
+ *
+ * \param force_update: Clear the preview's data, so it will be re-loaded once actual loading is
+ *   triggered.
+ * \param count_users: This must be applied consistently to all previews of their kind (for
+ *     example, to all asset previews, to *no* BPY defined previews, etc.).
+ */
+PreviewImage *BKE_previewimg_online_thumbnail_read(const char *name,
+                                                   const char *dst_filepath,
+                                                   bool force_update,
+                                                   bool count_users = false);
+
+void BKE_previewimg_cached_release(const char *name);
+
+void BKE_previewimg_blend_write(BlendWriter *writer, const PreviewImage *prv);
+void BKE_previewimg_blend_read(BlendDataReader *reader, PreviewImage *prv);
+
+}  // namespace blender

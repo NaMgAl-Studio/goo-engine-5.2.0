@@ -1,0 +1,111 @@
+/* SPDX-FileCopyrightText: 2025 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
+#include "BKE_attribute.hh"
+#include "BKE_attribute_storage.hh"
+
+#include "DNA_meshdata_types.h"
+#include "DNA_object_types.h"
+
+#include <optional>
+
+namespace blender::bke {
+
+using AttrUpdateOnChange = void (*)(void *owner);
+
+struct AttrBuiltinInfo {
+  AttrDomain domain;
+  AttrType type;
+  GPointer default_value = {};
+  AttributeValidator validator = {};
+  bool deletable = true;
+  AttrBuiltinInfo(AttrDomain domain, AttrType type) : domain(domain), type(type) {}
+};
+
+GAttributeReader attribute_to_reader(const Attribute &attribute,
+                                     const AttrDomain domain,
+                                     const int64_t domain_size);
+
+GAttributeWriter attribute_to_writer(void *owner,
+                                     const Map<StringRef, AttrUpdateOnChange> &changed_tags,
+                                     const int64_t domain_size,
+                                     Attribute &attribute);
+
+Attribute::DataVariant attribute_init_to_data(const bke::AttrType data_type,
+                                              const int64_t domain_size,
+                                              const AttributeInit &initializer,
+                                              bool require_array_data);
+
+GVArray get_varray_attribute(const AttributeStorage &storage,
+                             AttrDomain domain,
+                             const CPPType &cpp_type,
+                             StringRef name,
+                             int64_t domain_size,
+                             const void *default_value);
+
+template<typename T>
+inline VArray<T> get_varray_attribute(const AttributeStorage &storage,
+                                      const AttrDomain domain,
+                                      const StringRef name,
+                                      const int64_t domain_size,
+                                      const T &default_value)
+{
+  GVArray varray = get_varray_attribute(
+      storage, domain, CPPType::get<T>(), name, domain_size, &default_value);
+  return varray.typed<T>();
+}
+
+std::optional<GSpan> get_span_attribute(const AttributeStorage &storage,
+                                        AttrDomain domain,
+                                        const CPPType &cpp_type,
+                                        StringRef name,
+                                        const int64_t domain_size);
+
+template<typename T>
+inline std::optional<Span<T>> get_span_attribute(const AttributeStorage &storage,
+                                                 const AttrDomain domain,
+                                                 const StringRef name,
+                                                 const int64_t domain_size)
+{
+  const std::optional<GSpan> span = get_span_attribute(
+      storage, domain, CPPType::get<T>(), name, domain_size);
+  if (!span) {
+    return std::nullopt;
+  }
+  return span->typed<T>();
+}
+
+GMutableSpan get_mutable_attribute(AttributeStorage &storage,
+                                   const AttrDomain domain,
+                                   const CPPType &cpp_type,
+                                   const StringRef name,
+                                   const int64_t domain_size,
+                                   const void *default_value);
+
+template<typename T>
+inline MutableSpan<T> get_mutable_attribute(AttributeStorage &storage,
+                                            const AttrDomain domain,
+                                            const StringRef name,
+                                            const int64_t domain_size,
+                                            const T &default_value = T())
+{
+  const GMutableSpan span = get_mutable_attribute(
+      storage, domain, CPPType::get<T>(), name, domain_size, &default_value);
+  return span.typed<T>();
+}
+
+bool try_delete_vertex_group(ListBaseT<bDeformGroup> &vertex_groups,
+                             StringRef name,
+                             FunctionRef<MutableSpan<MDeformVert>()> get_mutable_dverts);
+
+Set<StringRef> rename_attributes(AttributeStorage &storage,
+                                 const Map<StringRef, StringRef> &name_map,
+                                 bool overwrite,
+                                 const Map<StringRef, AttrBuiltinInfo> &builtin_attributes,
+                                 const Set<StringRef> &array_storage_required,
+                                 FunctionRef<int(AttrDomain)> domain_size_fn,
+                                 std::optional<ListBaseT<bDeformGroup> *> vertex_groups,
+                                 FunctionRef<MutableSpan<MDeformVert>()> get_mutable_dverts);
+
+}  // namespace blender::bke

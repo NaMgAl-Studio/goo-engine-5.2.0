@@ -1,0 +1,8297 @@
+
+msgid ""
+msgstr ""
+"Project-Id-Version: Blender 5.2.0 LTS Release Candidate (b'3d8c46ac31f4')\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-13 07:34+0000\n"
+"PO-Revision-Date: 2026-03-19 12:41+0000\n"
+"Last-Translator: Banditer1483 <pleum.wongvarit@gmail.com>\n"
+"Language-Team: Thai <https://translate.blender.org/projects/blender-ui/ui/th/>\n"
+"Language: th\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.16.2"
+
+
+msgid "Shader AOV"
+msgstr "เชดเดอร์ AOV"
+
+
+msgid "Valid"
+msgstr "พร้อมใช้งาน"
+
+
+msgid "Is the name of the AOV conflicting"
+msgstr "ชื่อของ AOV ขัดแย้งกันหรือไม่?"
+
+
+msgid "Name"
+msgstr "ชื่อ"
+
+
+msgid "Name of the AOV"
+msgstr "ชื่อของเอโอวี"
+
+
+msgid "Type"
+msgstr "ชนิด"
+
+
+msgid "Data type of the AOV"
+msgstr "ชนิดข้อมูลของเอโอวี"
+
+
+msgid "Color"
+msgstr "สี"
+
+
+msgid "Value"
+msgstr "ค่า"
+
+
+msgid "List of AOVs"
+msgstr "รายการเอโอวี"
+
+
+msgid "Collection of AOVs"
+msgstr "ชุดสะสมเอโอวี"
+
+
+msgid "Animation Channel Bag"
+msgstr "ถุงช่องภาพเคลื่อนไหว"
+
+
+msgid "Collection of animation channels, typically associated with an action slot"
+msgstr "ชุดสะสมของช่องภาพเคลื่อนไหว ตามแบบอย่างแล้วเกี่ยวข้องกับช่องรูการกระทำ"
+
+
+msgid "The individual F-Curves that animate the slot"
+msgstr "เส้นโค้ง F แต่ละตัวที่เคลื่อนไหวช่องเสียบ"
+
+
+msgid "F-Curve Groups"
+msgstr "กลุ่มเส้นโค้ง F"
+
+
+msgid "Groupings of F-Curves for display purposes, in e.g. the dopesheet and graph editor"
+msgstr "การจัดกลุ่มของเส้นโค้ง F เพื่อวัตถุประสงค์ในการแสดงผล เช่น ในโปรแกรมแก้ไขโดปชีตและกราฟ"
+
+
+msgid "Slot"
+msgstr "ช่องเสียบ"
+
+
+msgid "The Slot that the Channelbag's animation data is for"
+msgstr "ช่องเสียบที่ข้อมูลแอนิเมชั่นของ Channelbag มีไว้สำหรับมัน"
+
+
+msgid "Collection of F-Curves for a specific action slot, on a specific strip"
+msgstr "การสะสมของเส้นโค้ง F สำหรับช่องเสียบการกระทำเฉพาะบนสแถบเฉพาะเจาะจง"
+
+
+msgid "Collection of f-curve groups"
+msgstr "การสะสมของกลุ่มเส้นโค้ง F"
+
+
+msgid "Animation Channels for Slots"
+msgstr "ช่องแอนิเมชั่นสำหรับช่องเสียบ"
+
+
+msgid "For each action slot, a list of animation channels that are meant for that slot"
+msgstr "สำหรับแต่ละช่องเสียบการกระทำ รายการช่องแอนิเมชั่นที่มีไว้สำหรับช่องเสียบนั้น"
+
+
+msgid "Action Group"
+msgstr "กลุ่มการกระทำ"
+
+
+msgid "Groups of F-Curves"
+msgstr "กลุ่มของเส้นโค้ง F"
+
+
+msgid "Channels"
+msgstr "ช่อง"
+
+
+msgid "F-Curves in this group"
+msgstr "เส้นโค้ง F ในกลุ่มนี้"
+
+
+msgid "Color Set"
+msgstr "ชุดสี"
+
+
+msgid "Custom color set to use"
+msgstr "ชุดสีกำหนดเองสำหรับการใช้งาน"
+
+
+msgid "Default Colors"
+msgstr "สีเริ่มต้น"
+
+
+msgid "01 - Theme Color Set"
+msgstr "01 - ธีมชุดสี"
+
+
+msgid "02 - Theme Color Set"
+msgstr "02 - ธีมชุดสี"
+
+
+msgid "03 - Theme Color Set"
+msgstr "03 - ธีมชุดสี"
+
+
+msgid "04 - Theme Color Set"
+msgstr "04 - ธีมชุดสี"
+
+
+msgid "05 - Theme Color Set"
+msgstr "05 - ธีมชุดสี"
+
+
+msgid "06 - Theme Color Set"
+msgstr "06 - ธีมชุดสี"
+
+
+msgid "07 - Theme Color Set"
+msgstr "07 - ธีมชุดสี"
+
+
+msgid "08 - Theme Color Set"
+msgstr "08 - ธีมชุดสี"
+
+
+msgid "09 - Theme Color Set"
+msgstr "09 - ธีมชุดสี"
+
+
+msgid "10 - Theme Color Set"
+msgstr "10 - ธีมชุดสี"
+
+
+msgid "11 - Theme Color Set"
+msgstr "11 - ธีมชุดสี"
+
+
+msgid "12 - Theme Color Set"
+msgstr "12 - ธีมชุดสี"
+
+
+msgid "13 - Theme Color Set"
+msgstr "13 - ธีมชุดสี"
+
+
+msgid "14 - Theme Color Set"
+msgstr "14 - ธีมชุดสี"
+
+
+msgid "15 - Theme Color Set"
+msgstr "15 - ธีมชุดสี"
+
+
+msgid "16 - Theme Color Set"
+msgstr "16 - ธีมชุดสี"
+
+
+msgid "17 - Theme Color Set"
+msgstr "17 - ธีมชุดสี"
+
+
+msgid "18 - Theme Color Set"
+msgstr "18 - ธีมชุดสี"
+
+
+msgid "19 - Theme Color Set"
+msgstr "19 - ธีมชุดสี"
+
+
+msgid "20 - Theme Color Set"
+msgstr "20 - ธีมชุดสี"
+
+
+msgid "Custom Color Set"
+msgstr "ชุดสีกำหนดเอง"
+
+
+msgid "Colors"
+msgstr "สี"
+
+
+msgid "Lock"
+msgstr "ล็อก"
+
+
+msgid "Action group is locked"
+msgstr "กลุ่มการกระทำถูกล็อก"
+
+
+msgid "Select"
+msgstr "เลือก"
+
+
+msgid "Action group is selected"
+msgstr "กลุ่มการกระทำถูกเลือก"
+
+
+msgid "Expanded"
+msgstr "ขยาย"
+
+
+msgid "Action group is expanded except in graph editor"
+msgstr "กลุ่มการกระทำถูกขยายแล้วยกเว้นในตัวแก้ไขกราฟ"
+
+
+msgid "Expanded in Graph Editor"
+msgstr "ขยายแล้วในตัวแก้ไขกราฟ"
+
+
+msgid "Action group is expanded in graph editor"
+msgstr "กลุ่มการกระทำถูกขยายแล้วในตัวแก้ไขกราฟ"
+
+
+msgid "Pin in Graph Editor"
+msgstr "ปักตัวแก้ไขกราฟ"
+
+
+msgid "Action Layer"
+msgstr "ชั้นภาพที่กำลังใช้งาน"
+
+
+msgid "Strips"
+msgstr "แถบ"
+
+
+msgid "The list of strips that are on this animation layer"
+msgstr "รายการแถบที่อยู่ในชั้นภาพแอนิเมชันนี้"
+
+
+msgid "Action Layers"
+msgstr "ชั้นภาพที่กำลังใช้งาน"
+
+
+msgid "Collection of animation layers"
+msgstr "ชุดสะสมชั้นภาพแอนิเมชัน"
+
+
+msgid "Action Pose Markers"
+msgstr "ตัวบ่งการจัดท่าทางการกระทำ"
+
+
+msgid "Collection of timeline markers"
+msgstr "การรวบรวมเครื่องหมายเส้นเวลา"
+
+
+msgid "Active Pose Marker"
+msgstr "เครื่องหมายจัดท่าทางกัมมันต์"
+
+
+msgid "Active pose marker for this action"
+msgstr "เครื่องหมายท่าทางใช้งานสำหรับการกระทำนี้"
+
+
+msgid "Active Pose Marker Index"
+msgstr "ดัชนีเครื่องหมายท่าทางที่ใช้งานอยู่"
+
+
+msgid "Index of active pose marker"
+msgstr "ดัชนีของเครื่องหมายท่าทางที่ใช้งานอยู่"
+
+
+msgid "Action slot"
+msgstr "ช่องเสียบการกระทำ"
+
+
+msgid "Identifier for a set of channels in this Action, that can be used by a data-block to specify what it gets animated by"
+msgstr "ตัวระบุสำหรับชุดช่องในการดำเนินการนี้ ซึ่งสามารถใช้โดยบล็อกข้อมูลเพื่อระบุว่าจะเคลื่อนไหวอย่างไร"
+
+
+msgid "Active"
+msgstr "กัมมันต์"
+
+
+msgid "Whether this is the active slot, can be set by assigning to action.slots.active"
+msgstr "ว่านี่คือสล็อตที่ใช้งานอยู่หรือไม่ สามารถตั้งค่าได้โดยการกำหนดให้กับ action.slots.active"
+
+
+msgid "Slot Handle"
+msgstr "ที่จับช่องเสียบ"
+
+
+msgid "Used when connecting an Action to a data-block, to find the correct slot handle. This is the display name, prefixed by two characters determined by the slot's ID type"
+msgstr "ใช้เมื่อเชื่อมต่อการกระทำกับบล็อกข้อมูล เพื่อค้นหาช่องเสียบจัดกระทำที่ถูกต้อง นี่คือชื่อที่แสดง โดยมีอักขระสองตัวนำหน้า ซึ่งกำหนดโดยประเภทไอดีของช่องเสียบ"
+
+
+msgid "Slot Display Name"
+msgstr "ชื่อช่องเสียบที่แสดงผล"
+
+
+msgid "Selection state of the slot"
+msgstr "สถานะการเลือกของช่องเสียบ"
+
+
+msgctxt "ID"
+msgid "Action"
+msgstr "Action"
+
+
+msgctxt "ID"
+msgid "Armature"
+msgstr "โครงร่าง"
+
+
+msgctxt "ID"
+msgid "Brush"
+msgstr "แปรง"
+
+
+msgctxt "ID"
+msgid "Cache File"
+msgstr "ไฟล์แคช"
+
+
+msgctxt "ID"
+msgid "Camera"
+msgstr "กล้อง"
+
+
+msgctxt "ID"
+msgid "Collection"
+msgstr "ชุด"
+
+
+msgctxt "ID"
+msgid "Curve"
+msgstr "เส้นโค้ง"
+
+
+msgctxt "ID"
+msgid "Font"
+msgstr "ฟอนต์"
+
+
+msgctxt "ID"
+msgid "Image"
+msgstr "ภาพ"
+
+
+msgctxt "ID"
+msgid "Key"
+msgstr "คีย์"
+
+
+msgctxt "ID"
+msgid "Lattice"
+msgstr "ช่องตาข่าย"
+
+
+msgctxt "ID"
+msgid "Library"
+msgstr "คลัง"
+
+
+msgctxt "ID"
+msgid "Light"
+msgstr "แสง"
+
+
+msgctxt "ID"
+msgid "Line Style"
+msgstr "สไตล์เส้น"
+
+
+msgctxt "ID"
+msgid "Mask"
+msgstr "หน้ากากหน้ากาก"
+
+
+msgctxt "ID"
+msgid "Material"
+msgstr "วัสดุ"
+
+
+msgctxt "ID"
+msgid "Mesh"
+msgstr "เมช"
+
+
+msgctxt "ID"
+msgid "Metaball"
+msgstr "เมต้าบอล"
+
+
+msgctxt "ID"
+msgid "Movie Clip"
+msgstr "คลิปภาพยนตร์"
+
+
+msgctxt "ID"
+msgid "Node Tree"
+msgstr "แผนผังโนด"
+
+
+msgctxt "ID"
+msgid "Object"
+msgstr "วัตถุ"
+
+
+msgctxt "ID"
+msgid "Palette"
+msgstr "จานสี"
+
+
+msgctxt "ID"
+msgid "Particle"
+msgstr "อนุภาค"
+
+
+msgctxt "ID"
+msgid "Scene"
+msgstr "ฉาก"
+
+
+msgctxt "ID"
+msgid "Sound"
+msgstr "เสียง"
+
+
+msgctxt "ID"
+msgid "Speaker"
+msgstr "ลำโพง"
+
+
+msgctxt "ID"
+msgid "Text"
+msgstr "ข้อความ"
+
+
+msgctxt "ID"
+msgid "Texture"
+msgstr "พื้นผิว"
+
+
+msgctxt "ID"
+msgid "Window Manager"
+msgstr "ตัวจัดการหน้าต่าง"
+
+
+msgctxt "ID"
+msgid "Workspace"
+msgstr "พื้นที่ใช้งาน"
+
+
+msgctxt "ID"
+msgid "World"
+msgstr "โลก"
+
+
+msgid "Keyframe"
+msgstr "คีย์เฟรม"
+
+
+msgid "Add-on"
+msgstr "แอดออน"
+
+
+msgid "Module"
+msgstr "โมดูล"
+
+
+msgid "Module name"
+msgstr "ชื่อโมดูล"
+
+
+msgid "Add-on Preferences"
+msgstr "การตั้งค่าโมดูล"
+
+
+msgid "Device to use for computation (rendering with Cycles)"
+msgstr "อุปกรณ์ที่ใช้สำหรับการคำนวณ (การเรนเดอร์ด้วยไซเคิลส์)"
+
+
+msgid "Kernel Optimization"
+msgstr "การหาค่าเหมาะที่สุดของใจกลาง"
+
+
+msgid "Kernels can be optimized based on scene content. Optimized kernels are requested at the start of a render. If optimized kernels are not available, rendering will proceed using generic kernels until the optimized set is available in the cache. This can result in additional CPU usage for a brief time (tens of seconds)"
+msgstr "ใจกลางสามารถปรับให้เหมาะสมตามเนื้อหาของฉากได้ ใจกลางที่ปรับให้เหมาะสมแล้วจะถูกร้องขอเมื่อเริ่มต้นการเรนเดอร์ หากไม่มีใจกลางที่ปรับให้เหมาะสม การเรนเดอร์จะดำเนินต่อไปโดยใช้ใจกลางทั่วไปจนกว่าชุดใจกลางที่ปรับให้เหมาะสมจะพร้อมใช้งานในแคช ซึ่งอาจส่งผลให้มีการใช้งานซีพียูเพิ่มขึ้นในช่วงเวลาสั้นๆ (หลายสิบวินาที)"
+
+
+msgid "Disable kernel optimization. Slowest rendering, no extra background CPU usage"
+msgstr "ปิดใช้งานการเพิ่มประสิทธิภาพใจกลาง การแสดงผลช้าที่สุด ไม่มีการใช้ซีพียูในพื้นหลังเพิ่มเติม"
+
+
+msgid "Optimize only intersection kernels. Faster rendering, negligible extra background CPU usage"
+msgstr "ปรับแต่งเฉพาะใจกลางส่วนที่ตัดกันเท่านั้น แสดงผลได้เร็วขึ้น และใช้ซีพียูในพื้นหลังเพิ่มขึ้นน้อยมาก"
+
+
+msgid "Full"
+msgstr "เต็ม"
+
+
+msgid "Optimize all kernels. Fastest rendering, may result in extra background CPU usage"
+msgstr "ปรับแต่งใจกลางทั้งหมดให้เหมาะสมที่สุด การแสดงผลที่เร็วที่สุดอาจส่งผลให้มีการใช้งานซีพียูในพื้นหลังเพิ่มขึ้น"
+
+
+msgid "MetalRT for ray tracing uses less memory for scenes which use curves extensively, and can give better performance in specific cases"
+msgstr "เมทัลอาร์ทีสำหรับการไล่แสงใช้หน่วยความจำน้อยลงสำหรับฉากที่ใช้เส้นโค้งจำนวนมาก และอาจให้ประสิทธิภาพที่ดีกว่าในบางกรณี"
+
+
+msgid "Disable MetalRT (uses BVH2 layout for intersection queries)"
+msgstr "ปิดใช้งานเมทัลอาร์ที (ใช้โครงสร้างบีวีเอชสอง สำหรับการค้นหาจุดตัด)"
+
+
+msgid "On"
+msgstr "เปิด"
+
+
+msgid "Enable MetalRT for intersection queries"
+msgstr "เปิดใช้งานเมทัลอาร์ที สำหรับการค้นหาจุดตัด"
+
+
+msgid "Auto"
+msgstr "อัตโนมัติ"
+
+
+msgid "Automatically pick the fastest intersection method"
+msgstr "เลือกวิธีการหาทางแยกที่เร็วที่สุดโดยอัตโนมัติ"
+
+
+msgid "Distribute memory across devices"
+msgstr "กระจายหน่วยความจำไปยังอุปกรณ์ต่างๆ"
+
+
+msgid "Make more room for large scenes to fit by distributing memory across interconnected devices (e.g. via NVLink) rather than duplicating it"
+msgstr "เพิ่มพื้นที่ว่างสำหรับฉากขนาดใหญ่โดยการกระจายหน่วยความจำไปยังอุปกรณ์ที่เชื่อมต่อกัน (เช่น ผ่านเอ็นวีลิงค์) แทนที่จะทำสำเนาหน่วยความจำซ้ำซ้อน"
+
+
+msgid "HIP RT"
+msgstr "เอชไอพี อาร์ที"
+
+
+msgid "HIP RT enables AMD hardware ray tracing on RDNA2 and above"
+msgstr "เอชไอพี อาร์ที ช่วยให้สามารถใช้งานการไล่แสงด้วยส่วนเครื่องของเอเอ็มดี บนอาร์ดีเอ็นเอสอง และรุ่นที่สูงกว่าได้"
+
+
+msgid "Embree on GPU"
+msgstr "เอ็มบรีบนจีพียู"
+
+
+msgid "Embree on GPU enables the use of hardware ray tracing on Intel GPUs, providing better overall performance"
+msgstr "เอ็มบรีบนจีพียูช่วยให้สามารถใช้การไล่แสงด้วยส่วนเครื่องบนจีพียูของอินเทลซึ่งให้ประสิทธิภาพโดยรวมที่ดีขึ้น"
+
+
+msgid "KHR_materials_variants_ui"
+msgstr "KHR_materials_variants_ui"
+
+
+msgid "Displays glTF UI to manage material variants"
+msgstr "แสดงส่วนต่อประสานกับผู้ใช้ของจีแอลทีเอฟ เพื่อจัดการตัวเลือกวัสดุ"
+
+
+msgid "Allow glTF Embedded format"
+msgstr "อนุญาตรูปแบบฝังตัวจีแอลทีเอฟ"
+
+
+msgid "Display glTF UI to manage animations"
+msgstr "แสดงส่วนต่อประสานกับผู้ใช้ของจีแอลทีเอฟ เพื่อจัดการแอนิเมชัน"
+
+
+msgid "glTFpack file path"
+msgstr "เส้นทางไฟล์จีแอลทีเอฟแพ็ค"
+
+
+msgid "Path to gltfpack binary"
+msgstr "เส้นทางไปยังไฟล์ฐานสองจีแอลทีเอฟแพ็ค"
+
+
+msgid "Displays glTF Material Output node in Shader Editor (Menu Add > Output)"
+msgstr "แสดงจุดต่อผลผลิตวัสดุจีแอลทีเอฟ ในตัวแก้ไขเชดเดอร์ (เมนู เพิ่ม > เอาต์พุต)"
+
+
+msgid "        Filter by Name"
+msgstr "        กรองตามชื่อ"
+
+
+msgid "Show only hotkeys that have this text in their name"
+msgstr "แสดงเฉพาะปุ่มลัดที่มีข้อความนี้อยู่ในชื่อเท่านั้น"
+
+
+msgid "When merging nodes with the Ctrl+Numpad0 hotkey (and similar) specify whether to collapse them or show the full node with options expanded"
+msgstr "เมื่อรวมโหนดโดยใช้ปุ่มลัด คอนโทรล+นัมแพ็ดศูนย์ (และปุ่มลัดที่คล้ายกัน) ให้ระบุว่าต้องการยุบโหนดหรือแสดงโหนดแบบเต็มพร้อมตัวเลือกต่างๆ ที่ขยายออก"
+
+
+msgid "Always"
+msgstr "เสมอ"
+
+
+msgid "Always collapse the new merge nodes"
+msgstr "ยุบโหนดที่ผสานใหม่ทุกครั้ง"
+
+
+msgid "Non-Shader"
+msgstr "ไร้เชดเดอร์"
+
+
+msgid "Collapse in all cases except for shaders"
+msgstr "ยุบในทุกกรณี ยกเว้นกรณีของเชดเดอร์"
+
+
+msgid "Never"
+msgstr "ไม่เคย"
+
+
+msgid "Never collapse the new merge nodes"
+msgstr "ไม่ยุบโหนดผสานใหม่เลย"
+
+
+msgid "Mix Node Position"
+msgstr "ตำแหน่งจุดต่อผสม"
+
+
+msgid "When merging nodes with the Ctrl+Numpad0 hotkey (and similar) specify the position of the new nodes"
+msgstr "เมื่อรวมโหนดโดยใช้ปุ่มลัด Ctrl+Numpad0 (และปุ่มลัดที่คล้ายกัน) ให้ระบุตำแหน่งของโหนดใหม่ด้วย"
+
+
+msgid "Center"
+msgstr "ศูนย์กลาง"
+
+
+msgid "Place the Mix node between the two nodes"
+msgstr "วางโหนดผสมไว้ระหว่างโหนดทั้งสอง"
+
+
+msgid "Bottom"
+msgstr "ด้านล่าง"
+
+
+msgid "Place the Mix node at the same height as the lowest node"
+msgstr "วางโหนดผสมไว้ที่ความสูงเดียวกับโหนดที่อยู่ต่ำที่สุด"
+
+
+msgid "Fribidi Library"
+msgstr "ห้องสมุดฟริบิดี"
+
+
+msgid "The FriBidi C compiled library (.so under Linux, .dll under windows...), you’ll likely have to edit it if you’re under Windows, e.g. using the one included in Blender libraries repository"
+msgstr "คลังโปรแกรมฟรีบีดีที่แปลโปรแกรมด้วยภาษาซี (จุดเอสโอ บนลินุกซ์, จุดดีแอลแอล บนวินโดวส์...) คุณอาจต้องแก้ไขหากใช้วินโดวส์ เช่น ใช้คลังโปรแกรมที่มีอยู่ในคลังโปรแกรมของเบลนเดอร์"
+
+
+msgid "Translation Root"
+msgstr "รากการแปล"
+
+
+msgid "The bf-translation repository"
+msgstr "คลังเก็บข้อมูลการแปลบีเอฟ"
+
+
+msgid "Import Paths"
+msgstr "เส้นทางนำเข้า"
+
+
+msgid "Additional paths to add to sys.path (';' separated)"
+msgstr "เส้นทางเพิ่มเติมที่จะเพิ่มลงใน \"sys.path\" (คั่นด้วยเครื่องหมายจุดครึ่ง)"
+
+
+msgid "Source Root"
+msgstr "รากแหล่งที่มา"
+
+
+msgid "The Blender source root path"
+msgstr "เส้นทางรากของรหัสต้นฉบับเบลนเดอร์"
+
+
+msgid "Spell Cache"
+msgstr "แคชสะกด"
+
+
+msgid "A cache storing validated msgids, to avoid re-spellchecking them"
+msgstr "แคชที่ใช้จัดเก็บเอ็มเอสจีไอดีเอส ที่ผ่านการตรวจสอบแล้ว เพื่อหลีกเลี่ยงการตรวจสอบการสะกดคำซ้ำอีกครั้ง"
+
+
+msgid "Warn Msgid Not Capitalized"
+msgstr "เตือนว่าเอ็มเอสจีไอดีไม่ได้ขึ้นต้นด้วยตัวพิมพ์ใหญ่"
+
+
+msgid "Warn about messages not starting by a capitalized letter (with a few allowed exceptions!)"
+msgstr "แจ้งเตือนเกี่ยวกับข้อความที่ไม่ได้ขึ้นต้นด้วยตัวอักษรพิมพ์ใหญ่ (โดยมีข้อยกเว้นบางประการ!)"
+
+
+msgid "Persistent Data Path"
+msgstr "เส้นทางข้อมูลถาวร"
+
+
+msgid "The name of a json file storing those settings (unfortunately, Blender's system does not work here)"
+msgstr "ชื่อไฟล์เจสันที่เก็บการตั้งค่าเหล่านั้น (น่าเสียดายที่ระบบของเบลนเดอร์ไม่รองรับส่วนนี้)"
+
+
+msgid "User Add-ons"
+msgstr "ส่วนเสริมผู้ใช้"
+
+
+msgid "Collection of add-ons"
+msgstr "ชุดสะสมส่วนเสริม"
+
+
+msgid "Animation Data"
+msgstr "ข้อมูลแอนิเมชัน"
+
+
+msgid "Animation data for data-block"
+msgstr "ข้อมูลแอนิเมชันสำหรับบล็อกข้อมูล"
+
+
+msgid "Action"
+msgstr "กระทำ"
+
+
+msgid "Active Action for this data-block"
+msgstr "การดำเนินการเชิงรุกสำหรับบล็อกข้อมูลนี้"
+
+
+msgid "Action Blending"
+msgstr "การผสมผสานการกระทำ"
+
+
+msgid "Method used for combining Active Action's result with result of NLA stack"
+msgstr "วิธีการที่ใช้ในการรวมผลลัพธ์ของการดำเนินการเชิงรุก เข้ากับผลลัพธ์ของกองซ้อนเอ็นแอลเอ"
+
+
+msgid "Replace"
+msgstr "แทนที่"
+
+
+msgid "The strip values replace the accumulated results by amount specified by influence"
+msgstr "ค่าแถบจะแทนที่ผลลัพธ์สะสมตามจำนวนที่ระบุโดยอิทธิพล"
+
+
+msgid "Combine"
+msgstr "รวมกัน"
+
+
+msgid "The strip values are combined with accumulated results by appropriately using addition, multiplication, or quaternion math, based on channel type"
+msgstr "ค่าแถบจะถูกรวมเข้ากับผลลัพธ์ที่สะสมไว้โดยใช้การบวก การคูณ หรือคณิตศาสตร์ควอเทอร์เนียนอย่างเหมาะสม โดยขึ้นอยู่กับประเภทของช่องสัญญาณ"
+
+
+msgid "Add"
+msgstr "เพิ่ม"
+
+
+msgid "Weighted result of strip is added to the accumulated results"
+msgstr "ผลลัพธ์ที่ถ่วงน้ำหนักของแถบจะถูกบวกเข้ากับผลลัพธ์สะสม"
+
+
+msgid "Subtract"
+msgstr "ลบ"
+
+
+msgid "Weighted result of strip is removed from the accumulated results"
+msgstr "ผลลัพธ์ที่ถ่วงน้ำหนักของแถบจะถูกลบออกจากผลลัพธ์สะสม"
+
+
+msgid "Multiply"
+msgstr "คูณ"
+
+
+msgid "Weighted result of strip is multiplied with the accumulated results"
+msgstr "ผลลัพธ์ถ่วงน้ำหนักของแถบจะถูกคูณด้วยผลลัพธ์สะสม"
+
+
+msgid "Action Extrapolation"
+msgstr "กิริยาการประมาณค่านอกช่วง"
+
+
+msgid "Action to take for gaps past the Active Action's range (when evaluating with NLA)"
+msgstr "มาตรการที่ต้องดำเนินการสำหรับช่องว่างที่อยู่นอกเหนือขอบเขตของมาตรการเชิงรุก (เมื่อประเมินด้วยเอ็นแอลเอ)"
+
+
+msgid "Nothing"
+msgstr "ไม่มีอะไรเลย"
+
+
+msgid "Strip has no influence past its extents"
+msgstr "แถบไม่มีอิทธิพลเกินขอบเขตของมัน"
+
+
+msgid "Hold"
+msgstr "ถือค้าง"
+
+
+msgid "Hold the first frame if no previous strips in track, and always hold last frame"
+msgstr "ให้ล็อคกรอบภาพแรกหากไม่มีแถบก่อนหน้าในราง และให้ล็อคกรอบภาพสุดท้ายเสมอ"
+
+
+msgid "Hold Forward"
+msgstr "ยกขึ้นไปข้างหน้า"
+
+
+msgid "Only hold last frame"
+msgstr "เก็บเฉพาะเฟรมสุดท้ายเท่านั้น"
+
+
+msgid "Action Influence"
+msgstr "อิทธิพลของการกระทำ"
+
+
+msgid "Amount the Active Action contributes to the result of the NLA stack"
+msgstr "ปริมาณที่การดำเนินการเชิงรุกมีส่วนช่วยต่อผลลัพธ์ของกลุ่มเอ็นแอลเอ"
+
+
+msgid "Action Slot"
+msgstr "ช่องเสียบการกระทำ"
+
+
+msgid "The slot identifies which sub-set of the Action is considered to be for this data-block, and its name is used to find the right slot when assigning an Action"
+msgstr "ช่องเสียบระบุว่าชุดย่อยใดของกิริยานั้นเหมาะสมกับบล็อกข้อมูลนี้ และชื่อของช่องเสียบจะใช้ในการค้นหาช่องเสียบที่ถูกต้องเมื่อกำหนดกิริยา"
+
+
+msgid "Action Slot Handle"
+msgstr "ด้ามจับช่องกิริยา"
+
+
+msgid "A number that identifies which sub-set of the Action is considered to be for this data-block"
+msgstr "หมายเลขที่ระบุว่าส่วนย่อยใดของการดำเนินการนั้นถือว่าเกี่ยวข้องกับบล็อกข้อมูลนี้"
+
+
+msgid "Tweak Mode Action Slot Storage"
+msgstr "ช่องการทำงานโหมดปรับแต่ง ช่องจัดเก็บ"
+
+
+msgid "Storage to temporarily hold the main action slot while in tweak mode"
+msgstr "พื้นที่จัดเก็บชั่วคราวสำหรับเก็บช่องการกระทำหลักขณะอยู่ในโหมดปรับแต่ง"
+
+
+msgid "Slots"
+msgstr "ช่องเสียบ"
+
+
+msgid "The list of slots in this animation data-block"
+msgstr "รายการช่องในบล็อกข้อมูลแอนิเมชันนี้"
+
+
+msgid "Tweak Mode Action Storage"
+msgstr "โหมดปรับแต่ง การจัดเก็บการกระทำ"
+
+
+msgid "Storage to temporarily hold the main action while in tweak mode"
+msgstr "พื้นที่จัดเก็บเพื่อหยุดการทำงานหลักชั่วคราวขณะอยู่ในโหมดปรับแต่ง"
+
+
+msgid "Drivers"
+msgstr "ตัวขับ"
+
+
+msgid "The Drivers/Expressions for this data-block"
+msgstr "ตัวขับ/นิพจน์สำหรับบล็อกข้อมูลนี้"
+
+
+msgid "Last Action Slot Identifier"
+msgstr "ตัวระบุช่องการดำเนินการครั้งสุดท้าย"
+
+
+msgid "The identifier of the most recently assigned action slot. The slot identifies which sub-set of the Action is considered to be for this data-block, and its identifier is used to find the right slot when assigning an Action."
+msgstr "ตัวระบุของช่องการดำเนินการที่ถูกกำหนดล่าสุด ช่องนี้ระบุว่าชุดย่อยใดของการดำเนินการนั้นถือว่าเหมาะสมกับบล็อกข้อมูลนี้ และตัวระบุนี้จะถูกใช้เพื่อค้นหาช่องที่ถูกต้องเมื่อกำหนดการดำเนินการ"
+
+
+msgid "NLA Tracks"
+msgstr "รางเอ็นแอลเอ"
+
+
+msgid "NLA Tracks (i.e. Animation Layers)"
+msgstr "รางเอ็นแอลเอ (เช่น ชั้นภาพแอนิเมชัน)"
+
+
+msgid "NLA Evaluation Enabled"
+msgstr "เปิดใช้งานการประเมินเอ็นแอลเอ"
+
+
+msgid "NLA stack is evaluated when evaluating this block"
+msgstr "จะประเมินกองซ้อนเอ็นแอลเอ เมื่อประเมินบล็อกนี้"
+
+
+msgid "Use NLA Tweak Mode"
+msgstr "ใช้โหมดปรับแต่งเอ็นแอลเอ"
+
+
+msgid "Whether to enable or disable tweak mode in NLA"
+msgstr "อันไหนที่จะเปิดหรือปิดโหมดปรับแต่งในเอ็นแอลเอ"
+
+
+msgid "Collection of Driver F-Curves"
+msgstr "การรวบรวมเส้นโค้ง F ของตัวขับ"
+
+
+msgid "Animation Visualization"
+msgstr "การแสดงภาพเคลื่อนไหว"
+
+
+msgid "Settings for the visualization of motion"
+msgstr "การตั้งค่าสำหรับการแสดงภาพเคลื่อนไหว"
+
+
+msgid "Motion Paths"
+msgstr "เส้นทางการเคลื่อนที่"
+
+
+msgid "Motion Path settings for visualization"
+msgstr "การตั้งค่าเส้นทางการเคลื่อนไหวสำหรับการแสดงภาพ"
+
+
+msgid "Motion Path Settings"
+msgstr "การตั้งค่าเส้นทางการเคลื่อนที่"
+
+
+msgid "Motion Path settings for animation visualization"
+msgstr "การตั้งค่าเส้นทางการเคลื่อนไหวสำหรับการแสดงภาพเคลื่อนไหว"
+
+
+msgid "Bake Location"
+msgstr "ตำแหน่งอบ"
+
+
+msgid "When calculating Bone Paths, use Head or Tips"
+msgstr "เมื่อคำนวณเส้นทางกระดูก ให้ใช้ส่วนหัวหรือส่วนปลาย"
+
+
+msgid "Heads"
+msgstr "หัว"
+
+
+msgid "Calculate bone paths from heads"
+msgstr "คำนวณเส้นทางการเคลื่อนที่ของกระดูกจากส่วนหัว"
+
+
+msgid "Tails"
+msgstr "หาง"
+
+
+msgid "Calculate bone paths from tails"
+msgstr "คำนวณเส้นทางกระดูกจากส่วนหาง"
+
+
+msgid "After Current"
+msgstr "หลังจากขณะนี้"
+
+
+msgid "Number of frames to show after the current frame (only for 'Around Frame' Onion-skinning method)"
+msgstr "จำนวนกรอบภาพที่จะแสดงต่อจากกรอบภาพปัจจุบัน (สำหรับวิธีการแสดงภาพซ้อนแบบ 'โดยรอบกรอบภาพ' เท่านั้น)"
+
+
+msgid "Before Current"
+msgstr "ก่อนปัจจุบัน"
+
+
+msgid "Number of frames to show before the current frame (only for 'Around Frame' Onion-skinning method)"
+msgstr "จำนวนกรอบภาพที่จะแสดงก่อนกรอบภาพปัจจุบัน (สำหรับวิธีการแสดงภาพซ้อนแบบ 'โดยรอบกรอบภาพ' เท่านั้น)"
+
+
+msgid "End Frame"
+msgstr "เฟรมสิ้นสุด"
+
+
+msgid "End frame of range of paths to display/calculate (not for 'Around Frame' Onion-skinning method)"
+msgstr "กรอบสุดท้ายของช่วงเส้นทางที่จะแสดง/คำนวณ (ไม่ใช่สำหรับวิธีการแสดงภาพซ้อนแบบ 'โดยรอบกรอบ')"
+
+
+msgid "Start Frame"
+msgstr "กรอบภาพเริ่มต้น"
+
+
+msgid "Starting frame of range of paths to display/calculate (not for 'Around Frame' Onion-skinning method)"
+msgstr "กรอบเริ่มต้นของช่วงเส้นทางที่จะแสดง/คำนวณ (ไม่ใช่สำหรับวิธีการแสดงภาพซ้อนแบบ 'โดยรอบกรอบ')"
+
+
+msgid "Frame Step"
+msgstr "ขั้นตอนของกรอบภาพ"
+
+
+msgid "Number of frames between paths shown (not for 'On Keyframes' Onion-skinning method)"
+msgstr "จำนวนกรอบภาพระหว่างเส้นทางที่แสดง (ไม่เหมาะสำหรับวิธีการแสดงภาพซ้อนแบบ 'บนกุญแจกรอบภาพ')"
+
+
+msgid "Has Motion Paths"
+msgstr "มีเส้นทางการเคลื่อนที่"
+
+
+msgid "Are there any bone paths that will need updating (read-only)"
+msgstr "มีเส้นทางกระดูกใดบ้างที่ต้องอัปเดต (อ่านอย่างเดียว)"
+
+
+msgid "Paths Range"
+msgstr "เส้นทางช่วง"
+
+
+msgid "Type of range to calculate for Motion Paths"
+msgstr "ประเภทของช่วงที่จะคำนวณสำหรับเส้นทางการเคลื่อนที่"
+
+
+msgid "All Keys"
+msgstr "กุญแจทั้งหมด"
+
+
+msgid "From the first keyframe to the last"
+msgstr "ตั้งแต่กุญแจกรอบภาพแรกจนถึงกุญแจกรอบภาพสุดท้าย"
+
+
+msgid "From the first selected keyframe to the last"
+msgstr "ตั้งแต่กุญแจกรอบภาพแรกที่เลือกจนถึงกุญแจกรอบภาพสุดท้าย"
+
+
+msgid "Scene Frame Range"
+msgstr "ช่วงกรอบภาพฉาก"
+
+
+msgid "The entire Scene / Preview range"
+msgstr "ช่วงฉาก / ดูก่อน ทั้งหมด"
+
+
+msgid "Manual Range"
+msgstr "ช่วงด้วยมือ"
+
+
+msgid "Manually determined frame range"
+msgstr "ช่วงกรอบภาพที่กำหนดด้วยตนเอง"
+
+
+msgid "Show Frame Numbers"
+msgstr "แสดงหมายเลขกรอบภาพ"
+
+
+msgid "Show frame numbers on Motion Paths"
+msgstr "แสดงหมายเลขกรอบภาพบนเส้นทางการเคลื่อนไหว"
+
+
+msgid "All Action Keyframes"
+msgstr "กรอบภาพสำคัญการกระทำทั้งหมด"
+
+
+msgid "For bone motion paths, search whole Action for keyframes instead of in group with matching name only (is slower)"
+msgstr "สำหรับการค้นหาเส้นทางการเคลื่อนไหวของกระดูก ให้ค้นหากรอบภาพสำคัญในกิริยาทั้งหมดแทนที่จะค้นหาเฉพาะในกลุ่มที่มีชื่อตรงกันเท่านั้น (ซึ่งจะช้ากว่า)"
+
+
+msgid "Highlight Keyframes"
+msgstr "จุดเด่นกรอบภาพสำคัญ"
+
+
+msgid "Emphasize position of keyframes on Motion Paths"
+msgstr "เน้นตำแหน่งของกรอบภาพสำคัญบนเส้นทางการเคลื่อนไหว"
+
+
+msgid "Show Keyframe Numbers"
+msgstr "แสดงหมายเลขกรอบภาพสำคัญ"
+
+
+msgid "Show frame numbers of Keyframes on Motion Paths"
+msgstr "แสดงหมายเลขกรอบภาพของกรอบภาพสำคัญบนเส้นทางการเคลื่อนไหว"
+
+
+msgid "Paths Type"
+msgstr "ชนิดของเส้นทาง"
+
+
+msgid "Type of range to show for Motion Paths"
+msgstr "ประเภทของช่วงที่จะแสดงสำหรับเส้นทางการเคลื่อนที่"
+
+
+msgid "Around Frame"
+msgstr "โดยรอบกรอบภาพ"
+
+
+msgid "Display Paths of poses within a fixed number of frames around the current frame"
+msgstr "แสดงเส้นทางการเคลื่อนที่ของท่าทางภายในจำนวนกรอบภาพที่กำหนดไว้รอบเฟรมปัจจุบัน"
+
+
+msgid "In Range"
+msgstr "ในระยะ"
+
+
+msgid "Display Paths of poses within specified range"
+msgstr "แสดงเส้นทางการเคลื่อนที่ของท่าทางต่างๆ ภายในระยะที่กำหนด"
+
+
+msgid "Bake to active Camera"
+msgstr "อบกล้องที่กำลังใช้งาน"
+
+
+msgid "Motion path points will be baked into the camera space of the active camera. This means they will only look right when looking through that camera. Switching cameras using markers is not supported."
+msgstr "จุดกำหนดเส้นทางการเคลื่อนไหวจะถูกฝังลงในพื้นที่กล้องของกล้องที่ใช้งานอยู่ ซึ่งหมายความว่าภาพจะดูถูกต้องเฉพาะเมื่อมองผ่านกล้องนั้นเท่านั้น การสลับกล้องโดยใช้เครื่องหมายไม่ได้รับการสนับสนุน"
+
+
+msgid "Annotation Frame"
+msgstr "กรอบคำอธิบายประกอบ"
+
+
+msgid "Collection of related sketches on a particular frame"
+msgstr "ชุดภาพร่างที่เกี่ยวข้องกันบนกรอบภาพเฉพาะ"
+
+
+msgid "Frame Number"
+msgstr "หมายเลขกรอบภาพ"
+
+
+msgid "The frame on which this sketch appears"
+msgstr "กรอบที่ภาพร่างนี้ปรากฏอยู่"
+
+
+msgid "Frame is selected for editing in the Dope Sheet"
+msgstr "เลือกกรอบสำหรับการแก้ไขในโดปชีทแล้ว"
+
+
+msgid "Strokes"
+msgstr "เส้น"
+
+
+msgid "Freehand curves defining the sketch on this frame"
+msgstr "เส้นโค้งที่วาดด้วยมือเปล่ากำหนดโครงร่างบนกรอบนี้"
+
+
+msgid "Annotation Frames"
+msgstr "กรอบคำอธิบายประกอบ"
+
+
+msgid "Collection of annotation frames"
+msgstr "ชุดของกรอบคำอธิบายประกอบ"
+
+
+msgid "Annotation Layer"
+msgstr "ชั้นคำอธิบายประกอบ"
+
+
+msgid "Collection of related sketches"
+msgstr "รวมภาพร่างที่เกี่ยวข้อง"
+
+
+msgid "Active Frame"
+msgstr "กรอบภาพกัมมันต์"
+
+
+msgid "Frame currently being displayed for this layer"
+msgstr "กรอบที่แสดงอยู่ในขณะนี้สำหรับชั้นภาพนี้"
+
+
+msgid "Hide"
+msgstr "ซ่อน"
+
+
+msgid "Set annotation Visibility"
+msgstr "ตั้งค่าการมองเห็นคำอธิบายประกอบ"
+
+
+msgid "After Color"
+msgstr "หลังลงสี"
+
+
+msgid "Base color for ghosts after the active frame"
+msgstr "สีพื้นฐานสำหรับผีหลังจากกรอบภาพที่ใช้งานอยู่"
+
+
+msgid "Frames After"
+msgstr "กรอบภาพหลังจากนั้น"
+
+
+msgid "Maximum number of frames to show after current frame"
+msgstr "จำนวนกรอบภาพสูงสุดที่จะแสดงหลังจากกรอบภาพปัจจุบัน"
+
+
+msgid "Before Color"
+msgstr "ก่อนลงสี"
+
+
+msgid "Base color for ghosts before the active frame"
+msgstr "สีพื้นฐานสำหรับผี ก่อนกรอบภาพที่ใช้งานอยู่"
+
+
+msgid "Frames Before"
+msgstr "ก่อนกรอบภาพ"
+
+
+msgid "Maximum number of frames to show before current frame"
+msgstr "จำนวนกรอบภาพสูงสุดที่จะแสดงก่อนกรอบภาพปัจจุบัน"
+
+
+msgid "Custom Onion Skin Colors"
+msgstr "สีผิวหัวหอมแบบกำหนดเอง"
+
+
+msgid "Use custom colors for onion skinning instead of the theme"
+msgstr "ใช้สีที่กำหนดเองสำหรับการแสดงภาพซ้อนภาพแทนการใช้ธีม"
+
+
+msgid "Opacity"
+msgstr "ความทึบแสง"
+
+
+msgid "Annotation Layer Opacity"
+msgstr "ความทึบของชั้นภาพคำอธิบายประกอบ"
+
+
+msgid "Color for all strokes in this layer"
+msgstr "ระบายสีให้กับเส้นทั้งหมดในชั้นภาพนี้"
+
+
+msgid "Frames"
+msgstr "กรอบภาพ"
+
+
+msgid "Sketches for this layer on different frames"
+msgstr "ภาพร่างสำหรับชั้นภาพนี้บนกรอบภาพต่างๆ"
+
+
+msgid "Info"
+msgstr "ข้อมูล"
+
+
+msgid "Layer name"
+msgstr "ชื่อชั้นภาพ"
+
+
+msgid "Ruler"
+msgstr "ไม้บรรทัด"
+
+
+msgid "This is a special ruler layer"
+msgstr "นี่คือชั้นภาพไม้บรรทัดพิเศษ"
+
+
+msgid "Locked"
+msgstr "ล็อคแล้ว"
+
+
+msgid "Protect layer from further editing and/or frame changes"
+msgstr "ป้องกันชั้นภาพจากการแก้ไขเพิ่มเติมและ/หรือการเปลี่ยนแปลงกรอบภาพ"
+
+
+msgid "Frame Locked"
+msgstr "ล็อคกรอบภาพ"
+
+
+msgid "Lock current frame displayed by layer"
+msgstr "ล็อคกรอบภาพปัจจุบันที่แสดงตามชั้นภาพ"
+
+
+msgid "Layer is selected for editing in the Dope Sheet"
+msgstr "เลือกชั้นภาพสำหรับการแก้ไขในโดปชีทแล้ว"
+
+
+msgid "In Front"
+msgstr "ด้านหน้า"
+
+
+msgid "Make the layer display in front of objects"
+msgstr "ทำให้ชั้นภาพแสดงผลอยู่ด้านหน้าวัตถุ"
+
+
+msgid "Thickness"
+msgstr "ความหนา"
+
+
+msgid "Thickness of annotation strokes"
+msgstr "ความหนาของเส้นขีดกำกับคำอธิบาย"
+
+
+msgid "Onion Skinning"
+msgstr "การปอกเปลือกหัวหอม"
+
+
+msgid "Display annotation onion skins before and after the current frame"
+msgstr "แสดงภาพซ้อนของคำอธิบายประกอบก่อนและหลังกรอบภาพปัจจุบัน"
+
+
+msgid "Annotation Layers"
+msgstr "ชั้นภาพคำอธิบายประกอบ"
+
+
+msgid "Collection of annotation layers"
+msgstr "การรวบรวมชั้นภาพคำอธิบายประกอบ"
+
+
+msgid "Active Layer Index"
+msgstr "ดัชนีชั้นภาพที่ใช้งานอยู่"
+
+
+msgid "Index of active annotation layer"
+msgstr "ดัชนีของชั้นภาพคำอธิบายประกอบที่ใช้งานอยู่"
+
+
+msgid "Active Note"
+msgstr "บันทึกที่ใช้งานอยู่"
+
+
+msgid "Note/Layer to add annotation strokes to"
+msgstr "หมายเหตุ/ชั้นภาพสำหรับเพิ่มเส้นขีดอธิบาย"
+
+
+msgid "Default"
+msgstr "ค่าเริ่มต้น"
+
+
+msgid "Annotation Stroke"
+msgstr "เส้นขอบคำอธิบายประกอบ"
+
+
+msgid "Freehand curve defining part of a sketch"
+msgstr "เส้นโค้งที่วาดด้วยมือเปล่าเพื่อกำหนดส่วนหนึ่งของภาพร่าง"
+
+
+msgid "Stroke Points"
+msgstr "จุดของเส้นกรอบ"
+
+
+msgid "Stroke data points"
+msgstr "จุดของข้อมูลเส้นกรอบ"
+
+
+msgid "Annotation Stroke Point"
+msgstr "จุดเส้นกำกับ"
+
+
+msgid "Data point for freehand stroke curve"
+msgstr "จุดข้อมูลสำหรับเส้นโค้งการวาดด้วยมือเปล่า"
+
+
+msgid "Coordinates"
+msgstr "พิกัด"
+
+
+msgid "Any Type"
+msgstr "ชนิดใดๆ"
+
+
+msgid "RNA type used for pointers to any possible data"
+msgstr "อาร์เอ็นเอชนิดที่ใช้สำหรับชี้ไปยังข้อมูลที่เป็นไปได้ใดๆ"
+
+
+msgid "Area in a subdivided screen, containing an editor"
+msgstr "พื้นที่ในหน้าจอที่แบ่งย่อย ซึ่งประกอบด้วยส่วนแก้ไข"
+
+
+msgid "Height"
+msgstr "สูง"
+
+
+msgid "Area height"
+msgstr "ความสูงของพื้นที่"
+
+
+msgid "Regions"
+msgstr "ขอบเขต"
+
+
+msgid "Regions this area is subdivided in"
+msgstr "บริเวณต่างๆ ที่พื้นที่นี้ถูกแบ่งย่อยออกเป็นส่วนๆ"
+
+
+msgid "Show Menus"
+msgstr "แสดงเมนู"
+
+
+msgid "Show menus in the header"
+msgstr "แสดงเมนูในส่วนหัว"
+
+
+msgid "Spaces"
+msgstr "ปริภูมิ"
+
+
+msgid "Spaces contained in this area, the first being the active space (NOTE: Useful for example to restore a previously used 3D view space in a certain area to get the old view orientation)"
+msgstr "พื้นที่ต่างๆ ที่อยู่ในบริเวณนี้ โดยพื้นที่แรกคือพื้นที่ใช้งาน (หมายเหตุ: มีประโยชน์ เช่น สำหรับการเรียกคืนพื้นที่แสดงผล 3 มิติที่เคยใช้มาก่อนในบริเวณใดบริเวณหนึ่ง เพื่อให้ได้ทิศทางการแสดงผลแบบเดิม)"
+
+
+msgid "Editor Type"
+msgstr "ชนิดตัวแก้ไข"
+
+
+msgid "Current editor type for this area"
+msgstr "ประเภทตัวแก้ไขปัจจุบันสำหรับพื้นที่นี้"
+
+
+msgid "Empty"
+msgstr "ว่างเปล่า"
+
+
+msgid "3D Viewport"
+msgstr "วิวพอร์ตสามมิติ"
+
+
+msgid "Manipulate objects in a 3D environment"
+msgstr "ควบคุมและจัดการวัตถุในสภาพแวดล้อมสามมิติ"
+
+
+msgid "UV/Image Editor"
+msgstr "ตัวแก้ไขรูปภาพ/ยูวี"
+
+
+msgid "View and edit images and UV Maps"
+msgstr "ดู แก้ไขรูปภาพ และแผนที่ยูวี"
+
+
+msgid "Node Editor"
+msgstr "ตัวแก้ไขโหนด"
+
+
+msgid "Editor for node-based shading and compositing tools"
+msgstr "โปรแกรมแก้ไขสำหรับเครื่องมือแรเงาและการประกอบรวมแบบอิงจุดต่อ"
+
+
+msgid "Video Sequencer"
+msgstr "เครื่องเรียงลำดับวิดีโอ"
+
+
+msgid "Non-linear editor for arranging and mixing scenes, video, audio, and effects"
+msgstr "โปรแกรมตัดต่อแบบไม่เชิงเส้น สำหรับจัดเรียงและผสมผสานฉาก วิดีโอ เสียง และปรากฏการณ์ต่างๆ"
+
+
+msgid "Movie Clip Editor"
+msgstr "โปรแกรมตัดต่อคลิปภาพยนตร์"
+
+
+msgid "Motion tracking tools"
+msgstr "เครื่องมือติดตามการเคลื่อนไหว"
+
+
+msgid "Dope Sheet"
+msgstr "โดปชีท"
+
+
+msgid "Adjust timing of keyframes"
+msgstr "ปรับจังหวะเวลาของกรอบภาพสำคัญ"
+
+
+msgid "Graph Editor"
+msgstr "ตัวแก้ไขกราฟ"
+
+
+msgid "Edit drivers and keyframe interpolation"
+msgstr "แก้ไขตัวขับและการแทรกกรอบภาพสำคัญ"
+
+
+msgid "Nonlinear Animation"
+msgstr "แอนิเมชั่นแบบไม่เชิงเส้น"
+
+
+msgid "Combine and layer Actions"
+msgstr "ผสานและซ้อนการกระทำต่างๆ เข้าด้วยกัน"
+
+
+msgid "Text Editor"
+msgstr "ตัวแก้ไขข้อความ"
+
+
+msgid "Edit scripts and in-file documentation"
+msgstr "แก้ไขบทคำสั่งและเอกสารประกอบในไฟล์"
+
+
+msgid "Python Console"
+msgstr "จอเฝ้าคุมไพธอน"
+
+
+msgid "Interactive programmatic console for advanced editing and script development"
+msgstr "จอเฝ้าคุมแบบโต้ตอบสำหรับแก้ไขและพัฒนาบทคำสั่งขั้นสูง"
+
+
+msgid "Log of operations, warnings and error messages"
+msgstr "ปูมการดำเนินการ คำเตือน และข้อความแสดงข้อผิดพลาด"
+
+
+msgid "Top Bar"
+msgstr "แถบบนสุด"
+
+
+msgid "Global bar at the top of the screen for global per-window settings"
+msgstr "แถบการตั้งค่าครอบคลุมที่ด้านบนของหน้าจอ สำหรับการตั้งค่าเฉพาะหน้าต่างแต่ละบาน"
+
+
+msgid "Status Bar"
+msgstr "แถบสถานะ"
+
+
+msgid "Global bar at the bottom of the screen for general status information"
+msgstr "แถบครอบคลุมที่ด้านล่างของหน้าจอสำหรับข้อมูลสถานะทั่วไป"
+
+
+msgid "Outliner"
+msgstr "โครงร่าง"
+
+
+msgid "Overview of scene graph and all available data-blocks"
+msgstr "ภาพรวมของกราฟฉากและบล็อกข้อมูลทั้งหมดที่มีอยู่"
+
+
+msgid "Properties"
+msgstr "คุณสมบัติ"
+
+
+msgid "Edit properties of active object and related data-blocks"
+msgstr "แก้ไขคุณสมบัติของวัตถุที่ใช้งานอยู่และบล็อกข้อมูลที่เกี่ยวข้อง"
+
+
+msgid "File Browser"
+msgstr "ตัวค้นดูแฟ้ม"
+
+
+msgid "Browse for files and assets"
+msgstr "เรียกดูไฟล์และสินทรัพย์"
+
+
+msgid "Spreadsheet"
+msgstr "สเปรดชีต"
+
+
+msgid "Explore geometry data in a table"
+msgstr "สำรวจข้อมูลทางเรขาคณิตในรูปแบบตาราง"
+
+
+msgid "Preferences"
+msgstr "ความพึงใจ"
+
+
+msgid "Edit persistent configuration settings"
+msgstr "แก้ไขการตั้งค่าการกำหนดค่าแบบถาวร"
+
+
+msgid "Width"
+msgstr "ความกว้าง"
+
+
+msgid "Area width"
+msgstr "ความกว้างของพื้นที่"
+
+
+msgid "X Position"
+msgstr "ตำแหน่งแกนนอน"
+
+
+msgid "The window relative vertical location of the area"
+msgstr "ตำแหน่งแนวตั้งสัมพัทธ์ของหน้าต่างของพื้นที่"
+
+
+msgid "Y Position"
+msgstr "ตำแหน่งแกนตั้ง"
+
+
+msgid "The window relative horizontal location of the area"
+msgstr "ตำแหน่งแนวนอนสัมพัทธ์ของหน้าต่างของพื้นที่"
+
+
+msgid "Area Spaces"
+msgstr "พื้นที่ปริภูมิ"
+
+
+msgid "Collection of spaces"
+msgstr "กลุ่มของพื้นที่"
+
+
+msgid "Active Space"
+msgstr "พื้นที่ใช้งาน"
+
+
+msgid "Space currently being displayed in this area"
+msgstr "พื้นที่ที่กำลังจัดแสดงอยู่ในบริเวณนี้"
+
+
+msgid "Armature Bones"
+msgstr "โครงกระดูก"
+
+
+msgid "Collection of armature bones"
+msgstr "โครงกระดูกประกอบ"
+
+
+msgid "Active Bone"
+msgstr "กระดูกที่ใช้งานอยู่"
+
+
+msgid "Armature's active bone"
+msgstr "โครงกระดูกที่ใช้งานอยู่"
+
+
+msgid "Armature Deform Constraint Targets"
+msgstr "เป้าหมายการจำกัดการเสียรูปของโครงร่าง"
+
+
+msgid "Collection of target bones and weights"
+msgstr "การรวบรวมกระดูกเป้าหมายและน้ำหนัก"
+
+
+msgid "Armature EditBones"
+msgstr "โครงกระดูกแก้ไข"
+
+
+msgid "Collection of armature edit bones"
+msgstr "การรวบรวมกระดูกสำหรับแก้ไขโครงกระดูก"
+
+
+msgid "Active EditBone"
+msgstr "กระดูกแก้ไขที่ใช้งานอยู่"
+
+
+msgid "Armatures active edit bone"
+msgstr "แก้ไขโครงกระดูกที่ใช้งานอยู่"
+
+
+msgid "Asset Library"
+msgstr "คลังสินทรัพย์"
+
+
+msgid "All Libraries"
+msgstr "คลังทั้งหมด"
+
+
+msgid "Show assets from all of the listed asset libraries"
+msgstr "แสดงเนื้อหาจากคลังเนื้อหาทั้งหมดที่ระบุไว้"
+
+
+msgid "Current File"
+msgstr "ไฟล์ปัจจุบัน"
+
+
+msgid "Show the assets currently available in this Blender session"
+msgstr "แสดงสินทรัพย์ที่มีอยู่ในช่วงสมัยของเบลนเดอร์นี้"
+
+
+msgid "Essentials"
+msgstr "รากแก่น"
+
+
+msgid "Custom"
+msgstr "กำหนดเอง"
+
+
+msgid "Show assets from the asset libraries configured in the Preferences"
+msgstr "แสดงเนื้อหาจากคลังเนื้อหาที่กำหนดค่าไว้ในส่วนการตั้งค่า"
+
+
+msgid "User Asset Libraries"
+msgstr "คลังสินทรัพย์ของผู้ใช้"
+
+
+msgid "Collection of user asset libraries"
+msgstr "การรวบรวมคลังสินทรัพย์ของผู้ใช้"
+
+
+msgid "Asset Library Reference"
+msgstr "สิ่งอ้างอิงคลังสินทรัพย์"
+
+
+msgid "Identifier to refer to the asset library"
+msgstr "ตัวระบุสำหรับอ้างอิงถึงคลังสินทรัพย์"
+
+
+msgid "Asset Data"
+msgstr "ข้อมูลสินทรัพย์"
+
+
+msgid "Additional data stored for an asset data-block"
+msgstr "ข้อมูลเพิ่มเติมที่จัดเก็บไว้สำหรับบล็อกข้อมูลสินทรัพย์"
+
+
+msgid "Active Tag"
+msgstr "ป้ายระบุที่ใช้งานอยู่"
+
+
+msgid "Index of the tag set for editing"
+msgstr "ดัชนีของชุดป้ายระบุสำหรับการแก้ไข"
+
+
+msgid "Author"
+msgstr "ผู้เขียน"
+
+
+msgid "Name of the creator of the asset"
+msgstr "ชื่อผู้สร้างสินทรัพย์"
+
+
+msgid "Catalog UUID"
+msgstr "ยูยูไอดีของสารบัญแฟ้ม"
+
+
+msgid "Identifier for the asset's catalog, used by Blender to look up the asset's catalog path. Must be a UUID according to RFC4122."
+msgstr "ตัวระบุสำหรับสารบัญแฟ้มของสินทรัพย์ ซึ่งเบลนเดอร์ใช้ในการค้นหาเส้นทางสารบัญแฟ้มของสินทรัพย์ ต้องเป็นยูยูไอดีตามมาตรฐานอาร์เอฟซี4122"
+
+
+msgid "Catalog Simple Name"
+msgstr "ชื่อสารบัญแฟ้มแบบง่าย"
+
+
+msgid "Simple name of the asset's catalog, for debugging and data recovery purposes"
+msgstr "ชื่อสารบัญแฟ้มของสินทรัพย์แบบง่าย ๆ สำหรับใช้ในการแก้ไขข้อผิดพลาดและการกู้คืนข้อมูล"
+
+
+msgid "Copyright"
+msgstr "ลิขสิทธิ์"
+
+
+msgid "Copyright notice for this asset. An empty copyright notice does not necessarily indicate that this is copyright-free. Contact the author if any clarification is needed."
+msgstr "ข้อความแจ้งลิขสิทธิ์สำหรับเนื้อหานี้ ข้อความแจ้งลิขสิทธิ์ที่ว่างเปล่าไม่ได้หมายความว่าเนื้อหานี้ปลอดลิขสิทธิ์เสมอไป โปรดติดต่อผู้สร้างหากต้องการคำชี้แจงเพิ่มเติม"
+
+
+msgid "Description"
+msgstr "คำอธิบาย"
+
+
+msgid "A description of the asset to be displayed for the user"
+msgstr "คำอธิบายของสินทรัพย์ที่จะแสดงให้ผู้ใช้เห็น"
+
+
+msgid "License"
+msgstr "ใบอนุญาต"
+
+
+msgid "The type of license this asset is distributed under. An empty license name does not necessarily indicate that this is free of licensing terms. Contact the author if any clarification is needed."
+msgstr "ประเภทของใบอนุญาตที่ใช้ในการเผยแพร่สินทรัพย์นี้ ชื่อใบอนุญาตที่ว่างเปล่าไม่ได้หมายความว่าสินทรัพย์นี้ปราศจากข้อกำหนดด้านใบอนุญาตเสมอไป โปรดติดต่อผู้สร้างหากต้องการคำชี้แจงเพิ่มเติม"
+
+
+msgid "Link"
+msgstr "เชื่อมโยง"
+
+
+msgid "Tags"
+msgstr "ป้ายระบุ"
+
+
+msgid "Custom tags (name tokens) for the asset, used for filtering and general asset management"
+msgstr "ป้ายระบุที่กำหนดเอง (โทเค็นชื่อ) สำหรับสินทรัพย์ ใช้สำหรับการกรองและการจัดการสินทรัพย์โดยทั่วไป"
+
+
+msgid "Asset Representation"
+msgstr "การเป็นตัวแทนสินทรัพย์"
+
+
+msgid "Information about an entity that makes it possible for the asset system to deal with the entity as asset"
+msgstr "ข้อมูลเกี่ยวกับหน่วยงานที่ทำให้ระบบสินทรัพย์สามารถจัดการกับหน่วยงานนั้นในฐานะสินทรัพย์ได้"
+
+
+msgid "Full Library Path"
+msgstr "เส้นทางคลังแบบเต็ม"
+
+
+msgid "Absolute path to the .blend file containing this asset"
+msgstr "เส้นทางแบบเต็มไปยังไฟล์ \".blend\" ที่มีสินทรัพย์นี้"
+
+
+msgid "Full Path"
+msgstr "เส้นทางเต็ม"
+
+
+msgid "Absolute path to the .blend file containing this asset extended with the path of the asset inside the file"
+msgstr "เส้นทางแบบเต็มไปยังไฟล์ \".blend\" ที่มีสินทรัพย์นี้ โดยต่อท้ายด้วยเส้นทางของสินทรัพย์ภายในไฟล์"
+
+
+msgctxt "ID"
+msgid "Data-block Type"
+msgstr "ประเภทบล็อกข้อมูล"
+
+
+msgid "The type of the data-block, if the asset represents one ('NONE' otherwise)"
+msgstr "ประเภทของบล็อกข้อมูล หากสินทรัพย์นั้นแสดงถึงบล็อกข้อมูล ('ไม่มี' ในกรณีอื่น)"
+
+
+msgid "The local data-block this asset represents; only valid if that is a data-block in this file"
+msgstr "บล็อกข้อมูลภายในเครื่องที่สินทรัพย์นี้แสดงถึง จะมีผลก็ต่อเมื่อเป็นบล็อกข้อมูลในไฟล์นี้เท่านั้น"
+
+
+msgid "Asset Metadata"
+msgstr "ข้อมูลบริบทของสินทรัพย์"
+
+
+msgid "Additional information about the asset"
+msgstr "ข้อมูลเพิ่มเติมเกี่ยวกับสินทรัพย์"
+
+
+msgid "Asset Shelf"
+msgstr "ชั้นวางสินทรัพย์"
+
+
+msgid "Regions for quick access to assets"
+msgstr "บริเวณที่เข้าถึงสินทรัพย์ได้อย่างรวดเร็ว"
+
+
+msgid "Choose the asset library to display assets from"
+msgstr "เลือกคลังสินทรัพย์เพื่อแสดงสินทรัพย์จาก"
+
+
+msgid "Activate Operator"
+msgstr "เปิดใช้งานตัวดำเนินการ"
+
+
+msgid "Operator to call when activating an item with asset reference properties"
+msgstr "ผู้ปฏิบัติงานที่จะโทรติดต่อเมื่อเปิดใช้งานรายการที่มีคุณสมบัติอ้างอิงสินทรัพย์"
+
+
+msgid "Default size of the asset preview thumbnails in pixels"
+msgstr "ขนาดเริ่มต้นของภาพขนาดย่อแสดงตัวอย่างสินทรัพย์ในหน่วยพิกเซล"
+
+
+msgid "Drag Operator"
+msgstr "ผู้ควบคุมการลาก"
+
+
+msgid "Operator to call when dragging an item with asset reference properties"
+msgstr "ฟังก์ชันที่จะเรียกใช้เมื่อลากรายการที่มีคุณสมบัติการอ้างอิงสินทรัพย์"
+
+
+msgid "ID Name"
+msgstr "ชื่อไอดี"
+
+
+msgid "If this is set, the asset gets a custom ID, otherwise it takes the name of the class used to define the asset (for example, if the class name is \"OBJECT_AST_hello\", and bl_idname is not set by the script, then bl_idname = \"OBJECT_AST_hello\")"
+msgstr "หากมีการตั้งค่านี้ไว้ สินทรัพย์จะได้รับไอดีที่กำหนดเอง มิฉะนั้นจะใช้ชื่อของแบบชั้นที่ใช้กำหนดสินทรัพย์ (ตัวอย่างเช่น หากชื่อคลาสคือ \"OBJECT_AST_hello\" และบทคำสั่งไม่ได้ตั้งค่า \"bl_idname\" ดังนั้น \" bl_idname = \"OBJECT_AST_hello\" \")"
+
+
+msgid "Options"
+msgstr "ตัวเลือก"
+
+
+msgid "Options for this asset shelf type"
+msgstr "ตัวเลือกสำหรับชั้นวางสินทรัพย์ประเภทนี้"
+
+
+msgid "No Asset Dragging"
+msgstr "ห้ามลากสินทรัพย์"
+
+
+msgid "Disable the default asset dragging on drag events. Useful for implementing custom dragging via custom key-map items."
+msgstr "ปิดใช้งานการลากสินทรัพย์เริ่มต้นในเหตุการณ์การลาก มีประโยชน์สำหรับการใช้งานการลากแบบกำหนดเองผ่านรายการแผนผังปุ่มแบบกำหนดเอง"
+
+
+msgid "Visible by Default"
+msgstr "มองเห็นได้โดยค่าเริ่มต้น"
+
+
+msgid "Unhide the asset shelf when it's available for the first time, otherwise it will be hidden"
+msgstr "แสดงชั้นวางสินทรัพย์เมื่อพร้อมใช้งานเป็นครั้งแรก มิเช่นนั้นมันจะถูกซ่อนไว้"
+
+
+msgid "Store Enabled Catalogs in Preferences"
+msgstr "เปิดใช้งานการจัดเก็บสารบัญแฟ้มในการตั้งค่า"
+
+
+msgid "Store the shelf's enabled catalogs in the preferences rather than the local asset shelf settings"
+msgstr "บันทึกสารบัญแฟ้มที่เปิดใช้งานของชั้นวางไว้ในส่วนการตั้งค่า แทนที่จะบันทึกไว้ในส่วนการตั้งค่าชั้นวางสินทรัพย์ในเครื่อง"
+
+
+msgid "When spawning a context menu for an asset, activate the asset and call `bl_activate_operator` if present, rather than just highlighting the asset"
+msgstr "เมื่อสร้างเมนูบริบทสำหรับสินทรัพย์ ให้เปิดใช้งานสินทรัพย์และเรียกใช้ `bl_activate_operator` หากมีอยู่ แทนที่จะเพียงแค่ทำให้สินทรัพย์เด่น"
+
+
+msgid "Space Type"
+msgstr "ประเภทพื้นที่"
+
+
+msgid "The space where the asset shelf will show up in. Ignored for popup asset shelves which can be displayed in any space."
+msgstr "พื้นที่ที่จะแสดงชั้นวางสินทรัพย์ สำหรับชั้นวางสินทรัพย์แบบเด่งขึ้นมาซึ่งสามารถแสดงในพื้นที่ใดก็ได้ จะไม่สนใจพื้นที่นี้"
+
+
+msgid "Actions"
+msgstr "การกระทำ"
+
+
+msgid "Show Action data-blocks"
+msgstr "แสดงบล็อกข้อมูลการดำเนินการ"
+
+
+msgid "Annotations"
+msgstr "คำอธิบายประกอบ"
+
+
+msgid "Show Annotation data-blocks"
+msgstr "แสดงบล็อกข้อมูลคำอธิบายประกอบ"
+
+
+msgid "Armatures"
+msgstr "โครงหุ่น"
+
+
+msgid "Show Armature data-blocks"
+msgstr "แสดงบล็อกข้อมูลโครงหุ่น"
+
+
+msgid "Brushes"
+msgstr "แปรงสี"
+
+
+msgid "Show Brushes data-blocks"
+msgstr "แสดงบล็อกข้อมูลแปรงสี"
+
+
+msgid "Show Cache File data-blocks"
+msgstr "แสดงบล็อกข้อมูลไฟล์แคช"
+
+
+msgid "Cameras"
+msgstr "กล้อง"
+
+
+msgid "Show Camera data-blocks"
+msgstr "แสดงบล็อกข้อมูลกล้อง"
+
+
+msgid "Curves"
+msgstr "โค้ง"
+
+
+msgid "Show Curve data-blocks"
+msgstr "แสดงบล็อกข้อมูลเส้นโค้ง"
+
+
+msgid "Hair Curves"
+msgstr "โค้งแบบเส้นผม"
+
+
+msgid "Show/hide Curves data-blocks"
+msgstr "แสดง/ซ่อนบล็อกข้อมูลเส้นโค้ง"
+
+
+msgid "Fonts"
+msgstr "ฟอนต์"
+
+
+msgid "Show Font data-blocks"
+msgstr "แสดงบล็อกข้อมูลแบบอักษร"
+
+
+msgid "Grease Pencil"
+msgstr "ดินสอไขมัน"
+
+
+msgid "Show Grease Pencil data-blocks"
+msgstr "แสดงบล็อกข้อมูลของดินสอไขมัน"
+
+
+msgid "Collections"
+msgstr "การรวบรวม"
+
+
+msgid "Show Collection data-blocks"
+msgstr "แสดงบล็อกข้อมูลการรวบรวม"
+
+
+msgid "Images"
+msgstr "รูปภาพ"
+
+
+msgid "Show Image data-blocks"
+msgstr "แสดงบล็อกข้อมูลรูปภาพ"
+
+
+msgid "Lattices"
+msgstr "โครงตาข่าย"
+
+
+msgid "Show Lattice data-blocks"
+msgstr "แสดงบล็อกข้อมูลโครงตาข่าย"
+
+
+msgid "Lights"
+msgstr "แสง"
+
+
+msgid "Show Light data-blocks"
+msgstr "แสดงบล็อกข้อมูลแสง"
+
+
+msgid "Light Probes"
+msgstr "ตัวหยั่งแสง"
+
+
+msgid "Show Light Probe data-blocks"
+msgstr "แสดงบล็อกข้อมูลของตัวหยั่งแสง"
+
+
+msgid "Freestyle Linestyles"
+msgstr "ลีลาเส้นฟรีสไตล์"
+
+
+msgid "Show Freestyle's Line Style data-blocks"
+msgstr "แสดงบล็อกข้อมูลลีลาเส้นฟรีสไตล์"
+
+
+msgid "Masks"
+msgstr "หน้ากาก"
+
+
+msgid "Show Mask data-blocks"
+msgstr "แสดงบล็อกข้อมูลหน้ากาก"
+
+
+msgid "Materials"
+msgstr "วัสดุ"
+
+
+msgid "Show Material data-blocks"
+msgstr "แสดงบล็อกข้อมูลวัสดุ"
+
+
+msgid "Meshes"
+msgstr "ตาข่าย"
+
+
+msgid "Show Mesh data-blocks"
+msgstr "แสดงบล็อกข้อมูลตาข่าย"
+
+
+msgid "Metaballs"
+msgstr "เมตาบอล"
+
+
+msgid "Show Metaball data-blocks"
+msgstr "แสดงบล็อกข้อมูลเมตาบอล"
+
+
+msgid "Movie Clips"
+msgstr "คลิปภาพยนตร์"
+
+
+msgid "Show Movie Clip data-blocks"
+msgstr "แสดงบล็อกข้อมูลคลิปภาพยนตร์"
+
+
+msgid "Node Trees"
+msgstr "ต้นไม้โหนด"
+
+
+msgid "Show Node Tree data-blocks"
+msgstr "แสดงบล็อกข้อมูลของต้นไม้โหนด"
+
+
+msgid "Objects"
+msgstr "วัตถุ"
+
+
+msgid "Show Object data-blocks"
+msgstr "แสดงบล็อกข้อมูลของวัตถุ"
+
+
+msgid "Paint Curves"
+msgstr "เส้นโค้งระบายสี"
+
+
+msgid "Show Paint Curve data-blocks"
+msgstr "แสดงบล็อกข้อมูลเส้นโค้งการทาสี"
+
+
+msgid "Palettes"
+msgstr "จานสี"
+
+
+msgid "Show Palette data-blocks"
+msgstr "แสดงบล็อกข้อมูลจานสี"
+
+
+msgid "Particles Settings"
+msgstr "การตั้งค่าอนุภาค"
+
+
+msgid "Show Particle Settings data-blocks"
+msgstr "แสดงบล็อกข้อมูลการตั้งค่าอนุภาค"
+
+
+msgid "Point Clouds"
+msgstr "กลุ่มเมฆจุด"
+
+
+msgid "Show/hide Point Cloud data-blocks"
+msgstr "แสดง/ซ่อนบล็อกข้อมูลจุดกลุ่มเมฆ"
+
+
+msgid "Scenes"
+msgstr "ฉาก"
+
+
+msgid "Show Scene data-blocks"
+msgstr "แสดงบล็อกข้อมูลของฉาก"
+
+
+msgid "Sounds"
+msgstr "เสียง"
+
+
+msgid "Show Sound data-blocks"
+msgstr "แสดงบล็อกข้อมูลเสียง"
+
+
+msgid "Speakers"
+msgstr "ลำโพง"
+
+
+msgid "Show Speaker data-blocks"
+msgstr "แสดงบล็อกข้อมูลลำโพง"
+
+
+msgid "Texts"
+msgstr "ข้อความ"
+
+
+msgid "Show Text data-blocks"
+msgstr "แสดงบล็อกข้อมูลข้อความ"
+
+
+msgid "Textures"
+msgstr "พื้นผิว"
+
+
+msgid "Show Texture data-blocks"
+msgstr "แสดงบล็อกข้อมูลพื้นผิว"
+
+
+msgid "Volumes"
+msgstr "ปริมาตร"
+
+
+msgid "Show/hide Volume data-blocks"
+msgstr "แสดง/ซ่อนบล็อกข้อมูลของปริมาตร"
+
+
+msgid "Workspaces"
+msgstr "พื้นที่ทำงาน"
+
+
+msgid "Show workspace data-blocks"
+msgstr "แสดงบล็อกข้อมูลพื้นที่ทำงาน"
+
+
+msgid "Worlds"
+msgstr "โลก"
+
+
+msgid "Show World data-blocks"
+msgstr "แสดงบล็อกข้อมูลโลก"
+
+
+msgid "Preview Size"
+msgstr "ขนาดตัวอย่าง"
+
+
+msgid "Size of the asset preview thumbnails in pixels"
+msgstr "ขนาดของภาพขนาดย่อแสดงตัวอย่างสินทรัพย์ในหน่วยพิกเซล"
+
+
+msgid "Display Filter"
+msgstr "ตัวกรองการแสดงผล"
+
+
+msgid "Filter assets by name"
+msgstr "กรองสินทรัพย์ตามชื่อ"
+
+
+msgid "Show Names"
+msgstr "แสดงชื่อ"
+
+
+msgid "Show the asset name together with the preview. Otherwise only the preview will be visible."
+msgstr "แสดงชื่อไฟล์พร้อมกับภาพตัวอย่าง มิเช่นนั้นจะแสดงเฉพาะภาพตัวอย่างเท่านั้น"
+
+
+msgid "Asset Tag"
+msgstr "ป้ายระบุสินทรัพย์"
+
+
+msgid "User defined tag (name token)"
+msgstr "ป้ายระบุที่ผู้ใช้กำหนดเอง (โทเค็นชื่อ)"
+
+
+msgid "The identifier that makes up this tag"
+msgstr "ตัวระบุที่ประกอบขึ้นเป็นป้ายระบุนี้"
+
+
+msgid "Asset Tags"
+msgstr "ป้ายระบุสินทรัพย์"
+
+
+msgid "Collection of custom asset tags"
+msgstr "การรวบรวมป้ายระบุสินทรัพย์แบบกำหนดเอง"
+
+
+msgid "Asset Weak Reference"
+msgstr "สินทรัพย์ที่อ่อนแอ การอ้างอิง"
+
+
+msgid "Weak reference to some asset"
+msgstr "การอ้างอิงที่ไม่ชัดเจนถึงสินทรัพย์บางอย่าง"
+
+
+msgid "Geometry attribute"
+msgstr "คุณลักษณะทางเรขาคณิต"
+
+
+msgid "Data Type"
+msgstr "ชนิดข้อมูล"
+
+
+msgid "Type of data stored in attribute"
+msgstr "ประเภทของข้อมูลที่จัดเก็บในลักษณะประจำ"
+
+
+msgid "Float"
+msgstr "ค่าลอยตัว"
+
+
+msgid "Floating-point value"
+msgstr "ค่าจุดลอยตัว"
+
+
+msgid "Integer"
+msgstr "จำนวนเต็ม"
+
+
+msgid "32-bit integer"
+msgstr "จำนวนเต็ม 32 บิต"
+
+
+msgid "Boolean"
+msgstr "บูลีน"
+
+
+msgid "True or false"
+msgstr "จริงหรือเท็จ"
+
+
+msgid "Vector"
+msgstr "เวกเตอร์"
+
+
+msgid "3D vector with floating-point values"
+msgstr "เวกเตอร์ 3 มิติที่มีค่าทศนิยม"
+
+
+msgid "RGBA color with 32-bit floating-point values"
+msgstr "สีอาร์จีบีเอที่มีค่าทศนิยม 32 บิต"
+
+
+msgid "Quaternion"
+msgstr "ควอเทอร์เนียน"
+
+
+msgid "Floating point quaternion rotation"
+msgstr "การหมุนควอเทอร์เนียนจุดลอยตัว"
+
+
+msgid "4x4 Matrix"
+msgstr "เมทริกซ์ 4x4"
+
+
+msgid "Floating point matrix"
+msgstr "เมทริกซ์จุดลอยตัว"
+
+
+msgid "String"
+msgstr "สายอักขระ"
+
+
+msgid "Text string"
+msgstr "ข้อความสายอักขระ"
+
+
+msgid "8-Bit Integer"
+msgstr "จำนวนเต็ม 8 บิต"
+
+
+msgid "Smaller integer with a range from -128 to 127"
+msgstr "จำนวนเต็มที่เล็กกว่าซึ่งมีช่วงตั้งแต่ -128 ถึง 127"
+
+
+msgid "2D 16-Bit Integer Vector"
+msgstr "เวกเตอร์จำนวนเต็ม 2 มิติ 16 บิต"
+
+
+msgid "16-bit signed integer vector"
+msgstr "เวกเตอร์จำนวนเต็มแบบมีเครื่องหมาย 16 บิต"
+
+
+msgid "2D Integer Vector"
+msgstr "เวกเตอร์จำนวนเต็มสองมิติ"
+
+
+msgid "32-bit signed integer vector"
+msgstr "เวกเตอร์จำนวนเต็มแบบมีเครื่องหมาย 32 บิต"
+
+
+msgid "2D Vector"
+msgstr "เวกเตอร์ 2 มิติ"
+
+
+msgid "2D vector with floating-point values"
+msgstr "เวกเตอร์ 2 มิติที่มีค่าทศนิยม"
+
+
+msgid "Byte Color"
+msgstr "สีไบต์"
+
+
+msgid "RGBA color with 8-bit positive integer values"
+msgstr "สีอาร์จีบีเอที่มีค่าเป็นจำนวนเต็มบวก 8 บิต"
+
+
+msgid "Domain"
+msgstr "โดเมน"
+
+
+msgid "Domain of the Attribute"
+msgstr "โดเมนของลักษณะประจำ"
+
+
+msgid "Point"
+msgstr "จุด"
+
+
+msgid "Attribute on point"
+msgstr "ลักษณะประจำบนจุด"
+
+
+msgid "Edge"
+msgstr "ขอบ"
+
+
+msgid "Attribute on mesh edge"
+msgstr "ลักษณะประจำบนขอบตาข่าย"
+
+
+msgid "Face"
+msgstr "หน้า"
+
+
+msgid "Attribute on mesh faces"
+msgstr "ลักษณะประจำบนหน้าตาข่าย"
+
+
+msgid "Face Corner"
+msgstr "มุมหน้า"
+
+
+msgid "Attribute on mesh face corner"
+msgstr "ลักษณะประจำที่มุมของหน้าตาข่าย"
+
+
+msgid "Spline"
+msgstr "ร่องสลัก"
+
+
+msgid "Attribute on spline"
+msgstr "ลักษณะประจำบนร่องสลัก"
+
+
+msgid "Instance"
+msgstr "กรณีตัวอย่าง"
+
+
+msgid "Attribute on instance"
+msgstr "ลักษณะประจำบนกรณีตัวอย่าง"
+
+
+msgid "Layer"
+msgstr "ชั้นภาพ"
+
+
+msgid "Attribute on Grease Pencil layer"
+msgstr "ลักษณะประจำบนชั้นภาพดินสอไขมัน"
+
+
+msgid "Is Internal"
+msgstr "เป็นการภายใน"
+
+
+msgid "The attribute is meant for internal use by Blender"
+msgstr "ลักษณะประจำนี้มีไว้สำหรับใช้งานภายในของเบลนเดอร์เท่านั้น"
+
+
+msgid "Is Required"
+msgstr "เป็นการจำเป็น"
+
+
+msgid "Whether the attribute can be removed or renamed"
+msgstr "สามารถลบหรือเปลี่ยนชื่อลักษณะประจำได้หรือไม่"
+
+
+msgid "Name of the Attribute"
+msgstr "ชื่อของลักษณะประจำ"
+
+
+msgctxt "Amount"
+msgid "Storage Type"
+msgstr "ประเภทที่จัดเก็บ"
+
+
+msgid "Method used to store the data"
+msgstr "วิธีการที่ใช้ในการจัดเก็บข้อมูล"
+
+
+msgctxt "Amount"
+msgid "Array"
+msgstr "อาร์เรย์"
+
+
+msgid "Store a value for every element"
+msgstr "เก็บค่าสำหรับทุกองค์ประกอบ"
+
+
+msgctxt "Amount"
+msgid "Single"
+msgstr "เดี่ยว"
+
+
+msgid "Store a single value for the entire domain"
+msgstr "จัดเก็บค่าเดี่ยวสำหรับโดเมนทั้งหมด"
+
+
+msgid "Bool Attribute"
+msgstr "ลักษณะประจำของบูล"
+
+
+msgid "Geometry attribute that stores booleans"
+msgstr "ลักษณะประจำทางเรขาคณิตที่เก็บค่าบูลีน"
+
+
+msgid "Byte Color Attribute"
+msgstr "ลักษณะประจำสีของไบต์"
+
+
+msgid "Geometry attribute that stores RGBA colors as positive integer values using 8-bits per channel"
+msgstr "ลักษณะประจำทางเรขาคณิตที่จัดเก็บสีอาร์จีบีเอเป็นค่าจำนวนเต็มบวกโดยใช้ 8 บิตต่อช่อง"
+
+
+msgid "8-bit Integer Attribute"
+msgstr "ลักษณะประจำจำนวนเต็ม 8 บิต"
+
+
+msgid "Geometry attribute that stores 8-bit integers"
+msgstr "ลักษณะประจำทางเรขาคณิตที่เก็บค่าจำนวนเต็ม 8 บิต"
+
+
+msgid "Float2 Attribute"
+msgstr "ลักษณะประจำค่าทศนิยม 2"
+
+
+msgid "Geometry attribute that stores floating-point 2D vectors"
+msgstr "ลักษณะประจำทางเรขาคณิตที่เก็บเวกเตอร์ 2 มิติแบบจุดลอยตัว"
+
+
+msgid "4x4 Matrix Attribute"
+msgstr "ลักษณะประจำเมทริกซ์ 4x4"
+
+
+msgid "Geometry attribute that stores a 4 by 4 float matrix"
+msgstr "ลักษณะประจำเรขาคณิตที่เก็บเมทริกซ์ทศนิยมขนาด 4x4"
+
+
+msgid "Float Attribute"
+msgstr "ลักษณะประจำค่าทศนิยม"
+
+
+msgid "Geometry attribute that stores floating-point values"
+msgstr "ลักษณะประจำทางเรขาคณิตที่เก็บค่าทศนิยม"
+
+
+msgid "Float Color Attribute"
+msgstr "ลักษณะประจำสีแบบลอยตัว"
+
+
+msgid "Geometry attribute that stores RGBA colors as floating-point values using 32-bits per channel"
+msgstr "ลักษณะประจำทางเรขาคณิตที่จัดเก็บสีอาร์จีบีเอ ในรูปแบบค่าทศนิยมโดยใช้ 32 บิตต่อช่อง"
+
+
+msgid "Float Vector Attribute"
+msgstr "ลักษณะประจำเวกเตอร์ลอยตัว"
+
+
+msgid "Geometry attribute that stores floating-point 3D vectors"
+msgstr "ลักษณะประจำทางเรขาคณิตที่เก็บเวกเตอร์ 3 มิติแบบจุดลอยตัว"
+
+
+msgid "2D Integer Vector Attribute"
+msgstr "ลักษณะประจำเวกเตอร์จำนวนเต็ม 2 มิติ"
+
+
+msgid "Geometry attribute that stores 2D integer vectors"
+msgstr "ลักษณะประจำเรขาคณิตที่เก็บเวกเตอร์จำนวนเต็ม 2 มิติ"
+
+
+msgid "Integer Attribute"
+msgstr "ลักษณะประจำจำนวนเต็ม"
+
+
+msgid "Geometry attribute that stores integer values"
+msgstr "ลักษณะประจำทางเรขาคณิตที่เก็บค่าจำนวนเต็ม"
+
+
+msgid "Quaternion Attribute"
+msgstr "ลักษณะประจำควอเทอร์เนียน"
+
+
+msgid "Geometry attribute that stores rotation"
+msgstr "ลักษณะประจำทางเรขาคณิตที่เก็บค่าการหมุน"
+
+
+msgid "2D 16-Bit Integer Vector Attribute"
+msgstr "ลักษณะประจำเวกเตอร์จำนวนเต็ม 16 บิต 2 มิติ"
+
+
+msgid "String Attribute"
+msgstr "ลักษณะประจำสายอักขระ"
+
+
+msgid "Geometry attribute that stores strings"
+msgstr "ลักษณะประจำทางเรขาคณิตที่เก็บสายอักขระ"
+
+
+msgid "Attribute Group"
+msgstr "กลุ่มลักษณะประจำ"
+
+
+msgid "Group of geometry attributes"
+msgstr "กลุ่มของลักษณะประจำทางเรขาคณิต"
+
+
+msgid "Active Attribute"
+msgstr "ลักษณะประจำที่ใช้งานอยู่"
+
+
+msgid "Active attribute"
+msgstr "ลักษณะประจำที่ใช้งานอยู่"
+
+
+msgid "Active Attribute Index"
+msgstr "ดัชนีลักษณะประจำที่ใช้งานอยู่"
+
+
+msgid "Active attribute index or -1 when none are active"
+msgstr "ดัชนีลักษณะประจำที่ใช้งานอยู่ หรือ -1 เมื่อไม่มีลักษณะประจำใดใช้งานอยู่"
+
+
+msgid "Active Color"
+msgstr "สีที่ใช้งานอยู่"
+
+
+msgid "Active color attribute for display and editing"
+msgstr "ลักษณะประจำสีที่ใช้งานอยู่สำหรับการแสดงผลและการแก้ไข"
+
+
+msgid "Active Color Index"
+msgstr "ดัชนีสีที่ใช้งานอยู่"
+
+
+msgid "Active color attribute index"
+msgstr "ดัชนีลักษณะประจำสีที่ใช้งานอยู่"
+
+
+msgid "Active Color Attribute"
+msgstr "ลักษณะประจำสีที่ใช้งานอยู่"
+
+
+msgid "The name of the active color attribute for display and editing"
+msgstr "ชื่อของลักษณะประจำสีที่ใช้งานอยู่สำหรับการแสดงผลและการแก้ไข"
+
+
+msgid "Default Color Attribute"
+msgstr "ลักษณะประจำสีเริ่มต้น"
+
+
+msgid "The name of the default color attribute used as a fallback for rendering"
+msgstr "ชื่อของลักษณะประจำสีเริ่มต้นที่ใช้เป็นตัวเลือกสำรองสำหรับการแสดงผล"
+
+
+msgid "Active Render Color Index"
+msgstr "ดัชนีสีเรนเดอร์ที่ใช้งานอยู่"
+
+
+msgid "The index of the color attribute used as a fallback for rendering"
+msgstr "ดัชนีของลักษณะประจำสีที่ใช้เป็นตัวเลือกสำรองสำหรับการแสดงผล"
+
+
+msgid "Bake Data"
+msgstr "ข้อมูลการอบ"
+
+
+msgid "Bake data for a Scene data-block"
+msgstr "อบข้อมูลสำหรับบล็อกข้อมูลฉาก"
+
+
+msgid "Cage Extrusion"
+msgstr "การขึ้นรูปกรง"
+
+
+msgid "Inflate the active object by the specified distance for baking. This helps matching to points nearer to the outside of the selected object meshes."
+msgstr "ขยายวัตถุที่ใช้งานอยู่ตามระยะทางที่กำหนดสำหรับการอบ วิธีนี้จะช่วยให้การจับคู่กับจุดที่อยู่ใกล้กับขอบด้านนอกของตาข่ายวัตถุที่เลือกทำได้ง่ายขึ้น"
+
+
+msgid "Cage Object"
+msgstr "วัตถุกรง"
+
+
+msgid "Object to use as cage instead of calculating the cage from the active object with cage extrusion"
+msgstr "วัตถุที่จะใช้เป็นโครงสร้างแทนการคำนวณโครงสร้างจากวัตถุที่ใช้งานอยู่ด้วยการขึ้นรูปโครงสร้าง"
+
+
+msgid "Displacement Space"
+msgstr "พื้นที่การเคลื่อนย้าย"
+
+
+msgid "Choose displacement space for baking"
+msgstr "เลือกพื้นที่การแทนที่สำหรับการอบ"
+
+
+msgid "Object"
+msgstr "วัตถุ"
+
+
+msgid "Bake the displacement in object space"
+msgstr "อบการกระจัดในพื้นที่วัตถุ"
+
+
+msgid "Tangent"
+msgstr "เส้นสัมผัส"
+
+
+msgid "Bake the displacement in tangent space"
+msgstr "อบการกระจัดในปริภูมิเส้นสัมผัส"
+
+
+msgid "File Path"
+msgstr "เส้นทางไฟล์"
+
+
+msgid "Image filepath to use when saving externally"
+msgstr "เส้นทางไฟล์ภาพที่จะใช้เมื่อบันทึกภายนอก"
+
+
+msgid "Vertical dimension of the baking map"
+msgstr "มิติแนวตั้งของแผนที่การอบ"
+
+
+msgid "Image Format"
+msgstr "รูปแบบรูปภาพ"
+
+
+msgid "Margin"
+msgstr "ระยะขอบ"
+
+
+msgid "Extends the baked result as a post process filter"
+msgstr "ขยายผลลัพธ์ที่ผ่านการอบแล้วเป็นตัวกรองหลังการประมวลผล"
+
+
+msgid "Margin Type"
+msgstr "ประเภทระยะขอบ"
+
+
+msgid "Algorithm to extend the baked result"
+msgstr "ขั้นตอนวิธีเพื่อขยายผลลัพธ์ที่ได้จากการอบ"
+
+
+msgid "Adjacent Faces"
+msgstr "หน้าที่อยู่ติดกัน"
+
+
+msgid "Use pixels from adjacent faces across UV seams"
+msgstr "ใช้พิกเซลจากหน้าที่อยู่ติดกันข้ามรอยต่อยูวี"
+
+
+msgid "Extend"
+msgstr "ต่อขยาย"
+
+
+msgid "Extend border pixels outwards"
+msgstr "ขยายพิกเซลขอบออกไปด้านนอก"
+
+
+msgid "Max Ray Distance"
+msgstr "ระยะห่างของรังสีสูงสุด"
+
+
+msgid "The maximum ray distance for matching points between the active and selected objects. If zero, there is no limit."
+msgstr "ระยะห่างสูงสุดของลำแสงสำหรับการจับคู่จุดระหว่างวัตถุที่ใช้งานอยู่และวัตถุที่เลือก หากเป็นศูนย์ จะไม่มีข้อจำกัด"
+
+
+msgid "Normal Space"
+msgstr "พื้นที่ปกติ"
+
+
+msgid "Axis to bake in blue channel"
+msgstr "แกนสำหรับอบในช่องสีน้ำเงิน"
+
+
+msgid "+X"
+msgstr "+X"
+
+
+msgid "+Y"
+msgstr "+Y"
+
+
+msgid "+Z"
+msgstr "+Z"
+
+
+msgid "-X"
+msgstr "-X"
+
+
+msgid "-Y"
+msgstr "-Y"
+
+
+msgid "-Z"
+msgstr "-Z"
+
+
+msgid "Axis to bake in green channel"
+msgstr "แกนสำหรับอบในช่องสีเขียว"
+
+
+msgid "Axis to bake in red channel"
+msgstr "แกนสำหรับอบในช่องสีแดง"
+
+
+msgid "Choose normal space for baking"
+msgstr "เลือกพื้นที่ปกติสำหรับการอบ"
+
+
+msgid "Bake the normals in object space"
+msgstr "อบค่าปกติในพื้นที่วัตถุ"
+
+
+msgid "Bake the normals in tangent space"
+msgstr "อบค่าปกติในพื้นที่สัมผัส"
+
+
+msgid "Pass Filter"
+msgstr "ตัวกรองแบบผ่าน"
+
+
+msgid "Passes to include in the active baking pass"
+msgstr "บัตรผ่านที่จะรวมอยู่ในการผ่านอบขนมที่ใช้งานอยู่"
+
+
+msgid "None"
+msgstr "ไม่มี"
+
+
+msgid "Emit"
+msgstr "ปล่อย"
+
+
+msgid "Direct"
+msgstr "โดยตรง"
+
+
+msgid "Indirect"
+msgstr "ทางอ้อม"
+
+
+msgid "Diffuse"
+msgstr "กระจาย"
+
+
+msgid "Glossy"
+msgstr "มันวาว"
+
+
+msgid "Transmission"
+msgstr "การส่งผ่าน"
+
+
+msgid "Save Mode"
+msgstr "โหมดบันทึก"
+
+
+msgid "Where to save baked image textures"
+msgstr "ตำแหน่งที่จะบันทึกพื้นผิวภาพที่อบแล้ว"
+
+
+msgid "Internal"
+msgstr "ภายใน"
+
+
+msgid "Save the baking map in an internal image data-block"
+msgstr "บันทึกแผนผังการอบลงในบล็อกข้อมูลรูปภาพภายใน"
+
+
+msgid "External"
+msgstr "ภายนอก"
+
+
+msgid "Save the baking map in an external file"
+msgstr "บันทึกแผนที่การอบลงในไฟล์ภายนอก"
+
+
+msgid "Target"
+msgstr "เป้าหมาย"
+
+
+msgid "Where to output the baked map"
+msgstr "จะส่งออกแผนที่ที่อบแล้วไปที่ใด"
+
+
+msgid "Image Textures"
+msgstr "ผิวสัมผัสรูปภาพ"
+
+
+msgid "Bake to image data-blocks associated with active image texture nodes in materials"
+msgstr "อบข้อมูลบล็อกรูปภาพที่เชื่อมโยงกับโหนดพื้นผิวรูปภาพที่ใช้งานอยู่ภายในวัสดุ"
+
+
+msgid "Bake to the active color attribute on meshes"
+msgstr "อบให้ตรงกับค่าสีที่ใช้งานอยู่บนโมเดล 3 มิติ"
+
+
+msgid "Bake Type"
+msgstr "ประเภทการอบ"
+
+
+msgid "Choose shading information to bake into the image"
+msgstr "เลือกข้อมูลการแรเงาที่จะฝังลงในภาพ"
+
+
+msgid "Normals"
+msgstr "ปกติ"
+
+
+msgid "Bake normals"
+msgstr "อบปกติ"
+
+
+msgid "Displacement"
+msgstr "การกระจัด"
+
+
+msgid "Bake displacement"
+msgstr "การกระจัดการอบ"
+
+
+msgid "Vector Displacement"
+msgstr "การกระจัดเวกเตอร์"
+
+
+msgid "Bake vector displacement"
+msgstr "การกระจัดของเวกเตอร์อบ"
+
+
+msgid "Automatic Name"
+msgstr "ชื่ออัตโนมัติ"
+
+
+msgid "Automatically name the output file with the pass type (external only)"
+msgstr "ตั้งชื่อไฟล์เอาต์พุตโดยอัตโนมัติด้วยประเภทการส่งผ่าน (เฉพาะภายนอก)"
+
+
+msgid "Cage"
+msgstr "กรง"
+
+
+msgid "Cast rays to active object from a cage"
+msgstr "ยิงลำแสงไปยังวัตถุที่กำลังเคลื่อนไหวจากภายในกรง"
+
+
+msgid "Clear"
+msgstr "ล้าง"
+
+
+msgid "Clear Images before baking (internal only)"
+msgstr "ล้างรูปภาพให้สะอาดก่อนอบ (เฉพาะภายใน)"
+
+
+msgid "Low Resolution Mesh"
+msgstr "ตาข่ายความละเอียดต่ำ"
+
+
+msgid "Calculate heights against unsubdivided low resolution mesh"
+msgstr "คำนวณความสูงเทียบกับตาข่ายความละเอียดต่ำที่ยังไม่ได้แบ่งย่อย"
+
+
+msgid "Bake from Multires"
+msgstr "อบจากมัลติเรส"
+
+
+msgid "Bake directly from multires object"
+msgstr "อบโดยตรงจากวัตถุมัลติรีส"
+
+
+msgid "Color the pass"
+msgstr "ระบายสีผ่าน"
+
+
+msgid "Add diffuse contribution"
+msgstr "เพิ่มการมีส่วนร่วมแบบกระจาย"
+
+
+msgid "Add direct lighting contribution"
+msgstr "เพิ่มการมีส่วนร่วมของแสงสว่างโดยตรง"
+
+
+msgid "Emission"
+msgstr "การปลดปล่อย"
+
+
+msgid "Add emission contribution"
+msgstr "เพิ่มส่วนร่วมในการปลดปล่อย"
+
+
+msgid "Add glossy contribution"
+msgstr "เพิ่มส่วนประกอบที่มันวาว"
+
+
+msgid "Add indirect lighting contribution"
+msgstr "เพิ่มแสงสว่างทางอ้อม"
+
+
+msgid "Add transmission contribution"
+msgstr "เพิ่มการสนับสนุนการส่งผ่าน"
+
+
+msgid "Selected to Active"
+msgstr "เลือกเพื่อใช้งาน"
+
+
+msgid "Bake shading on the surface of selected objects to the active object"
+msgstr "อบเงาบนพื้นผิวของวัตถุที่เลือกไปยังวัตถุที่ใช้งานอยู่"
+
+
+msgid "Split Materials"
+msgstr "แยกส่วนวัสดุ"
+
+
+msgid "Split external images per material (external only)"
+msgstr "แยกภาพภายนอกตามแต่ละวัสดุ (เฉพาะภายนอก)"
+
+
+msgid "View From"
+msgstr "มุมมองจาก"
+
+
+msgid "Source of reflection ray directions"
+msgstr "แหล่งที่มาของทิศทางรังสีสะท้อน"
+
+
+msgid "Above Surface"
+msgstr "เหนือพื้นผิว"
+
+
+msgid "Cast rays from above the surface"
+msgstr "ฉายรังสีจากเหนือผิวน้ำ"
+
+
+msgid "Use the active camera's position to cast rays"
+msgstr "ใช้ตำแหน่งของกล้องที่ใช้งานอยู่เพื่อฉายรังสี"
+
+
+msgid "Horizontal dimension of the baking map"
+msgstr "มิติแนวนอนของแผนที่การอบ"
+
+
+msgid "Bézier Curve Point"
+msgstr "จุดโค้งเบซิเยร์"
+
+
+msgid "Bézier curve point with two handles"
+msgstr "จุดโค้งเบซิเยร์แบบมีด้ามจับสองอัน"
+
+
+msgid "Control Point"
+msgstr "จุดควบคุม"
+
+
+msgid "Coordinates of the control point"
+msgstr "พิกัดของจุดควบคุม"
+
+
+msgid "Handle 1"
+msgstr "ด้ามจับ 1"
+
+
+msgid "Coordinates of the first handle"
+msgstr "พิกัดของด้ามจับอันแรก"
+
+
+msgid "Handle 1 Type"
+msgstr "ด้ามจับแบบที่ 1"
+
+
+msgid "Handle types"
+msgstr "ประเภทการจัดการ"
+
+
+msgid "Free"
+msgstr "อิสระ"
+
+
+msgid "Aligned"
+msgstr "จัดเรียง"
+
+
+msgid "Handle 2"
+msgstr "ด้ามจับ 2"
+
+
+msgid "Coordinates of the second handle"
+msgstr "พิกัดของด้ามจับอันที่สอง"
+
+
+msgid "Handle 2 Type"
+msgstr "ด้ามจับแบบที่ 2"
+
+
+msgid "Visibility status"
+msgstr "สถานะการมองเห็น"
+
+
+msgid "Bevel Radius"
+msgstr "รัศมีขอบเอียง"
+
+
+msgid "Radius for beveling"
+msgstr "รัศมีสำหรับการลบมุม"
+
+
+msgid "Control Point selected"
+msgstr "เลือกจุดควบคุมแล้ว"
+
+
+msgid "Control point selection status"
+msgstr "สถานะการเลือกจุดควบคุม"
+
+
+msgid "Handle 1 selected"
+msgstr "เลือกจัดกระทำ 1 แล้ว"
+
+
+msgid "Handle 1 selection status"
+msgstr "จัดการสถานะจัดกระทำ 1"
+
+
+msgid "Handle 2 selected"
+msgstr "เลือกจัดกระทำที่ 2 แล้ว"
+
+
+msgid "Handle 2 selection status"
+msgstr "จัดการสถานะจัดกระทำ 2"
+
+
+msgid "Tilt in 3D View"
+msgstr "ตะแคงในมุมมอง 3 มิติ"
+
+
+msgid "Weight"
+msgstr "น้ำหนัก"
+
+
+msgid "Blend-File Data"
+msgstr "ข้อมูลไฟล์เบลนด์"
+
+
+msgid "Main data structure representing a .blend file and all its data-blocks"
+msgstr "โครงสร้างข้อมูลหลักที่แสดงถึงไฟล์ .blend และบล็อกข้อมูลทั้งหมดในไฟล์นั้น"
+
+
+msgid "Action data-blocks"
+msgstr "บล็อกข้อมูลการกระทำ"
+
+
+msgid "Annotation"
+msgstr "บรรณนิทัศน์"
+
+
+msgid "Annotation data-blocks (legacy Grease Pencil)"
+msgstr "บล็อกข้อมูลบรรณนิทัศน์ (ดินสอเทียนแบบเก่า)"
+
+
+msgid "Armature data-blocks"
+msgstr "บล็อกข้อมูลโครงหุ่น"
+
+
+msgid "Brush data-blocks"
+msgstr "บล็อกข้อมูลแปรง"
+
+
+msgid "Cache Files data-blocks"
+msgstr "บล็อกข้อมูลไฟล์แคช"
+
+
+msgid "Camera data-blocks"
+msgstr "บล็อกข้อมูลกล้อง"
+
+
+msgid "Collection data-blocks"
+msgstr "บล็อกข้อมูลการรวบรวม"
+
+
+msgid "Color Space"
+msgstr "พื้นที่สี"
+
+
+msgid "Information about the color space used for data-blocks in a blend file"
+msgstr "ข้อมูลเกี่ยวกับพื้นที่สีที่ใช้สำหรับบล็อกข้อมูลในไฟล์ Blend"
+
+
+msgid "Curve data-blocks"
+msgstr "บล็อกข้อมูลเส้นโค้ง"
+
+
+msgid "Filename"
+msgstr "ชื่อไฟล์"
+
+
+msgid "Path to the .blend file"
+msgstr "เส้นทางไปยังไฟล์ .blend"
+
+
+msgid "Vector Fonts"
+msgstr "ฟอนต์เวกเตอร์"
+
+
+msgid "Vector font data-blocks"
+msgstr "บล็อกข้อมูลแบบอักษรเวกเตอร์"
+
+
+msgid "Grease Pencil data-blocks"
+msgstr "บล็อกข้อมูลดินสอเทียน"
+
+
+msgid "Hair curve data-blocks"
+msgstr "บล็อกข้อมูลเส้นโค้งของเส้นผม"
+
+
+msgid "Image data-blocks"
+msgstr "บล็อกข้อมูลภาพ"
+
+
+msgid "File Has Unsaved Changes"
+msgstr "ไฟล์มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก"
+
+
+msgid "Have recent edits been saved to disk"
+msgstr "การแก้ไขล่าสุดได้รับการบันทึกไปยังดิสก์แล้วหรือไม่"
+
+
+msgid "File is Saved"
+msgstr "ไฟล์ถูกบันทึกแล้วไฟล์ถูกบันทึกแล้ว"
+
+
+msgid "Has the current session been saved to disk as a .blend file"
+msgstr "เซสชันปัจจุบันถูกบันทึกเป็นไฟล์ .blend ลงดิสก์แล้วหรือยัง"
+
+
+msgid "Lattice data-blocks"
+msgstr "บล็อกข้อมูลโครงตาข่าย"
+
+
+msgid "Libraries"
+msgstr "คลัง"
+
+
+msgid "Library data-blocks"
+msgstr "บล็อกข้อมูลคลัง"
+
+
+msgid "Light Probe data-blocks"
+msgstr "บล็อกข้อมูลหัววัดแสง"
+
+
+msgid "Light data-blocks"
+msgstr "บล็อกข้อมูลแสง"
+
+
+msgid "Line Styles"
+msgstr "ลีลาเส้น"
+
+
+msgid "Line Style data-blocks"
+msgstr "บล็อกข้อมูลแบบอย่างเส้น"
+
+
+msgid "Masks data-blocks"
+msgstr "บล็อกข้อมูลหน้ากาก"
+
+
+msgid "Material data-blocks"
+msgstr "บล็อกข้อมูลวัสดุ"
+
+
+msgid "Mesh data-blocks"
+msgstr "บล็อกข้อมูลเมช"
+
+
+msgid "Metaball data-blocks"
+msgstr "บล็อกข้อมูลเมตาบอล"
+
+
+msgid "Movie Clip data-blocks"
+msgstr "บล็อกข้อมูลคลิปวิดีโอ"
+
+
+msgid "Node Groups"
+msgstr "กลุ่มจุดต่อ"
+
+
+msgid "Node group data-blocks"
+msgstr "บล็อกข้อมูลกลุ่มจุดต่อ"
+
+
+msgid "Object data-blocks"
+msgstr "บล็อกข้อมูลวัตถุ"
+
+
+msgid "Paint Curves data-blocks"
+msgstr "บล็อกข้อมูลการระบายสีเส้นโค้ง"
+
+
+msgid "Palette data-blocks"
+msgstr "บล็อกข้อมูลจานสี"
+
+
+msgid "Particles"
+msgstr "อนุภาค"
+
+
+msgid "Particle data-blocks"
+msgstr "บล็อกข้อมูลอนุภาค"
+
+
+msgid "Point cloud data-blocks"
+msgstr "บล็อกข้อมูลจุดก้อนเมฆ"
+
+
+msgid "Scene data-blocks"
+msgstr "บล็อกข้อมูลฉาก"
+
+
+msgid "Screens"
+msgstr "หน้าจอ"
+
+
+msgid "Screen data-blocks"
+msgstr "บล็อกข้อมูลหน้าจอ"
+
+
+msgid "Shape Keys"
+msgstr "กุญแจรูปทรง"
+
+
+msgid "Shape Key data-blocks"
+msgstr "บล็อกข้อมูลกุญแจรูปทรง"
+
+
+msgid "Sound data-blocks"
+msgstr "บล็อกข้อมูลเสียง"
+
+
+msgid "Speaker data-blocks"
+msgstr "บล็อกข้อมูลลำโพง"
+
+
+msgid "Text data-blocks"
+msgstr "บล็อกข้อมูลข้อความ"
+
+
+msgid "Texture data-blocks"
+msgstr "บล็อกข้อมูลผิวสัมผัส"
+
+
+msgid "Use Auto-Pack"
+msgstr "ใช้การบรรจุอัตโนมัติ"
+
+
+msgid "Automatically pack all external data into .blend file"
+msgstr "รวมข้อมูลภายนอกทั้งหมดลงในไฟล์ .blend โดยอัตโนมัติ"
+
+
+msgid "Version"
+msgstr "รุ่น"
+
+
+msgid "File format version the .blend file was saved with"
+msgstr "รูปแบบไฟล์เวอร์ชันที่บันทึกไฟล์ .blend ไว้"
+
+
+msgid "Volume data-blocks"
+msgstr "บล็อกข้อมูลปริมาตร"
+
+
+msgid "Window Managers"
+msgstr "ตัวจัดการหน้าต่าง"
+
+
+msgid "Window manager data-blocks"
+msgstr "บล็อกข้อมูลตัวจัดการหน้าต่าง"
+
+
+msgid "Workspace data-blocks"
+msgstr "บล็อกข้อมูลพื้นที่ทำงาน"
+
+
+msgid "World data-blocks"
+msgstr "บล็อกข้อมูลโลก"
+
+
+msgid "Main Actions"
+msgstr "การดำเนินการหลัก"
+
+
+msgid "Collection of actions"
+msgstr "การรวบรวมการกระทำ"
+
+
+msgid "Main Annotations"
+msgstr "คำอธิบายหลัก"
+
+
+msgid "Collection of annotations"
+msgstr "การรวบรวมคำอธิบายประกอบ"
+
+
+msgid "Main Armatures"
+msgstr "โครงร่างหลัก"
+
+
+msgid "Collection of armatures"
+msgstr "การรวบรวมโครงร่าง"
+
+
+msgid "Main Brushes"
+msgstr "แปรงสีหลัก"
+
+
+msgid "Collection of brushes"
+msgstr "การรวบรวมแปรงสี"
+
+
+msgid "Main Cache Files"
+msgstr "ไฟล์แคชหลัก"
+
+
+msgid "Collection of cache files"
+msgstr "การรวบรวมไฟล์แคช"
+
+
+msgid "Main Cameras"
+msgstr "กล้องหลัก"
+
+
+msgid "Collection of cameras"
+msgstr "คอลเลกชันกล้อง"
+
+
+msgid "Main Collections"
+msgstr "การรวบรวมหลัก"
+
+
+msgid "Collection of collections"
+msgstr "การรวบรวมของการรวบรวม"
+
+
+msgid "Main Curves"
+msgstr "เส้นโค้งหลัก"
+
+
+msgid "Collection of curves"
+msgstr "การรวบรวมเส้นโค้ง"
+
+
+msgid "Main Fonts"
+msgstr "แบบอักษรหลัก"
+
+
+msgid "Collection of fonts"
+msgstr "การรวบรวมแบบอักษร"
+
+
+msgid "Main Grease Pencils"
+msgstr "ดินสอไขมันหลัก"
+
+
+msgid "Collection of Grease Pencils"
+msgstr "การรวบรวมดินสอเทียน"
+
+
+msgid "Main Hair Curves"
+msgstr "โค้งเส้นผมหลัก"
+
+
+msgid "Collection of hair curves"
+msgstr "การรวบรวมโค้งเส้นผม"
+
+
+msgid "Main Images"
+msgstr "รูปภาพหลัก"
+
+
+msgid "Collection of images"
+msgstr "การรวบรวมภาพ"
+
+
+msgid "Main Lattices"
+msgstr "โครงตาข่ายหลัก"
+
+
+msgid "Collection of lattices"
+msgstr "การรวบรวมโครงตาข่าย"
+
+
+msgid "Main Libraries"
+msgstr "คลังหลัก"
+
+
+msgid "Collection of libraries"
+msgstr "การรวบรวมคลัง"
+
+
+msgid "Main Lights"
+msgstr "แสงหลัก"
+
+
+msgid "Collection of lights"
+msgstr "การรวบรวมแสง"
+
+
+msgid "Main Line Styles"
+msgstr "ลีลาเส้นหลัก"
+
+
+msgid "Collection of line styles"
+msgstr "การรวบรวมลีลาเส้น"
+
+
+msgid "Main Masks"
+msgstr "หน้ากากหลัก"
+
+
+msgid "Collection of masks"
+msgstr "การรวบรวมหน้ากาก"
+
+
+msgid "Main Materials"
+msgstr "วัสดุหลัก"
+
+
+msgid "Collection of materials"
+msgstr "การรวบรวมวัสดุ"
+
+
+msgid "Main Meshes"
+msgstr "ตาข่ายหลักก"
+
+
+msgid "Collection of meshes"
+msgstr "การรวบรวมตาข่าย"
+
+
+msgid "Main Metaballs"
+msgstr "เมตาบอลหลัก"
+
+
+msgid "Collection of metaballs"
+msgstr "การรวบรวมเมตาบอล"
+
+
+msgid "Main Movie Clips"
+msgstr "คลิปภาพยนตร์หลัก"
+
+
+msgid "Collection of movie clips"
+msgstr "การรวบรวมคลิปภาพยนตร์"
+
+
+msgid "Main Node Trees"
+msgstr "ต้นไม้จุดต่อหลัก"
+
+
+msgid "Collection of node trees"
+msgstr "การรวบรวมต้นไม้จุดต่อ"
+
+
+msgid "Main Objects"
+msgstr "วัตถุหลัก"
+
+
+msgid "Collection of objects"
+msgstr "การรวบรวมวัตถุ"
+
+
+msgid "Main Paint Curves"
+msgstr "เส้นโค้งระบายสีหลัก"
+
+
+msgid "Collection of paint curves"
+msgstr "การรวบรวมเส้นโค้งระบายสี"
+
+
+msgid "Main Palettes"
+msgstr "จานสีหลัก"
+
+
+msgid "Collection of palettes"
+msgstr "การรวบรวมจานสี"
+
+
+msgid "Main Particle Settings"
+msgstr "การตั้งค่าอนุภาคหลัก"
+
+
+msgid "Collection of particle settings"
+msgstr "การรวบรวมการตั้งค่าอนุภาค"
+
+
+msgid "Main Point Clouds"
+msgstr "กลุ่มเมฆจุดหลัก"
+
+
+msgid "Collection of point clouds"
+msgstr "การรวบรวมเมฆจุด"
+
+
+msgid "Main Light Probes"
+msgstr "ตัวหยั่งแสงหลัก"
+
+
+msgid "Collection of light probes"
+msgstr "การรวบรวมตัวหยั่งแสง"
+
+
+msgid "Main Scenes"
+msgstr "ฉากหลัก"
+
+
+msgid "Collection of scenes"
+msgstr "การรวบรวมฉาก"
+
+
+msgid "Main Screens"
+msgstr "หน้าจอหลัก"
+
+
+msgid "Collection of screens"
+msgstr "การรวบรวมหน้าจอ"
+
+
+msgid "Main Sounds"
+msgstr "เสียงหลัก"
+
+
+msgid "Collection of sounds"
+msgstr "การรวบรวมเสียง"
+
+
+msgid "Main Speakers"
+msgstr "ลำโพงหลัก"
+
+
+msgid "Collection of speakers"
+msgstr "การรวบรวมลำโพง"
+
+
+msgid "Main Texts"
+msgstr "ข้อความหลัก"
+
+
+msgid "Collection of texts"
+msgstr "การรวบรวมข้อความ"
+
+
+msgid "Main Textures"
+msgstr "ผิวสัมผัสหลัก"
+
+
+msgid "Collection of textures"
+msgstr "การรวบรวมผิวสัมผัส"
+
+
+msgid "Main Volumes"
+msgstr "ปริมาตรหลัก"
+
+
+msgid "Collection of volumes"
+msgstr "การรวบรวมปริมาตร"
+
+
+msgid "Main Window Managers"
+msgstr "ตัวจัดการหน้าต่างหลัก"
+
+
+msgid "Collection of window managers"
+msgstr "การรวบรวมตัวจัดการหน้าต่าง"
+
+
+msgid "Main Workspaces"
+msgstr "พื้นที่ทำงานหลัก"
+
+
+msgid "Collection of workspaces"
+msgstr "การรวบรวมพื้นที่ทำงาน"
+
+
+msgid "Main Worlds"
+msgstr "โลกหลัก"
+
+
+msgid "Collection of worlds"
+msgstr "การรวบรวมโลก"
+
+
+msgid "Blend-File Color Space"
+msgstr "ปริภูมิสีของไฟล์ผสม"
+
+
+msgid "Missing OpenColorIO Configuration"
+msgstr "การกำหนดค่า \"OpenColorIO\" หายไป"
+
+
+msgid "A color space, view or display was not found, which likely means the OpenColorIO config used to create this blend file is missing"
+msgstr "ไม่พบพื้นที่สี มุมมอง หรือการแสดงผล ซึ่งอาจหมายความว่าไฟล์การกำหนดค่า OpenColorIO ที่ใช้สร้างไฟล์ Blend นี้หายไป"
+
+
+msgid "Working Space"
+msgstr "พื้นที่ทำงาน"
+
+
+msgid "Color space used for all scene linear colors in this file, and for compositing, shader and geometry nodes processing"
+msgstr "พื้นที่สีที่ใช้สำหรับสีเชิงเส้นทั้งหมดในฉากในไฟล์นี้ รวมถึงการประมวลผลโหนดการจัดองค์ประกอบภาพ เชเดอร์ และเรขาคณิต"
+
+
+msgid "Linear Rec.709"
+msgstr "ลิเนียร์ เรค.709"
+
+
+msgid "Linear BT.709 with illuminant D65 white point"
+msgstr "เส้นตรง BT.709 พร้อมแหล่งกำเนิดแสงจุดขาว D65"
+
+
+msgid "Linear Rec.2020"
+msgstr "ลิเนียร์ เรค.2020"
+
+
+msgid "Linear BT.2020 with illuminant D65 white point"
+msgstr "ไฟส่องสว่างแบบเส้นตรง BT.2020 พร้อมจุดสีขาว D65"
+
+
+msgid "ACEScg"
+msgstr "เอซีเอสซีจี"
+
+
+msgid "Linear AP1 with ACES white point"
+msgstr "เส้นตรง AP1 พร้อมจุดสีขาว ACES"
+
+
+msgid "Working Space Interop ID"
+msgstr "รหัสการทำงานร่วมกันของพื้นที่ทำงาน"
+
+
+msgid "Unique identifier for common color spaces, as defined by the Color Interop Forum. May be empty if there is no interop ID for the working space. Common values are lin_rec709_scene, lin_rec2020_scene and lin_ap1_scene (for ACEScg)"
+msgstr "รหัสเฉพาะสำหรับพื้นที่สีทั่วไป ตามที่กำหนดโดย Color Interop Forum อาจว่างเปล่าหากไม่มีรหัสการทำงานร่วมกันสำหรับพื้นที่ทำงาน ค่าทั่วไปคือ lin_rec709_scene, lin_rec2020_scene และ lin_ap1_scene (สำหรับ ACEScg)"
+
+
+msgid "Blendfile Import Context"
+msgstr "บริบทการนำเข้าไฟล์ Blendfile"
+
+
+msgid "Contextual data for a blendfile library/linked-data related operation. Currently only exposed as read-only data for the pre/post blendimport handlers"
+msgstr "ข้อมูลบริบทสำหรับการดำเนินการที่เกี่ยวข้องกับไลบรารีไฟล์ Blendfile/ข้อมูลที่เชื่อมโยง ปัจจุบันแสดงเฉพาะในรูปแบบข้อมูลอ่านอย่างเดียวสำหรับตัวจัดการก่อน/หลังการนำเข้า Blendfile"
+
+
+msgid "Options for this blendfile import operation"
+msgstr "ตัวเลือกสำหรับการนำเข้าไฟล์ Blendfile นี้"
+
+
+msgid "Only link data, instead of appending it"
+msgstr "เพียงแค่เชื่อมโยงข้อมูล ไม่ใช่เพิ่มข้อมูลต่อท้าย"
+
+
+msgid "Speed"
+msgstr "ความเร็ว"
+
+
+msgid "Distance"
+msgstr "ระยะทาง"
+
+
+msgid "Strength"
+msgstr "ความเข้ม"
+
+
+msgid "Random"
+msgstr "สุ่ม"
+
+
+msgid "Volume"
+msgstr "ปริมาตร"
+
+
+msgid "Wire"
+msgstr "เส้น"
+
+
+msgid "Head"
+msgstr "หัว"
+
+
+msgid "Length"
+msgstr "ความยาว"
+
+
+msgid "Parent"
+msgstr "แม่"
+
+
+msgid "Tail"
+msgstr "หาง"
+
+
+msgid "Connected"
+msgstr "เชื่อมต่อกัน"
+
+
+msgctxt "Operator"
+msgid "Add"
+msgstr "เพิ่ม"
+
+
+msgid "Angle"
+msgstr "องศา"
+
+
+msgid "Mode"
+msgstr "โหมด"
+
+
+msgid "Material"
+msgstr "วัสดุ"
+
+
+msgid "Vertex Color"
+msgstr "สีจุดยอด"
+
+
+msgid "All"
+msgstr "ทั้งหมด"
+
+
+msgid "Stretch"
+msgstr "ยืด"
+
+
+msgid "Fit"
+msgstr "พอดี"
+
+
+msgid "Crop"
+msgstr "ตัด"
+
+
+msgid "Image"
+msgstr "ภาพ"
+
+
+msgid "Rotation"
+msgstr "หมุน"
+
+
+msgid "Scale"
+msgstr "ขนาด"
+
+
+msgid "Ratio"
+msgstr "อัตราส่วน"
+
+
+msgid "Left"
+msgstr "ซ้าย"
+
+
+msgid "Right"
+msgstr "ขวา"
+
+
+msgid "Linear"
+msgstr "เชิงเส้น"
+
+
+msgid "Quality"
+msgstr "คุณภาพ"
+
+
+msgid "Status"
+msgstr "สถิติ"
+
+
+msgid "Display"
+msgstr "แสดง"
+
+
+msgid "Curve"
+msgstr "เส้นโค้ง"
+
+
+msgid "View"
+msgstr "มุมมอง"
+
+
+msgid "Brightness"
+msgstr "ความสว่าง"
+
+
+msgid "RGB"
+msgstr "RGB"
+
+
+msgid "Constant"
+msgstr "คงตัว"
+
+
+msgid "Input"
+msgstr "ป้อนข้อมูล"
+
+
+msgid "Disable"
+msgstr "ปิดการใช้งาน"
+
+
+msgid "Local Space"
+msgstr "ปริภูมิท้องถิ่น"
+
+
+msgid "Sub-Target"
+msgstr "เป้าหมายรอง"
+
+
+msgid "Target Space"
+msgstr "ปริภูมิเป้าหมาย"
+
+
+msgid "Transformation"
+msgstr "การปรับเปลี่ยน"
+
+
+msgid "Transform Cache"
+msgstr "แคชการปรับเปลี่ยน"
+
+
+msgid "Armature"
+msgstr "โครงร่าง"
+
+
+msgid "Mix Mode"
+msgstr "โหมดผสม"
+
+
+msgid "Rotation X"
+msgstr "หมุน X"
+
+
+msgid "Rotation Y"
+msgstr "หมุน Y"
+
+
+msgid "Rotation Z"
+msgstr "หมุน Z"
+
+
+msgid "X"
+msgstr "X"
+
+
+msgid "Y"
+msgstr "Y"
+
+
+msgid "Z"
+msgstr "Z"
+
+
+msgid "Invert X"
+msgstr "กลับค่า X"
+
+
+msgid "Invert Y"
+msgstr "กลับค่า Y"
+
+
+msgid "Invert Z"
+msgstr "กลับค่า Z"
+
+
+msgctxt "MovieClip"
+msgid "Track"
+msgstr "แทร็ค"
+
+
+msgid "Front"
+msgstr "หน้า"
+
+
+msgid "Back"
+msgstr "กลับ"
+
+
+msgid "Location"
+msgstr "ตำแหน่ง"
+
+
+msgid "Standard"
+msgstr "มาตรฐาน"
+
+
+msgid "Depth"
+msgstr "ความลึก"
+
+
+msgid "Cursor"
+msgstr "เคอร์เซอร์"
+
+
+msgid "Surface"
+msgstr "พื้นผิว"
+
+
+msgid "Plane"
+msgstr "ระนาบ"
+
+
+msgid "Radius"
+msgstr "รัศมี"
+
+
+msgid "Segments"
+msgstr "ส่วน"
+
+
+msgid "Viewport"
+msgstr "วิวพอร์ต"
+
+
+msgid "Render"
+msgstr "เรนเดอร์"
+
+
+msgid "Scene"
+msgstr "ฉาก"
+
+
+msgid "Shading"
+msgstr "แรเงา"
+
+
+msgid "Transform"
+msgstr "การปรับเปลี่ยน"
+
+
+msgid "Source"
+msgstr "แหล่งที่มา"
+
+
+msgid "Invert"
+msgstr "กลับค่า"
+
+
+msgid "Rotation Mode"
+msgstr "โหมดหมุน"
+
+
+msgid "Z-Axis"
+msgstr "แกน Z"
+
+
+msgid "Replace Color"
+msgstr "แทนที่สี"
+
+
+msgid "Resolution"
+msgstr "ความละเอียด"
+
+
+msgid "Data Layer"
+msgstr "ชั้นข้อมูล"
+
+
+msgid "Texture"
+msgstr "พื้นผิว"
+
+
+msgid "Vertex"
+msgstr "จุดยอด"
+
+
+msgid "Slow"
+msgstr "ช้า"
+
+
+msgid "Dry"
+msgstr "แห้ง"
+
+
+msgid "Roll"
+msgstr "หมุน"
+
+
+msgid "Group"
+msgstr "กลุ่ม"
+
+
+msgctxt "Sound"
+msgid "Volume"
+msgstr "ความดัง"
+
+
+msgid "Audio volume"
+msgstr "ความดังเสียง"
+
+
+msgid "Video Codec"
+msgstr "โคเดกวิดีโอ"
+
+
+msgid "No Video"
+msgstr "ไม่มีวิดีโอ"
+
+
+msgid "H.264"
+msgstr "H.264"
+
+
+msgid "MPEG-1"
+msgstr "MPEG-1"
+
+
+msgid "MPEG-2"
+msgstr "MPEG-2"
+
+
+msgid "MPEG-4 (divx)"
+msgstr "MPEG-4 (divx)"
+
+
+msgid "Lossless"
+msgstr "ไม่สูญเสียข้อมูล"
+
+
+msgid "Encoding Speed"
+msgstr "ความเร็วในเข้ารหัส"
+
+
+msgid "Slowest"
+msgstr "ช้าที่สุด"
+
+
+msgid "Good"
+msgstr "ดี"
+
+
+msgid "Realtime"
+msgstr "ตามเวลาจริง"
+
+
+msgid "MPEG-4"
+msgstr "MPEG-4"
+
+
+msgid "Matroska"
+msgstr "Matroska"
+
+
+msgid "WebM"
+msgstr "WebM"
+
+
+msgid "Flash"
+msgstr "Flash"
+
+
+msgid "Ogg"
+msgstr "Ogg"
+
+
+msgctxt "Action"
+msgid "Type"
+msgstr "ชนิด"
+
+
+msgctxt "Action"
+msgid "Generator"
+msgstr "ตัวกำเนิด"
+
+
+msgid "Frame"
+msgstr "เฟรม"
+
+
+msgid "Cone"
+msgstr "ทรงกรวย"
+
+
+msgid "Sphere"
+msgstr "ทรงกลม"
+
+
+msgid "Axis"
+msgstr "แกน"
+
+
+msgid "Size"
+msgstr "ขนาด"
+
+
+msgid "Texture Mode"
+msgstr "โหมดพื้นผิว"
+
+
+msgid "2D"
+msgstr "สองมิติ"
+
+
+msgid "Save"
+msgstr "บันทึก"
+
+
+msgid "File Extensions"
+msgstr "ส่วนขยายไฟล์"
+
+
+msgid "Label"
+msgstr "ข้อความ"
+
+
+msgid "Miscellaneous"
+msgstr "เบ็ดเตล็ด"
+
+
+msgid "Medium"
+msgstr "ปานกลาง"
+
+
+msgid "Show .blend files"
+msgstr "แสดงไฟล์ .blend"
+
+
+msgid "Show .blend files items (objects, materials, etc.)"
+msgstr "แสดงรายการในไฟล์ .blend (วัตถุ วัสดุ อื่น ๆ)"
+
+
+msgid "Matrix"
+msgstr "เมทริกซ์"
+
+
+msgid "End"
+msgstr "สิ้นสุด"
+
+
+msgid "Start"
+msgstr "เริ่มต้น"
+
+
+msgid "Color Grid"
+msgstr "ตะแกรงสี"
+
+
+msgid "Closest"
+msgstr "ใกล้ชิดที่สุด"
+
+
+msgid "res"
+msgstr "res"
+
+
+msgid "Preview"
+msgstr "ดูตัวอย่าง"
+
+
+msgid "Zip"
+msgstr "Zip"
+
+
+msgid "Delete"
+msgstr "ลบ"
+
+
+msgid "Top"
+msgstr "บน"
+
+
+msgid "Vertex Group"
+msgstr "กลุ่มจุดยอด"
+
+
+msgid "Fire"
+msgstr "ไฟ"
+
+
+msgid "Normal"
+msgstr "แนวฉาก"
+
+
+msgid "Shader"
+msgstr "เชดเดอร์"
+
+
+msgid "Font"
+msgstr "ฟอนต์"
+
+
+msgid "Text"
+msgstr "ช้อความ"
+
+
+msgid "Mask"
+msgstr "หน้ากาก"
+
+
+msgid "Sound"
+msgstr "เสียง"
+
+
+msgid "Border"
+msgstr "เส้นขอบ"
+
+
+msgid "Line Style"
+msgstr "สไตล์เส้น"
+
+
+msgid "Use"
+msgstr "ใช้"
+
+
+msgid "Grid"
+msgstr "ตาราง"
+
+
+msgid "Line Width"
+msgstr "ความหนาเส้น"
+
+
+msgid "Window"
+msgstr "หน้าต่าง"
+
+
+msgid "Tools"
+msgstr "เครื่องมือ"
+
+
+msgid "Reverse"
+msgstr "ย้อนกลับ"
+
+
+msgid "Repeat"
+msgstr "ทำซ้ำ"
+
+
+msgid "Translation"
+msgstr "แปลภาษา"
+
+
+msgid "Red Green Blue"
+msgstr "แดง เขียน น้ำเงิน"
+
+
+msgid "Red"
+msgstr "แดง"
+
+
+msgctxt "ID"
+msgid "Type"
+msgstr "ชนิด"
+
+
+msgid "Library Override"
+msgstr "ควบคุมคลังโปรแกรมด้วยมือ"
+
+
+msgid "Users"
+msgstr "ผู้ใช้"
+
+
+msgid "Layers"
+msgstr "ชั้น"
+
+
+msgid "Local"
+msgstr "โดยท้องถิ่น"
+
+
+msgid "Global"
+msgstr "โดยรวม"
+
+
+msgid "Add Color"
+msgstr "เพิ่มสี"
+
+
+msgctxt "Curve"
+msgid "Smooth"
+msgstr "ราบเรียบ"
+
+
+msgctxt "Curve"
+msgid "Sphere"
+msgstr "กลม"
+
+
+msgctxt "Curve"
+msgid "Root"
+msgstr "ฐาน"
+
+
+msgctxt "Curve"
+msgid "Sharp"
+msgstr "แหลม"
+
+
+msgctxt "Curve"
+msgid "Linear"
+msgstr "เชิงเส้น"
+
+
+msgctxt "Curve"
+msgid "Constant"
+msgstr "คงที่"
+
+
+msgid "Mask Texture"
+msgstr "พื้นผิวหน้ากาก"
+
+
+msgid "Depth Of Field"
+msgstr "ระยะชัดลึก"
+
+
+msgid "Panorama Type"
+msgstr "ชนิดทัศนียภาพ"
+
+
+msgid "Vertical"
+msgstr "แนวตั้ง"
+
+
+msgid "Shift X"
+msgstr "เลื่อน X"
+
+
+msgid "Shift Y"
+msgstr "เลื่อน Y"
+
+
+msgid "Round"
+msgstr "มน"
+
+
+msgid "Dimensions"
+msgstr "มิติ"
+
+
+msgid "Resolution U"
+msgstr "ความละเอียด U"
+
+
+msgid "Resolution V"
+msgstr "ความละเอียด V"
+
+
+msgid "Path"
+msgstr "เส้นทาง"
+
+
+msgid "Font Bold"
+msgstr "ฟอนต์ตัวหนา"
+
+
+msgid "Font Bold Italic"
+msgstr "ฟอนต์เอนตัวหนา"
+
+
+msgid "Font Italic"
+msgstr "ฟอนต์เอน"
+
+
+msgid "Shear"
+msgstr "ตัด"
+
+
+msgid "Font Size"
+msgstr "ขนาดฟอนต์"
+
+
+msgid "Square"
+msgstr "สี่เหลี่ยม"
+
+
+msgid "Max"
+msgstr "สูงสุด"
+
+
+msgid "Panel"
+msgstr "แผง"
+
+
+msgid "Texture Spacing"
+msgstr "การจัดช่องว่างพื้นผิว"
+
+
+msgid "Dashed Line"
+msgstr "เส้นประ"
+
+
+msgid "Sorting"
+msgstr "เรียงตาม"
+
+
+msgid "Selected"
+msgstr "ถูกเลือก"
+
+
+msgid "Alpha Mode"
+msgstr "โหมดแอลฟา"
+
+
+msgid "UV Grid"
+msgstr "ตะแกรง UV"
+
+
+msgid "Pixels"
+msgstr "พิกเซล"
+
+
+msgid "Render Result"
+msgstr "ผลลัพธ์การเรนเดอร์"
+
+
+msgid "Compositing"
+msgstr "เปรียบเทียบ"
+
+
+msgid "U"
+msgstr "U"
+
+
+msgid "V"
+msgstr "V"
+
+
+msgctxt "Light"
+msgid "Light"
+msgstr "แสง"
+
+
+msgctxt "Light"
+msgid "Type"
+msgstr "ชนิด"
+
+
+msgctxt "Light"
+msgid "Point"
+msgstr "จุด"
+
+
+msgctxt "Light"
+msgid "Sun"
+msgstr "ดวงอาทิตย์"
+
+
+msgctxt "Light"
+msgid "Spot"
+msgstr "เฉพาะจุด"
+
+
+msgctxt "Light"
+msgid "Area"
+msgstr "พื้นที่"
+
+
+msgid "Rectangle"
+msgstr "สี่เหลี่ยม"
+
+
+msgid "Resolution X"
+msgstr "ความละเอียด X"
+
+
+msgid "Resolution Y"
+msgstr "ความละเอียด Y"
+
+
+msgid "Resolution Z"
+msgstr "ความละเอียด Z"
+
+
+msgid "Cube"
+msgstr "ลูกบาศก์"
+
+
+msgid "Specular"
+msgstr "Specular"
+
+
+msgid "Edges"
+msgstr "เส้นขอบ"
+
+
+msgid "Edges of the mesh"
+msgstr "เส้นขอบของเมช"
+
+
+msgid "Texture Mesh"
+msgstr "เมชพื้นผิว"
+
+
+msgid "Vertex Colors"
+msgstr "สีจุดยอด"
+
+
+msgid "Vertices"
+msgstr "จุดยอด"
+
+
+msgid "Render Size"
+msgstr "ขนาดการเรนเดอร์"
+
+
+msgid "Update"
+msgstr "อัปเดต"
+
+
+msgid "Movie File"
+msgstr "ไฟล์ภาพยนตร์"
+
+
+msgid "Pattern"
+msgstr "ลวดลาย"
+
+
+msgid "Interface"
+msgstr "อินเตอร์เฟส"
+
+
+msgid "Edit"
+msgstr "แก้ไข"
+
+
+msgid "Sculpt"
+msgstr "สลัก"
+
+
+msgid "Tool"
+msgstr "เครื่องมือ"
+
+
+msgid "Mesh"
+msgstr "เมช"
+
+
+msgid "Bounding Box"
+msgstr "ขอบเขต"
+
+
+msgid "Data"
+msgstr "ข้อมูล"
+
+
+msgid "Cylinder"
+msgstr "ทรงกระบอก"
+
+
+msgid "Capsule"
+msgstr "แคปซูล"
+
+
+msgid "Solid"
+msgstr "แข็ง"
+
+
+msgid "Circle"
+msgstr "วงกลม"
+
+
+msgid "Faces"
+msgstr "ด้าน"
+
+
+msgid "Location of the object"
+msgstr "ตำแหน่งของวัตถุ"
+
+
+msgid "Lock Location"
+msgstr "ล็อกตำแหน่ง"
+
+
+msgid "Lock Rotation"
+msgstr "ล็อกการหมุน"
+
+
+msgid "Lock Scale"
+msgstr "ล็อกการปรับขนาด"
+
+
+msgid "Object Mode"
+msgstr "โหมดวัตถุ"
+
+
+msgid "Edit Mode"
+msgstr "โหมดแก้ไข"
+
+
+msgid "Pose Mode"
+msgstr "โหมดท่าทาง"
+
+
+msgid "Sculpt Mode"
+msgstr "โหมดแกะสลัก"
+
+
+msgid "Vertex Paint"
+msgstr "วาดจุดยอด"
+
+
+msgid "Weight Paint"
+msgstr "วาดน้ำหนัก"
+
+
+msgid "Texture Paint"
+msgstr "วาดพื้นผิว"
+
+
+msgid "Pose"
+msgstr "ท่าทาง"
+
+
+msgid "Euler Rotation"
+msgstr "หมุน"
+
+
+msgid "Scaling of the object"
+msgstr "ขนาดของวัตถุ"
+
+
+msgctxt "ID"
+msgid "Surface"
+msgstr "พื้นผิว"
+
+
+msgctxt "ID"
+msgid "Empty"
+msgstr "ว่างเปล่า"
+
+
+msgid "Vertex Groups"
+msgstr "กลุ่มจุดยอด"
+
+
+msgid "Simple"
+msgstr "ง่าย ๆ"
+
+
+msgid "Display Color"
+msgstr "สีที่แสดง"
+
+
+msgid "Particle"
+msgstr "อนุภาค"
+
+
+msgid "Path Start"
+msgstr "เส้นทางเริ้่มต้น"
+
+
+msgid "Random Size"
+msgstr "สุ่มขนาด"
+
+
+msgid "Advanced"
+msgstr "ขั้นสูง"
+
+
+msgid "Died"
+msgstr "ตาย"
+
+
+msgid "3D Cursor"
+msgstr "เคอร์เซอร์สามมิติ"
+
+
+msgid "Current Frame"
+msgstr "เฟรมปัจจุบัน"
+
+
+msgid "Current Frame Final"
+msgstr "เฟรมสุดท้ายปัจจุบัน"
+
+
+msgid "Final frame of the playback/rendering range"
+msgstr "เฟรมสุดท้ายของความยาวการเล่น/เรนเดอร์"
+
+
+msgid "Restore Frame"
+msgstr "คืนค่าเฟรม"
+
+
+msgid "Render Data"
+msgstr "เรนเดอร์ข้อมูล"
+
+
+msgid "Sync Mode"
+msgstr "โหมดซิงค์"
+
+
+msgid "Animation Editors"
+msgstr "ตัวแก้ไขแอนิเมชัน"
+
+
+msgid "Memory"
+msgstr "หน่วยความจำ"
+
+
+msgid "Register"
+msgstr "ทะเบียน"
+
+
+msgid "Image or Movie"
+msgstr "ภาพ หรือ ภาพยนตร์"
+
+
+msgid "Allow for images or movies to be used as textures"
+msgstr "เปิดใช้งานให้กับภาพหรือภาพยนตร์เพื่อใช้กับเนื้อผิว"
+
+
+msgid "Show Alpha"
+msgstr "แสดงแอลฟา"
+
+
+msgid "Filter Size"
+msgstr "ขนาดของตัวกรอง"
+
+
+msgid "Repeat X"
+msgstr "ซ้ำ X"
+
+
+msgid "Repeat Y"
+msgstr "ซ้ำ Y"
+
+
+msgid "Mirror X"
+msgstr "สะท้อน X"
+
+
+msgid "Mirror Y"
+msgstr "สะท้อน Y"
+
+
+msgid "Add-ons"
+msgstr "แอดออน"
+
+
+msgid "Themes"
+msgstr "ธีม"
+
+
+msgid "Workspace"
+msgstr "พื้นที่ใช้งาน"
+
+
+msgid "Animation"
+msgstr "แอนิเมชัน"
+
+
+msgid "Simulation"
+msgstr "การจำลอง"
+
+
+msgid "Video"
+msgstr "วิดีโอ"
+
+
+msgid "YCC"
+msgstr "YCC"
+
+
+msgid "User Modified"
+msgstr "การปรับแต่งโดยผู้ใช้"
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid "Pen"
+msgstr "ปากกา"
+
+
+msgid "ShiftL"
+msgstr "Shift ซ้าย"
+
+
+msgid "ShiftR"
+msgstr "Shift ขวา"
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid "Delete"
+msgstr "ลบ"
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid ";"
+msgstr ";"
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid ","
+msgstr ","
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid "\""
+msgstr "\""
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid "`"
+msgstr "`"
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid "="
+msgstr "="
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid "["
+msgstr "["
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid "]"
+msgstr "]"
+
+
+msgid "←"
+msgstr "←"
+
+
+msgid "↓"
+msgstr "↓"
+
+
+msgid "→"
+msgstr "→"
+
+
+msgid "↑"
+msgstr "↑"
+
+
+msgctxt "UI_Events_KeyMaps"
+msgid "Pause"
+msgstr "พัก"
+
+
+msgid "Mouse"
+msgstr "เมาส์"
+
+
+msgctxt "WindowManager"
+msgid "Shift"
+msgstr "เลื่อน"
+
+
+msgid "Release"
+msgstr "ปล่อย"
+
+
+msgid "Paths"
+msgstr "เส้นทาง"
+
+
+msgid "Rotation & Scale"
+msgstr "หมุน และ ย่อขยาย"
+
+
+msgid "Mix"
+msgstr "ผสม"
+
+
+msgid "Difference"
+msgstr "แตกต่าง"
+
+
+msgid "Screen"
+msgstr "จอภาพ"
+
+
+msgid "Squares"
+msgstr "สี่เหลี่ยม"
+
+
+msgid "Orientation"
+msgstr "การปรับทิศทาง"
+
+
+msgid "Mask Layer"
+msgstr "ชั้นหน้ากาก"
+
+
+msgid "Sharp falloff"
+msgstr "ลอยแหลม ๆ"
+
+
+msgid "Mask Layers"
+msgstr "ชั้นหน้ากาก"
+
+
+msgid "Fixed"
+msgstr "คงที่"
+
+
+msgid "Mix Color"
+msgstr "ผสมสี"
+
+
+msgid "Face Data"
+msgstr "ข้อมูลด้าน"
+
+
+msgid "Merge"
+msgstr "ผสาน"
+
+
+msgid "Metaball"
+msgstr "เมตาบอล"
+
+
+msgid "Math"
+msgstr "คณิตศาสตร์"
+
+
+msgid "Names"
+msgstr "ชื่อ"
+
+
+msgid "Pivot Point"
+msgstr "จุดหมุน"
+
+
+msgid "Snap"
+msgstr "ยึดติด"
+
+
+msgid "Proportional Editing Falloff"
+msgstr "แก้ไข"
+
+
+msgid "Mask Edit"
+msgstr "การแก้ไขหน้ากาก"
+
+
+msgid "Import"
+msgstr "นำเข้า"
+
+
+msgid "Mirror"
+msgstr "กระจกสะท้อน"
+
+
+msgid "Local View"
+msgstr "มุมมองท้องถิ่น"
+
+
+msgid "Viewpoint"
+msgstr "จุดของมุมมอง"
+
+
+msgid "Navigation"
+msgstr "การนำทาง"
+
+
+msgid "Align View"
+msgstr "จัดมุมมอง"
+
+
+msgid "Align View to Active"
+msgstr "จัดมุมมองไปยังที่วัตถุใช้งาน"
+
+
+msgid "View Regions"
+msgstr "ขอบเขตมุมมอง"
+
+
+msgid "UV"
+msgstr "UV"
+
+
+msgid "Light"
+msgstr "แสง"
+
+
+msgid "Add Image"
+msgstr "เพิ่มภาพ"
+
+
+msgid "Apply"
+msgstr "นำไปใช้"
+
+
+msgid "Track"
+msgstr "แทร็ค"
+
+
+msgid "Layout"
+msgstr "เค้าโครง"
+
+
+msgid "Hooks"
+msgstr "ตะขอ"
+
+
+msgid "Keying"
+msgstr "คีย์"
+
+
+msgid "Zoom"
+msgstr "ซูม"
+
+
+msgid "Marker"
+msgstr "เครื่องหมาย"
+
+
+msgid "Files"
+msgstr "ไฟล์"
+
+
+msgctxt "Operator"
+msgid "Mirror"
+msgstr "กระจกสะท้อน"
+
+
+msgid "Node"
+msgstr "จุดต่อ"
+
+
+msgid "Add Modifier"
+msgstr "เพิ่มการปรับแต่ง"
+
+
+msgid "Blender"
+msgstr "Blender"
+
+
+msgid "System"
+msgstr "ระบบ"
+
+
+msgid "File"
+msgstr "ไฟล์"
+
+
+msgid "Defaults"
+msgstr "ค่าเริ่มต้น"
+
+
+msgid "Export"
+msgstr "ส่งออก"
+
+
+msgid "External Data"
+msgstr "ข้อมูลภายนอก"
+
+
+msgid "New File"
+msgstr "ไฟล์ใหม่"
+
+
+msgid "Data Previews"
+msgstr "ตัวอย่างข้อมูล"
+
+
+msgid "Recover"
+msgstr "กู้คืน"
+
+
+msgid "Help"
+msgstr "ช่วยเหลือ"
+
+
+msgid "Presets"
+msgstr "รูปแบบล่วงหน้า"
+
+
+msgid "Save & Load"
+msgstr "บันทึกและโหลด"
+
+
+msgctxt "Operator"
+msgid "Parent"
+msgstr "แม่"
+
+
+msgid "Splash"
+msgstr "หน้าเริ่มต้น"
+
+
+msgid "Sharp"
+msgstr "แหลม"
+
+
+msgid "Seam"
+msgstr "รอยต่อ"
+
+
+msgid "Triangle Area"
+msgstr "พื้นที่สามเหลี่ยม"
+
+
+msgid "Polygon"
+msgstr "โพลิกอน"
+
+
+msgid "Smooth"
+msgstr "ราบเรียบ"
+
+
+msgid "Polygon Area"
+msgstr "พื้นที่โพลิกอน"
+
+
+msgid "Polygon Center"
+msgstr "ศูนย์กลางโพลิกอน"
+
+
+msgid "Root"
+msgstr "ฐาน"
+
+
+msgid "Samples"
+msgstr "ตัวอย่าง"
+
+
+msgid "Intersect"
+msgstr "ตัดกัน"
+
+
+msgid "Active Element"
+msgstr "ส่วนประกอบที่กำลังใช้งาน"
+
+
+msgid "Normal Edit"
+msgstr "แก้ไขแนวฉาก"
+
+
+msgid "Wireframe"
+msgstr "โครงเส้น"
+
+
+msgid "Subdivide"
+msgstr "แบ่งย่อย"
+
+
+msgid "Merge Vertices"
+msgstr "ผสานจุดยอด"
+
+
+msgid "New"
+msgstr "ใหม่"
+
+
+msgid "Patch"
+msgstr "แพตช์"
+
+
+msgid "Percent"
+msgstr "ร้อยละ"
+
+
+msgid "Randomize"
+msgstr "สุ่ม"
+
+
+msgid "Ray Radius"
+msgstr "รัศมีรังสี"
+
+
+msgid "Edge Data"
+msgstr "ข้อมูลขอบ"
+
+
+msgid "Vertex Data"
+msgstr "ข้อมูลจุดยอด"
+
+
+msgid "RGB to XYZ"
+msgstr "RGB ไปยัง XYZ"
+
+
+msgid "Texture Coordinates"
+msgstr "พิกัดพื้นผิว"
+
+
+msgid "Shift"
+msgstr "เลื่อน"
+
+
+msgctxt "Curve"
+msgid "Curve"
+msgstr "เส้นโค้ง"
+
+
+msgid "Step"
+msgstr "ขั้นตอน"
+
+
+msgid "Subdivisions"
+msgstr "แบ่งย่อย"
+
+
+msgid "Subdivision Type"
+msgstr "ชนิดของการแบ่งย่อย"
+
+
+msgid "Mask Modifier"
+msgstr "เพิ่มตัวทำเปลี่ยนแปลงหน้ากาก"
+
+
+msgid "Overwrite"
+msgstr "เขียนทับ"
+
+
+msgid "Mirror U"
+msgstr "สะท้อน U"
+
+
+msgid "Mirror V"
+msgstr "สะท้อน V"
+
+
+msgid "Copy"
+msgstr "คัดลอก"
+
+
+msgid "World"
+msgstr "โลก"
+
+
+msgid "Edge Length"
+msgstr "ความยาวของเส้นขอบ"
+
+
+msgid "UV Center"
+msgstr "ศูนย์กลาง UV"
+
+
+msgctxt "Curve"
+msgid "Random"
+msgstr "สุ่ม"
+
+
+msgid "X Normal"
+msgstr "แนวฉาก X"
+
+
+msgid "Y Normal"
+msgstr "แนวฉาก Y"
+
+
+msgid "Z Normal"
+msgstr "แนวฉาก Z"
+
+
+msgid "Face Area"
+msgstr "พื้นที่ด้าน"
+
+
+msgid "Lines"
+msgstr "เส้น"
+
+
+msgid "Units"
+msgstr "หน่วย"
+
+
+msgid "px"
+msgstr "px"
+
+
+msgid "mm"
+msgstr "มิลลิเมตร"
+
+
+msgid "Total"
+msgstr "รวม"
+
+
+msgid "Starting"
+msgstr "กำลังเริ่มต้น"
+
+
+msgid "Outputs"
+msgstr "ผลลัพธ์"
+
+
+msgid "YCbCr"
+msgstr "YCbCr"
+
+
+msgid "To"
+msgstr "ไปยัง"
+
+
+msgid "RGB Curves"
+msgstr "เส้นโค้ง RGB"
+
+
+msgid "RGB to BW"
+msgstr "RGB ไปยัง BW"
+
+
+msgid "Rotate"
+msgstr "หมุน"
+
+
+msgid "Translate"
+msgstr "เลื่อนขนาน"
+
+
+msgid "Object Info"
+msgstr "ข้อมูลวัตถุ"
+
+
+msgid "Selection"
+msgstr "การเลือก"
+
+
+msgid "Background"
+msgstr "พื้นหลัง"
+
+
+msgid "Cycles"
+msgstr "ไซเคิล"
+
+
+msgid "Z axis"
+msgstr "แกน Z"
+
+
+msgid "Rings"
+msgstr "แหวน"
+
+
+msgid "Z Axis"
+msgstr "แกน Z"
+
+
+msgid "Tooltip"
+msgstr "ตัวช่วยเครื่องมือ"
+
+
+msgid "Data type"
+msgstr "ชนิดข้อมูล"
+
+
+msgctxt "Operator"
+msgid "Add Torus"
+msgstr "เพิ่มทอรัส"
+
+
+msgctxt "Operator"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Operator"
+msgid "Randomize"
+msgstr "สุ่ม"
+
+
+msgctxt "Operator"
+msgid "Toolbar"
+msgstr "แถบเครื่องมือ"
+
+
+msgid "Mouse X"
+msgstr "เมาส์ X"
+
+
+msgid "Mouse Y"
+msgstr "เมาส์ Y"
+
+
+msgctxt "Operator"
+msgid "New Action"
+msgstr "การกระทำใหม่"
+
+
+msgctxt "Operator"
+msgid "Paste Keyframes"
+msgstr "วางคีย์เฟรม"
+
+
+msgctxt "Operator"
+msgid "Box Select"
+msgstr "เลือกโดยช่องขอบเขต"
+
+
+msgctxt "Operator"
+msgid "Change Frame"
+msgstr "เปลี่ยนเฟรม"
+
+
+msgid "Enable"
+msgstr "เปิดการใช้งาน"
+
+
+msgctxt "Operator"
+msgid "Add Bone"
+msgstr "เพิ่มกระดูก"
+
+
+msgid "View Axis"
+msgstr "แกนมุมมอง"
+
+
+msgid "Move"
+msgstr "เคลื่อนที่"
+
+
+msgid "Search"
+msgstr "ค้นหา"
+
+
+msgctxt "Operator"
+msgid "(De)select All"
+msgstr "(ยกเลิก)เลือกทั้งหมด"
+
+
+msgctxt "Operator"
+msgid "Subdivide"
+msgstr "แบ่งย่อย"
+
+
+msgid "-X to +X"
+msgstr "-X ไป +X"
+
+
+msgid "+X to -X"
+msgstr "+X ไปยัง -X"
+
+
+msgid "Path to file"
+msgstr "ตำแหน่งไปยังไฟล์"
+
+
+msgctxt "Operator"
+msgid "Select"
+msgstr "เลือก"
+
+
+msgctxt "Operator"
+msgid "Pan View"
+msgstr "เลื่อนมุมมอง"
+
+
+msgctxt "Operator"
+msgid "Zoom In"
+msgstr "ซูมเข้า"
+
+
+msgctxt "Operator"
+msgid "Zoom Out"
+msgstr "ซูมออก"
+
+
+msgctxt "Operator"
+msgid "Delete"
+msgstr "ลบ"
+
+
+msgctxt "Operator"
+msgid "Paste from Clipboard"
+msgstr "วางจากคลิปบอร์ด"
+
+
+msgid "Report"
+msgstr "รายงาน"
+
+
+msgid "Enter Edit Mode"
+msgstr "เข้าสู่โหมดแก้ไข"
+
+
+msgctxt "Operator"
+msgid "Add Circle"
+msgstr "เพิ่มวงกลม"
+
+
+msgid "Handles"
+msgstr "จัดกระทำ"
+
+
+msgid "Duplicate"
+msgstr "ทำซ้ำ"
+
+
+msgctxt "Operator"
+msgid "Add Path"
+msgstr "เพิ่มเส้นทาง"
+
+
+msgctxt "Operator"
+msgid "Shade Flat"
+msgstr "แรเงาแบบราบแบน"
+
+
+msgctxt "Operator"
+msgid "Shade Smooth"
+msgstr "แรเงาแบบราบเรียบ"
+
+
+msgctxt "Operator"
+msgid "Redo"
+msgstr "ทำอีกครั้ง"
+
+
+msgctxt "Operator"
+msgid "Undo"
+msgstr "เลิกทำ"
+
+
+msgctxt "Operator"
+msgid "Undo History"
+msgstr "ประวัติการเลิกทำ"
+
+
+msgid "-X Forward"
+msgstr "หน้า -X"
+
+
+msgid "-Y Forward"
+msgstr "แกน -Y"
+
+
+msgid "-Z Forward"
+msgstr "หน้า -Z"
+
+
+msgid "-X Up"
+msgstr "ขึ้น -X"
+
+
+msgid "-Y Up"
+msgstr "ขึ้น -Y"
+
+
+msgid "-Z Up"
+msgstr "ขึ้น -Z"
+
+
+msgid "Scene Collections"
+msgstr "คอลเลกชันฉาก"
+
+
+msgid "Lamp"
+msgstr "แสงไฟ"
+
+
+msgid "-X Axis"
+msgstr "แกน -X"
+
+
+msgid "-Y Axis"
+msgstr "แกน -Y"
+
+
+msgid "-Z Axis"
+msgstr "แกน -Z"
+
+
+msgid "+Y Up"
+msgstr "+Y ขึ้น"
+
+
+msgid "URL"
+msgstr "URL"
+
+
+msgctxt "Operator"
+msgid "Add Bookmark"
+msgstr "เพิ่มบุ๊คมาร์ค"
+
+
+msgid "Open"
+msgstr "เปิด"
+
+
+msgid "Show"
+msgstr "แสดง"
+
+
+msgid "Play"
+msgstr "เล่น"
+
+
+msgid "Increment"
+msgstr "จำนวนที่เพิ่มขึ้น"
+
+
+msgid "Find All"
+msgstr "ค้นหาทั้งหมด"
+
+
+msgid "Next"
+msgstr "ถัดไป"
+
+
+msgctxt "Operator"
+msgid "Paste Text"
+msgstr "วางข้อความ"
+
+
+msgctxt "Operator"
+msgid "Paste File"
+msgstr "วางไฟล์"
+
+
+msgid "Paste contents from file"
+msgstr "วางเนื้อหาจากไฟล์"
+
+
+msgid "Replace Existing"
+msgstr "แทนที่ที่มีอยู่"
+
+
+msgctxt "Operator"
+msgid "Erase"
+msgstr "ลบ"
+
+
+msgctxt "Operator"
+msgid "Mask"
+msgstr "หน้ากาก"
+
+
+msgid "Flat"
+msgstr "ราบแบน"
+
+
+msgctxt "Operator"
+msgid "Add New Layer"
+msgstr "เพิ่มชั้นใหม่"
+
+
+msgid "Y End"
+msgstr "Y สิ้นสุด"
+
+
+msgctxt "Operator"
+msgid "Clear Render Region"
+msgstr "ล้างขอบเขตที่เรนเดอร์"
+
+
+msgctxt "Operator"
+msgid "New Image"
+msgstr "ภาพใหม่"
+
+
+msgid "Create a new image"
+msgstr "สร้างรูปภาพใหม่"
+
+
+msgctxt "Operator"
+msgid "Open Image"
+msgstr "เปิดภาพ"
+
+
+msgid "Open image"
+msgstr "เปิดรูปภาพ"
+
+
+msgctxt "Operator"
+msgid "Reload Image"
+msgstr "โหลดภาพใหม่"
+
+
+msgctxt "Operator"
+msgid "Save As Image"
+msgstr "บันทึกเป็นรูปภาพ"
+
+
+msgid "Save As Render"
+msgstr "บันทึกเป็นเรนเดอร์"
+
+
+msgctxt "Operator"
+msgid "Zoom View"
+msgstr "ซูมมุมมอง"
+
+
+msgid "Zoom Out"
+msgstr "ซูมออก"
+
+
+msgid "Zoom out the image (centered around 2D cursor)"
+msgstr "ซูมรูปภาพออก (ใช้ศูนย์กลางบนเคอร์เซอร์สองมิติ)"
+
+
+msgctxt "Operator"
+msgid "Add Vertex"
+msgstr "เพิ่มจุดยอด"
+
+
+msgid "Add Vertex"
+msgstr "เพิ่มจุดยอด"
+
+
+msgctxt "Operator"
+msgid "New Material"
+msgstr "วัสดุใหม่"
+
+
+msgid "Add a new material"
+msgstr "เพิ่มวัสดุใหม่"
+
+
+msgid "Cut"
+msgstr "ตัด"
+
+
+msgid "X-Ray"
+msgstr "มองผ่าน"
+
+
+msgid "Paste Normal"
+msgstr "วางแนวฉาก"
+
+
+msgid "Add Normal"
+msgstr "เพิ่มแนวฉาก"
+
+
+msgid "Reset Normal"
+msgstr "ตั้งค่าแนวฉากใหม่"
+
+
+msgid "Falloff type for proportional editing mode"
+msgstr "ชนิดการลอยตัวของการแก้ไขโดยสัดส่วน"
+
+
+msgid "Constant falloff"
+msgstr "ลอยแบบคงตัว"
+
+
+msgid "Random falloff"
+msgstr "ลอยแบบสุ่ม"
+
+
+msgid "Proportional Editing"
+msgstr "แก้ไขโดยสัดส่วน"
+
+
+msgid "Projected (2D)"
+msgstr "แบบฉาย (สองมิติ)"
+
+
+msgid "Construct a circle mesh"
+msgstr "สร้างเมชวงกลม"
+
+
+msgctxt "Operator"
+msgid "Add Cone"
+msgstr "เพิ่มทรงกรวย"
+
+
+msgctxt "Operator"
+msgid "Add Cube"
+msgstr "เพิ่มลูกบาศก์"
+
+
+msgid "Construct a cube mesh"
+msgstr "สร้างเมชลูกบาศก์"
+
+
+msgctxt "Operator"
+msgid "Add Cylinder"
+msgstr "เพิ่มทรงกระบอก"
+
+
+msgid "Construct a cylinder mesh"
+msgstr "สร้างเมชทรงกระบอก"
+
+
+msgctxt "Operator"
+msgid "Add Grid"
+msgstr "เพิ่มตาราง"
+
+
+msgctxt "Operator"
+msgid "Add Ico Sphere"
+msgstr "เพิ่มทรงกลม Ico"
+
+
+msgctxt "Operator"
+msgid "Add Monkey"
+msgstr "เพิ่มลิง"
+
+
+msgctxt "Operator"
+msgid "Add Plane"
+msgstr "เพิ่มระนาบ"
+
+
+msgid "Construct a filled planar mesh with 4 vertices"
+msgstr "สร้างเมชพื้นผิวด้วยจุดยอด 4 จุด เชื่อมโยงกัน"
+
+
+msgctxt "Operator"
+msgid "Add UV Sphere"
+msgstr "เพิ่มทรงกลม UV"
+
+
+msgid "Axis Mode"
+msgstr "โหมดแกน"
+
+
+msgid "Gimbal"
+msgstr "กิมบอล"
+
+
+msgid "-Y to +Y"
+msgstr "-Y ไป +Y"
+
+
+msgid "+Y to -Y"
+msgstr "+Y ไปยัง -Y"
+
+
+msgid "-Z to +Z"
+msgstr "-Z ไป +Z"
+
+
+msgid "+Z to -Z"
+msgstr "+Z ไปยัง -Z"
+
+
+msgctxt "Operator"
+msgid "Add Object"
+msgstr "เพิ่มวัตถุ"
+
+
+msgctxt "Operator"
+msgid "Add Armature"
+msgstr "เพิ่มโครงร่าง"
+
+
+msgid "Add an armature object to the scene"
+msgstr "เพิ่มวัตถุโครงร่างไปยังฉาก"
+
+
+msgctxt "Operator"
+msgid "Add Camera"
+msgstr "เพิ่มกล้อง"
+
+
+msgid "Add a camera object to the scene"
+msgstr "เพิ่มกล้องไปยังฉาก"
+
+
+msgid "Vertex Group(s)"
+msgstr "กลุ่มจุดยอด"
+
+
+msgid "Add an empty object to the scene"
+msgstr "เพิ่มวัตถุว่างเปล่าไปยังฉาก"
+
+
+msgctxt "Operator"
+msgid "Monkey"
+msgstr "ลิง"
+
+
+msgctxt "Operator"
+msgid "Join"
+msgstr "เชื่อมโยง"
+
+
+msgid "Selected Only"
+msgstr "ที่ถูกเลือกเท่านั้น"
+
+
+msgid "Sets the object interaction mode"
+msgstr "ตั้งโหมดที่จะกระทำกับวัตถุ"
+
+
+msgctxt "Operator"
+msgid "Apply Modifier"
+msgstr "นำการปรับแต่งไปใช้"
+
+
+msgctxt "Operator"
+msgid "Copy Modifier"
+msgstr "คัดลอกการปรับแต่ง"
+
+
+msgid "   With Empty Groups"
+msgstr "   โดยกลุ่มว่างเปล่า"
+
+
+msgid "   With Automatic Weights"
+msgstr "   โดยน้ำหนักอัตโนมัติ"
+
+
+msgid "   With Envelope Weights"
+msgstr "   โดยน้ำหนักเยื่อหุ้ม"
+
+
+msgid "Vertex (Triangle)"
+msgstr "จุดยอด (สามเหลี่ยม)"
+
+
+msgid "Low"
+msgstr "ต่ำ"
+
+
+msgid "High"
+msgstr "สูง"
+
+
+msgctxt "ID"
+msgid "Blur"
+msgstr "เบลอ"
+
+
+msgctxt "ID"
+msgid "Colorize"
+msgstr "สีสัน"
+
+
+msgctxt "ID"
+msgid "Flip"
+msgstr "กลับด้าน"
+
+
+msgctxt "ID"
+msgid "Glow"
+msgstr "เรืองแสง"
+
+
+msgctxt "ID"
+msgid "Shadow"
+msgstr "เงา"
+
+
+msgctxt "ID"
+msgid "Swirl"
+msgstr "หมุน"
+
+
+msgctxt "ID"
+msgid "Wave Distortion"
+msgstr "การบิดเบือนของคลื่น"
+
+
+msgctxt "Operator"
+msgid "Add Speaker"
+msgstr "เพิ่มลำโพง"
+
+
+msgid "Add a speaker object to the scene"
+msgstr "เพิ่มวัตถุลำโพงไปยังฉาก"
+
+
+msgctxt "Operator"
+msgid "Add Text"
+msgstr "เพิ่มข้อความ"
+
+
+msgid "Add a text object to the scene"
+msgstr "เพิ่มข้อความไปยังฉาก"
+
+
+msgid "Reset Values"
+msgstr "ตั้งค่าใหม่"
+
+
+msgid "Rename"
+msgstr "เปลี่ยนชื่อ"
+
+
+msgid "New ID"
+msgstr "ไอดีใหม่"
+
+
+msgid "Reload"
+msgstr "โหลดใหม่"
+
+
+msgid "Reset"
+msgstr "ตั้งค่าใหม่"
+
+
+msgid "(De)select all"
+msgstr "(ยกเลิก)เลือกทั้งหมด"
+
+
+msgid "Palette"
+msgstr "จานสี"
+
+
+msgid "Axis Lock"
+msgstr "ล็อกแกน"
+
+
+msgctxt "Operator"
+msgid "Paste Pose"
+msgstr "วางท่าทาง"
+
+
+msgctxt "Operator"
+msgid "Render"
+msgstr "เรนเดอร์"
+
+
+msgctxt "Curve"
+msgid "Mode"
+msgstr "โหมด"
+
+
+msgctxt "Curve"
+msgid "Max"
+msgstr "สูงสุด"
+
+
+msgctxt "Curve"
+msgid "Line"
+msgstr "เส้น"
+
+
+msgctxt "Curve"
+msgid "Round"
+msgstr "มน"
+
+
+msgctxt "Scene"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Operator"
+msgid "Play Animation"
+msgstr "เล่นแอนิเมชัน"
+
+
+msgctxt "Operator"
+msgid "Redo Last"
+msgstr "ทำอีกครั้งล่าสุด"
+
+
+msgid "Editing"
+msgstr "การแก้ไข"
+
+
+msgid "File Paths"
+msgstr "เส้นทางไฟล์"
+
+
+msgctxt "Operator"
+msgid "Scale"
+msgstr "ปรับย่อขนาด"
+
+
+msgctxt "Operator"
+msgid "Mask Filter"
+msgstr "กรองหน้ากาก"
+
+
+msgid "Join"
+msgstr "เชื่อมโยง"
+
+
+msgid "Grab UVs"
+msgstr "จับ UV"
+
+
+msgid "Pinch UVs"
+msgstr "บีบ UV"
+
+
+msgid "Relax UVs"
+msgstr "ผ่อนคลาย UV"
+
+
+msgid "Replace Selection"
+msgstr "แทนที่ที่เลือกไว้"
+
+
+msgctxt "Sequence"
+msgid "Add"
+msgstr "เพิ่ม"
+
+
+msgctxt "Operator"
+msgid "Copy"
+msgstr "คัดลอก"
+
+
+msgctxt "Operator"
+msgid "Paste"
+msgstr "วาง"
+
+
+msgid "Sound Name"
+msgstr "ชื่อเสียง"
+
+
+msgctxt "Operator"
+msgid "Cut"
+msgstr "ตัด"
+
+
+msgid "Ignore"
+msgstr "ละเว้น"
+
+
+msgctxt "Operator"
+msgid "Save"
+msgstr "บันทึก"
+
+
+msgctxt "Operator"
+msgid "Save As"
+msgstr "บันทึกเป็น"
+
+
+msgid "Transformation orientation"
+msgstr "ทิศทางการแปลง"
+
+
+msgid "Snap to grid"
+msgstr "ยึดตามตาราง"
+
+
+msgid "Snap to vertices"
+msgstr "ยึดตามจุดยอด"
+
+
+msgid "Snap to edges"
+msgstr "ยึดตามขอบ"
+
+
+msgid "Snap to volume"
+msgstr "ยึดตามปริมาตร"
+
+
+msgctxt "Operator"
+msgid "Resize"
+msgstr "ขนาด"
+
+
+msgctxt "Operator"
+msgid "Rotate"
+msgstr "หมุน"
+
+
+msgctxt "Operator"
+msgid "Transform"
+msgstr "การปรับเปลี่ยน"
+
+
+msgctxt "Operator"
+msgid "Move"
+msgstr "เคลื่อนที่"
+
+
+msgid "Reset UV projection"
+msgstr "ตั้งค่าการฉาย UV ใหม่"
+
+
+msgid "Pinned"
+msgstr "ตรึงหมุด"
+
+
+msgid "Page"
+msgstr "หน้า"
+
+
+msgctxt "Operator"
+msgid "Zoom 2D View"
+msgstr "ซูมมุมมองสองมิติ"
+
+
+msgid "Path to image file"
+msgstr "ตำแหน่งไปยังไฟล์ภาพ"
+
+
+msgctxt "Operator"
+msgid "Rotate View"
+msgstr "หมุนมุมมอง"
+
+
+msgid "Rendered"
+msgstr "เรนเดอร์"
+
+
+msgctxt "Operator"
+msgid "Pan View Direction"
+msgstr "เลื่อนทิศทางมุมมอง"
+
+
+msgctxt "Operator"
+msgid "Zoom Camera 1:1"
+msgstr "ซูมกล้อง 1:1"
+
+
+msgctxt "Operator"
+msgid "Append"
+msgstr "นำเข้ามารวม"
+
+
+msgctxt "Operator"
+msgid "Call Menu"
+msgstr "เรียกเมนู"
+
+
+msgid "Remove"
+msgstr "ลบ"
+
+
+msgctxt "Operator"
+msgid "Quit Blender"
+msgstr "ออกจาก Blender"
+
+
+msgid "Zoom Path"
+msgstr "เส้นทางซูม"
+
+
+msgctxt "Operator"
+msgid "Load Factory Settings"
+msgstr "โหลดการตั้งค่าโรงงาน"
+
+
+msgctxt "Operator"
+msgid "Reload Start-Up File"
+msgstr "โหลดไฟล์เริ่มต้นใหม่"
+
+
+msgid "Save Copy"
+msgstr "บันทึกการคัดลอก"
+
+
+msgctxt "Operator"
+msgid "Save Blender File"
+msgstr "บันทึกเป็นไฟล์ Blender"
+
+
+msgid "Red-Cyan"
+msgstr "แดง-ฟ้า"
+
+
+msgid "Yellow-Blue"
+msgstr "เหลือง-น้ำเงิน"
+
+
+msgctxt "Operator"
+msgid "Splash Screen"
+msgstr "หน้าเริ่มต้น"
+
+
+msgid "Open the splash screen with release info"
+msgstr "เปิดหน้าเริ่มต้นพร้อมกับข้อมูลการปล่อยให้ใช้งาน"
+
+
+msgid "Selection Only"
+msgstr "เลือกเท่านั้น"
+
+
+msgid "Show Brush"
+msgstr "แสดงแปรง"
+
+
+msgid "Single Image"
+msgstr "ภาพเดี่ยว"
+
+
+msgid "View Lock"
+msgstr "ล็อกมุมมอง"
+
+
+msgid "Overlays"
+msgstr "วางซ้อน"
+
+
+msgid "Mask Display"
+msgstr "การแสดงหน้ากาก"
+
+
+msgid "Transparent"
+msgstr "โปร่งใส"
+
+
+msgid "Filters"
+msgstr "ตัวกรอง"
+
+
+msgid "Misc"
+msgstr "เบ็ดเตล็ด"
+
+
+msgid "Movement"
+msgstr "การเคลื่อนไหว"
+
+
+msgid "Shadows"
+msgstr "เงา"
+
+
+msgid "Audio"
+msgstr "เสียง"
+
+
+msgid "Views"
+msgstr "มุมมอง"
+
+
+msgid "Playback"
+msgstr "เล่น"
+
+
+msgid "Timeline"
+msgstr "ไทม์ไลน์"
+
+
+msgid "New Objects"
+msgstr "วัตถุใหม่"
+
+
+msgid "Editors"
+msgstr "ตัวแก้ไข"
+
+
+msgid "Menus"
+msgstr "เมนู"
+
+
+msgid "Text Rendering"
+msgstr "เรนเดอร์ข้อความ"
+
+
+msgid "3D Mouse Settings"
+msgstr "การตั้งค่าเมาส์ 3D"
+
+
+msgid "Save Preferences"
+msgstr "บันทึกการตั้งค่า"
+
+
+msgid "Editor"
+msgstr "ตัวแก้ไข"
+
+
+msgid "Text Style"
+msgstr "สไตล์ข้อความ"
+
+
+msgid "User Interface"
+msgstr "อินเตอร์เฟสผู้ใช้"
+
+
+msgctxt "Operator"
+msgid "Measure"
+msgstr "วัดขนาด"
+
+
+msgctxt "Operator"
+msgid "Box"
+msgstr "กล่อง"
+
+
+msgctxt "Operator"
+msgid "Circle"
+msgstr "วงกลม"
+
+
+msgctxt "Operator"
+msgid "Line"
+msgstr "เส้น"
+
+
+msgctxt "Operator"
+msgid "Arc"
+msgstr "เส้นโค้ง"
+
+
+msgid "Tip"
+msgstr "คำแนะนำ"
+
+
+msgid "View & Controls"
+msgstr "มุมมองและการควมคุม"
+
+
+msgid "Image Editor"
+msgstr "ตัวแก้ไขรูปภาพ"
+
+
+msgid "Recent Files"
+msgstr "ไฟล์ล่าสุด"
+
+
+msgid "Render Output Directory"
+msgstr "ตำแหน่งผลลัพธ์การเรนเดอร์"
+
+
+msgid "Zoom Axis"
+msgstr "ซูมแกน"
+
+
+msgid "Zoom Style"
+msgstr "สไตล์การซูม"
+
+
+msgid "192 kHz"
+msgstr "192 kHz"
+
+
+msgid "Manual"
+msgstr "ด้วยตนเอง"
+
+
+msgid "UI Line Width"
+msgstr "ความหนาเส้น UI"
+
+
+msgid "New Window"
+msgstr "หน้าต่างใหม่"
+
+
+msgid "Interface Font"
+msgstr "ฟอนต์อินเตอร์เฟส"
+
+
+msgid "Path to interface font"
+msgstr "ตำแหน่งไปยังฟอนต์อินเตอร์เฟส"
+
+
+msgid "Language"
+msgstr "ภาษา"
+
+
+msgid "Developer Extras"
+msgstr "เครื่องมือพิเศษสำหรับผู้พัฒนา"
+
+
+msgid "Display Object Info"
+msgstr "แสดงข้อมูลวัตถุ"
+
+
+msgid "Display splash screen on startup"
+msgstr "แสดงหน้าเริ่มต้นเมื่อเริ่มต้น"
+
+
+msgid "Tooltips"
+msgstr "ตัวช่วยเครื่องมือ"
+
+
+msgid "Python Tooltips"
+msgstr "ตัวช่วยเครื่องมือ Python"
+
+
+msgid "Slight"
+msgstr "เล็กน้อย"
+
+
+msgid "Thin"
+msgstr "บาง"
+
+
+msgid "Thick"
+msgstr "หนา"
+
+
+msgid "Translate Interface"
+msgstr "แปลอินเตอร์เฟส"
+
+
+msgid "High quality"
+msgstr "คุณภาพสูง"
+
+
+msgid "View layer name"
+msgstr "แสดงชื่อชั้น"
+
+
+msgid "Engine"
+msgstr "เอนจิน"
+
+
+msgid "FPS"
+msgstr "อัตราเฟรม"
+
+
+msgid "Resolution Scale"
+msgstr "ขนาดความละเอียด"
+
+
+msgid "Antialiasing"
+msgstr "การเกลี่ยเลือนขอบหยัก"
+
+
+msgid "Text Color"
+msgstr "สีข้อความ"
+
+
+msgid "Render Views"
+msgstr "เรนเดอร์มุมมอง"
+
+
+msgid "Render Region"
+msgstr "ขอบเขตการเรนเดอร์"
+
+
+msgid "Stamp Render Time"
+msgstr "เวลาการเรนเดอร์"
+
+
+msgid "Render View"
+msgstr "เรนเดอร์มุมมอง"
+
+
+msgid "Z Angle"
+msgstr "องศา Z"
+
+
+msgid "Render Samples"
+msgstr "ตัวอย่างการเรนเดอร์"
+
+
+msgid "YCbCr (ITU 601)"
+msgstr "YCbCr (ITU 601)"
+
+
+msgid "YCbCr (ITU 709)"
+msgstr "YCbCr (ITU 709)"
+
+
+msgid "Bounding Box Center"
+msgstr "ศูนย์กลางของขอบเขต"
+
+
+msgid "Median Point"
+msgstr "จุดมัธยฐาน"
+
+
+msgid "Individual Origins"
+msgstr "จุดกำเนิดของวัตถุนั้น ๆ"
+
+
+msgid "Mask Color"
+msgstr "สีหน้ากาก"
+
+
+msgid "Pivot center for rotation/scaling"
+msgstr "ศูนย์หมุนสำหรับการหมุน/ย่อขยาย"
+
+
+msgid "Pivot around bounding box center of selected object(s)"
+msgstr "หมุนรอบ ๆ ขอบเขตของวัตถุที่เลือก"
+
+
+msgid "Pivot around each object's own origin"
+msgstr "หมุนรอบ ๆ จุดกำเนิดของวัตถุนั้น ๆ"
+
+
+msgid "Pivot around the median point of selected objects"
+msgstr "หมุนรอบ ๆ จุดมัธยฐานของวัตถุที่ถูกเลือก"
+
+
+msgid "Adjust Last Operation"
+msgstr "ปรับตัวดำเนินการล่าสุด"
+
+
+msgctxt "MovieClip"
+msgid "View"
+msgstr "มุมมอง"
+
+
+msgctxt "MovieClip"
+msgid "Graph"
+msgstr "กราฟ"
+
+
+msgid "Realtime Updates"
+msgstr "ตามเวลาอัปเดตจริง"
+
+
+msgid "Recent Folders"
+msgstr "โฟลเอร์ล่าสุด"
+
+
+msgid "Show 2D cursor"
+msgstr "แสดงเคอร์เซอร์สองมิติ"
+
+
+msgid "UV Editor"
+msgstr "ตัวแก้ไข UV"
+
+
+msgid "Pivot around the 3D cursor"
+msgstr "หมุนรอบ ๆ เคอร์เซอร์สามมิติ"
+
+
+msgid "Pivot around active object"
+msgstr "หมุนรอบ ๆ วัตถุที่กำลังถูกใช้งาน"
+
+
+msgid "Shader Editor"
+msgstr "ตัวแก้ไขเชดเดอร์"
+
+
+msgid "Texture Node Editor"
+msgstr "ตัวแก้ไขโนดพื้นผิว"
+
+
+msgid "Data API"
+msgstr "API ข้อมูล"
+
+
+msgid "Show Cameras"
+msgstr "แสดงกล้อง"
+
+
+msgid "Replace Text"
+msgstr "แทนที่ข้อความ"
+
+
+msgid "Top Line"
+msgstr "เส้นบน"
+
+
+msgid "Lens"
+msgstr "เลนส์"
+
+
+msgid "Lock to Cursor"
+msgstr "ล็อกที่เคอร์เซอร์"
+
+
+msgid "Lock to Object"
+msgstr "ล็อกกับวัตถุ"
+
+
+msgid "3D Region"
+msgstr "ขอบเขตสามมิติ"
+
+
+msgid "Show Empty Image"
+msgstr "แสดงภาพว่างเปล่า"
+
+
+msgid "Speaker"
+msgstr "ลำโพง"
+
+
+msgid "3D"
+msgstr "สามมิติ"
+
+
+msgid "Text Info"
+msgstr "ข้อมูลข้อความ"
+
+
+msgctxt "Sequence"
+msgid "Image"
+msgstr "ภาพ"
+
+
+msgctxt "Sequence"
+msgid "Scene"
+msgstr "ฉาก"
+
+
+msgctxt "Sequence"
+msgid "Movie"
+msgstr "ภาพยนตร์"
+
+
+msgctxt "Sequence"
+msgid "Mask"
+msgstr "หน้ากาก"
+
+
+msgctxt "Sequence"
+msgid "Sound"
+msgstr "เสียง"
+
+
+msgid "Text color"
+msgstr "สีข้อความ"
+
+
+msgid "Selected Text"
+msgstr "ข้อความที่ถูกเลือก"
+
+
+msgid "Preview Background"
+msgstr "พื้นหลังตัวอย่าง"
+
+
+msgid "Panel Title"
+msgstr "ชื่อแผง"
+
+
+msgid "Text Cursor"
+msgstr "เคอร์เซอร์ข้อความ"
+
+
+msgid "Type of keyframes to create when inserting keyframes"
+msgstr "ชนิดของคีย์เฟรมที่จะสร้างเมื่อแทรกคีย์เฟรม"
+
+
+msgid "Type of element to snap to"
+msgstr "ชนิดของส่วนประกอบที่จะยึดติด"
+
+
+msgid "Snap Element"
+msgstr "ยึดตามส่วนประกอบ"
+
+
+msgid "Snap Target"
+msgstr "ยึดตามเป้าหมาย"
+
+
+msgid "Snap to increments of grid"
+msgstr "ยึดตามจำนวนที่เพิ่มขึ้นของตาราง"
+
+
+msgid "Automatically merge vertices moved to the same location"
+msgstr "ผสานจุดยอดที่อยู่ ณ จุดเดียวกันโดยอัตโนมัติ"
+
+
+msgid "Proportional Editing using connected geometry only"
+msgstr "การแก้ไขโดยสัดส่วนสามารถใช้งานกับรูปทรงที่เชื่อมต่อกันได้เท่านั้น"
+
+
+msgid "Proportional Editing Objects"
+msgstr "แก้ไขวัตถุโดยสัดส่วน"
+
+
+msgid "Proportional editing object mode"
+msgstr "โหมดแก้ไขวัตถุโดยสัดส่วน"
+
+
+msgid "Proportional Editing using screen space locations"
+msgstr "แก้ไขโดยสัดส่วนด้วยการใช้ตำแหน่งปริภูมิของจอภาพ"
+
+
+msgid "Snap during transform"
+msgstr "ยึดติดในระหว่างการแปรงวัตถุ"
+
+
+msgid "Use Snap for Rotation"
+msgstr "ใช้การยึดติดกับการหมุน"
+
+
+msgid "Use Snap for Scale"
+msgstr "ใช้การยึดติดกับการย่อขยาย"
+
+
+msgid "Use Snap for Translation"
+msgstr "ใช้การยึดติดกับการเลื่อนขนาน"
+
+
+msgid "Grid Lines"
+msgstr "จำนวนเส้นของตาราง"
+
+
+msgid "Grid Subdivisions"
+msgstr "จำนวนการแบ่งย่อยของตาราง"
+
+
+msgid "Display X Axis"
+msgstr "แสดงแกน X"
+
+
+msgid "Display Y Axis"
+msgstr "แสดงแกน Y"
+
+
+msgid "Display Z Axis"
+msgstr "แสดงแกน Z"
+
+
+msgid "Show 3D Cursor"
+msgstr "แสดงเคอร์เซอร์สามมิติ"
+
+
+msgid "Face Angles"
+msgstr "องศาของด้าน"
+
+
+msgid "Display Grid Floor"
+msgstr "แสดงพื้นตาราง"
+
+
+msgid "Viewport Shading"
+msgstr "วิวพอร์ตแรเงา"
+
+
+msgid "Method to display/shade objects in the 3D View"
+msgstr "วิธีที่จะแสดง/แรเงาวัตถุบนมุมมองสามมิติ"
+
+
+msgid "Error Message"
+msgstr "ข้อความแสดงข้อผิดพลาด"
+
+
+msgid "Cancel"
+msgstr "ยกเลิก"
+
+
+msgctxt "WindowManager"
+msgid "User Interface"
+msgstr "อินเตอร์เฟสผู้ใช้"
+
+
+msgctxt "WindowManager"
+msgid "Mesh"
+msgstr "เมช"
+
+
+msgctxt "WindowManager"
+msgid "Curve"
+msgstr "เส้นโค้ง"
+
+
+msgctxt "WindowManager"
+msgid "Font"
+msgstr "ฟอนต์"
+
+
+msgctxt "WindowManager"
+msgid "Pose"
+msgstr "ท่าทาง"
+
+
+msgctxt "WindowManager"
+msgid "Image"
+msgstr "ภาพ"
+
+
+msgctxt "WindowManager"
+msgid "Outliner"
+msgstr "แผงกิ่ง"
+
+
+msgctxt "WindowManager"
+msgid "Mask Editing"
+msgstr "การแก้ไขหน้ากาก"
+
+
+msgctxt "WindowManager"
+msgid "Animation"
+msgstr "แอนิเมชัน"
+
+
+msgctxt "Operator"
+msgid "All"
+msgstr "ทั้งหมด"
+
+
+msgctxt "Operator"
+msgid "None"
+msgstr "ไม่มี"
+
+
+msgid ":"
+msgstr ":"
+
+
+msgctxt "Operator"
+msgid "Report a Bug"
+msgstr "รายงานข้อผิดพลาด"
+
+
+msgid "Description:"
+msgstr "คำอธิบาย:"
+
+
+msgid "Internet:"
+msgstr "อินเตอร์เน็ต:"
+
+
+msgid "Author:"
+msgstr "ผู้สร้าง:"
+
+
+msgid "Version:"
+msgstr "เวอร์ชัน:"
+
+
+msgid "Warning:"
+msgstr "ระวัง:"
+
+
+msgctxt "Operator"
+msgid "Documentation"
+msgstr "เอกสาร"
+
+
+msgid "File:"
+msgstr "ไฟล์:"
+
+
+msgctxt "Operator"
+msgid "Apply"
+msgstr "นำไปใช้"
+
+
+msgid "3D View"
+msgstr "มุมมองสามมิติ"
+
+
+msgctxt "Operator"
+msgid "Open..."
+msgstr "เปิด..."
+
+
+msgctxt "Operator"
+msgid "Link..."
+msgstr "เชื่อมโยง..."
+
+
+msgctxt "Operator"
+msgid "Append..."
+msgstr "ผนวก..."
+
+
+msgctxt "Operator"
+msgid "Manual"
+msgstr "คู่มือ"
+
+
+msgctxt "Operator"
+msgid "Support"
+msgstr "สนับสนุน"
+
+
+msgctxt "Operator"
+msgid "User Communities"
+msgstr "ชุมชนผู้ใช้"
+
+
+msgctxt "Operator"
+msgid "Location"
+msgstr "ตำแหน่ง"
+
+
+msgctxt "Operator"
+msgid "Rotation"
+msgstr "หมุน"
+
+
+msgid "Frame Numbers"
+msgstr "หมายเลขเฟรม"
+
+
+msgid "+ Non-Grouped Keyframes"
+msgstr "+ คีย์เฟรมที่ไม่มีกลุ่ม"
+
+
+msgid "Shapes"
+msgstr "รูปทรง"
+
+
+msgctxt "Operator"
+msgid "Add Image"
+msgstr "เพิ่มภาพ"
+
+
+msgid "Render U"
+msgstr "เรนเดอร์ U"
+
+
+msgid "Offset X"
+msgstr "ออฟเซต X"
+
+
+msgctxt "Operator"
+msgid "Flip"
+msgstr "กลับด้าน"
+
+
+msgid "Detail"
+msgstr "รายละเอียด"
+
+
+msgid "Data Source:"
+msgstr "แหลางข้อมูล:"
+
+
+msgid "Parent:"
+msgstr "แม่:"
+
+
+msgid "Transform:"
+msgstr "การปรับเปลี่ยน:"
+
+
+msgid "Animation:"
+msgstr "แอนิเมชัน:"
+
+
+msgid "Date"
+msgstr "วันที่"
+
+
+msgid "Render As"
+msgstr "เรนเดอร์เป็น"
+
+
+msgctxt "Operator"
+msgid "Add Canvas"
+msgstr "เพิ่มภาพ"
+
+
+msgctxt "Operator"
+msgid "Add Brush"
+msgstr "เพิ่มแปรง"
+
+
+msgid "Resolution Divisions"
+msgstr "การหารความละเอียด"
+
+
+msgid "Render Engine"
+msgstr "เอนจินเรนเดอร์"
+
+
+msgid "Calculate"
+msgstr "คำนวณ"
+
+
+msgid "Match"
+msgstr "จับคู่"
+
+
+msgctxt "Operator"
+msgid "More"
+msgstr "เพิ่มเติม"
+
+
+msgctxt "Operator"
+msgid "Less"
+msgstr "ย่อ"
+
+
+msgctxt "Operator"
+msgid "Clean Channels"
+msgstr "ล้างช่อง"
+
+
+msgctxt "Operator"
+msgid "Extend"
+msgstr "ขยาย"
+
+
+msgctxt "Operator"
+msgid "Cleanup"
+msgstr "ล้าง"
+
+
+msgctxt "Operator"
+msgid "Back"
+msgstr "หลัง"
+
+
+msgctxt "Operator"
+msgid "Go to Parent"
+msgstr "ไปยังแม่"
+
+
+msgid ".blend Files"
+msgstr "ไฟล์ .blend"
+
+
+msgid "Image Files"
+msgstr "ไฟล์ภาพ"
+
+
+msgid "Script Files"
+msgstr "ไฟล์สคริปต์"
+
+
+msgid "Font Files"
+msgstr "ไฟล์ฟอนต์"
+
+
+msgid "Sound Files"
+msgstr "ไฟล์เสียง"
+
+
+msgid "Text Files"
+msgstr "ไฟล์ข้อความ"
+
+
+msgid "Blender IDs"
+msgstr "Blender ID"
+
+
+msgctxt "Operator"
+msgid "Zoom Region..."
+msgstr "ขอบเขตการซูม..."
+
+
+msgctxt "Operator"
+msgid "Save All Images"
+msgstr "บันทึกภาพทั้งหมด"
+
+
+msgctxt "Operator"
+msgid "By Distance"
+msgstr "โดยระยะทาง"
+
+
+msgctxt "Operator"
+msgid "Save As..."
+msgstr "บันทึกเป็น..."
+
+
+msgctxt "Operator"
+msgid "Clear Seam"
+msgstr "ล้างรอยต่อ"
+
+
+msgctxt "Operator"
+msgid "Vertex"
+msgstr "จุดยอด"
+
+
+msgctxt "Operator"
+msgid "Edge"
+msgstr "ขอบ"
+
+
+msgctxt "Operator"
+msgid "Face"
+msgstr "แผ่นผิว"
+
+
+msgid "Repeat Image"
+msgstr "วนภาพ"
+
+
+msgctxt "Operator"
+msgid "Replace..."
+msgstr "แทนที่..."
+
+
+msgctxt "Operator"
+msgid "X Axis"
+msgstr "แกน X"
+
+
+msgctxt "Operator"
+msgid "Y Axis"
+msgstr "แกน Y"
+
+
+msgctxt "Operator"
+msgid "Mirror X"
+msgstr "สะท้อน X"
+
+
+msgctxt "Operator"
+msgid "Mirror Y"
+msgstr "สะท้อน Y"
+
+
+msgctxt "Operator"
+msgid "Sound"
+msgstr "เสียง"
+
+
+msgctxt "Operator"
+msgid "Rename..."
+msgstr "เปลี่ยนชื่อ..."
+
+
+msgctxt "Operator"
+msgid "Fit"
+msgstr "พอดี"
+
+
+msgctxt "Operator"
+msgid "Show"
+msgstr "แสดง"
+
+
+msgctxt "Operator"
+msgid "Fade"
+msgstr "จาง"
+
+
+msgctxt "Operator"
+msgid "Delete Keyframes..."
+msgstr "ลบคีย์เฟรม..."
+
+
+msgctxt "Operator"
+msgid "Clear Keyframes..."
+msgstr "ล้างคีย์เฟรม..."
+
+
+msgid "Storage"
+msgstr "พื้นที่จัดเก็บ"
+
+
+msgctxt "Operator"
+msgid "Both"
+msgstr "ทั้งสอง"
+
+
+msgctxt "Operator"
+msgid "Left"
+msgstr "ซ้าย"
+
+
+msgctxt "Operator"
+msgid "Right"
+msgstr "ขวา"
+
+
+msgctxt "Operator"
+msgid "Both Sides"
+msgstr "ทั้งสองด้าน"
+
+
+msgctxt "Operator"
+msgid "Mask..."
+msgstr "หน้ากาก..."
+
+
+msgctxt "Operator"
+msgid "Color"
+msgstr "สี"
+
+
+msgctxt "Operator"
+msgid "Text"
+msgstr "ข้อความ"
+
+
+msgctxt "Operator"
+msgid "Glow"
+msgstr "เรืองแสง"
+
+
+msgctxt "Operator"
+msgid "Gaussian Blur"
+msgstr "เบลอเกาส์เซียน"
+
+
+msgctxt "Text"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Operator"
+msgid "Top"
+msgstr "บน"
+
+
+msgctxt "Operator"
+msgid "Bottom"
+msgstr "ล่าง"
+
+
+msgctxt "Operator"
+msgid "Line Begin"
+msgstr "เส้นเริ่มต้น"
+
+
+msgctxt "Operator"
+msgid "Line End"
+msgstr "เส้นสิ้นสุด"
+
+
+msgctxt "Operator"
+msgid "Previous Line"
+msgstr "เส้นก่อนหน้านี้"
+
+
+msgctxt "Operator"
+msgid "Next Line"
+msgstr "เส้นถัดไป"
+
+
+msgctxt "Operator"
+msgid "Next Word"
+msgstr "คำถัดไป"
+
+
+msgid "New Keyframe Type"
+msgstr "ชนิดคีย์เฟรมใหม่"
+
+
+msgctxt "Operator"
+msgid "Install Application Template..."
+msgstr "ติดตั้งแม่แบบแอปพลิเคชั่น..."
+
+
+msgctxt "Operator"
+msgid "Save Copy..."
+msgstr "บันทึกเป็น..."
+
+
+msgctxt "Operator"
+msgid "Quit"
+msgstr "ออก"
+
+
+msgctxt "Operator"
+msgid "Last Session"
+msgstr "การใช้งานล่าสุด"
+
+
+msgctxt "Operator"
+msgid "Render Animation"
+msgstr "เรนเดอร์อนิเมชัน"
+
+
+msgctxt "Operator"
+msgid "Render Audio..."
+msgstr "เรนเดอร์เสียง..."
+
+
+msgctxt "Operator"
+msgid "View Render"
+msgstr "ดูเรนเดอร์"
+
+
+msgctxt "Operator"
+msgid "View Animation"
+msgstr "ดูอนิเมชัน"
+
+
+msgctxt "Operator"
+msgid "Adjust Last Operation..."
+msgstr "ปรับตัวดำเนินการล่าสุด..."
+
+
+msgctxt "Operator"
+msgid "Repeat History..."
+msgstr "ประวัติการทำซ้ำ..."
+
+
+msgctxt "Operator"
+msgid "Preferences..."
+msgstr "การตั้งค่า..."
+
+
+msgctxt "Operator"
+msgid "Reorder to Front"
+msgstr "เรียงใหม่ไปหน้า"
+
+
+msgctxt "Operator"
+msgid "Reorder to Back"
+msgstr "เรียงใหม่ไปหลัง"
+
+
+msgctxt "Operator"
+msgid "Previous Workspace"
+msgstr "พื้นที่ใช้งานก่อนหน้านี้"
+
+
+msgctxt "Operator"
+msgid "Next Workspace"
+msgstr "พื้นที่ใช้งานถัดไป"
+
+
+msgctxt "Operator"
+msgid "Back to Previous"
+msgstr "กลับไปยังก่อนหน้านี้"
+
+
+msgctxt "Operator"
+msgid "General"
+msgstr "ทั่วไป"
+
+
+msgid "More..."
+msgstr "เพิ่มเติม..."
+
+
+msgctxt "Operator"
+msgid "Alembic (.abc)"
+msgstr "Alembic (.abc)"
+
+
+msgctxt "Operator"
+msgid "Render Image"
+msgstr "เรนเดอร์ภาพ"
+
+
+msgctxt "Operator"
+msgid "Operator Search..."
+msgstr "ค้นหาตัวดำเนินการ..."
+
+
+msgctxt "Operator"
+msgid "Developer Documentation"
+msgstr "เอกสารผู้พัฒนา"
+
+
+msgctxt "Operator"
+msgid "Developer Community"
+msgstr "ชุมชนผู้พัฒนา"
+
+
+msgctxt "Operator"
+msgid "Python API Reference"
+msgstr "อ้างอิง API Python"
+
+
+msgid "Splash Screen"
+msgstr "หน้าเริ่มต้น"
+
+
+msgid "Hinting"
+msgstr "การปรับความคมชัดระหว่างพิกเซลของข้อความ"
+
+
+msgid "New Data"
+msgstr "ข้อมูลใหม่"
+
+
+msgid "View Name"
+msgstr "ชื่อมุมมอง"
+
+
+msgid "Axis X"
+msgstr "แกน X"
+
+
+msgid "B"
+msgstr "B"
+
+
+msgid "Render Output"
+msgstr "ผลลัพธ์การเรนเดอร์"
+
+
+msgid "Player"
+msgstr "ตัวเล่น"
+
+
+msgid "Error (see console)"
+msgstr "ข้อผิดพลาด (ดูที่คอนโซล)"
+
+
+msgid "Missing script files"
+msgstr "ขาดไฟล์สคริปต์"
+
+
+msgctxt "Operator"
+msgid "Toggle Local View"
+msgstr "สลับมุมมองท้องถิ่น"
+
+
+msgctxt "Operator"
+msgid "Active Camera"
+msgstr "กล้องที่กำลังใช้งาน"
+
+
+msgctxt "Operator"
+msgid "Align Active Camera to View"
+msgstr "จัดกล้องที่ใช้งานไปยังมุมมอง"
+
+
+msgctxt "Operator"
+msgid "Align Active Camera to Selected"
+msgstr "จัดกล้องที่ใช้งานไปยังวัตถุที่เลือก"
+
+
+msgctxt "Operator"
+msgid "Clipping Region..."
+msgstr "ขอบเขตการตัด..."
+
+
+msgctxt "Operator"
+msgid "Render Region..."
+msgstr "ขอบเขตที่เรนเดอร์..."
+
+
+msgctxt "Operator"
+msgid "Child"
+msgstr "ลูก"
+
+
+msgctxt "Operator"
+msgid "Extend Parent"
+msgstr "ขยายแม่"
+
+
+msgctxt "Operator"
+msgid "Extend Child"
+msgstr "ขยายลูก"
+
+
+msgctxt "Operator"
+msgid "Select Active Camera"
+msgstr "เลือกกล้องที่กำลังใช้งาน"
+
+
+msgctxt "Operator"
+msgid "Roots"
+msgstr "รากฐาน"
+
+
+msgctxt "Operator"
+msgid "Face Regions"
+msgstr "ขอบเขตแผ่นผิว"
+
+
+msgctxt "Operator"
+msgid "Plane"
+msgstr "ระนาบ"
+
+
+msgctxt "Operator"
+msgid "Cube"
+msgstr "ลูกบาศก์"
+
+
+msgctxt "Operator"
+msgid "UV Sphere"
+msgstr "ทรงกลม UV"
+
+
+msgctxt "Operator"
+msgid "Ico Sphere"
+msgstr "ทรงกลม Ico"
+
+
+msgctxt "Operator"
+msgid "Cylinder"
+msgstr "ทรงกระบอก"
+
+
+msgctxt "Operator"
+msgid "Cone"
+msgstr "ทรงกรวย"
+
+
+msgctxt "Operator"
+msgid "Torus"
+msgstr "ทอรัส"
+
+
+msgctxt "Operator"
+msgid "Grid"
+msgstr "ตาราง"
+
+
+msgctxt "Operator"
+msgid "Path"
+msgstr "เส้นทาง"
+
+
+msgctxt "Operator"
+msgid "Single Bone"
+msgstr "กระดูกเดี่ยว"
+
+
+msgctxt "Operator"
+msgid "Camera"
+msgstr "กล้อง"
+
+
+msgctxt "Operator"
+msgid "Speaker"
+msgstr "ลำโพง"
+
+
+msgctxt "Operator"
+msgid "Bake Action..."
+msgstr "สร้างกระทำ..."
+
+
+msgctxt "Operator"
+msgid "Change Shape"
+msgstr "เปลี่ยนรูปร่าง"
+
+
+msgctxt "Operator"
+msgid "Apply Transformation"
+msgstr "นำการปรับเปลี่ยนไปใช้"
+
+
+msgctxt "Operator"
+msgid "Connect"
+msgstr "เชื่อต่อ"
+
+
+msgctxt "Operator"
+msgid "Origin"
+msgstr "จุดกำเนิด"
+
+
+msgctxt "Operator"
+msgid "Flat"
+msgstr "แบน"
+
+
+msgctxt "Operator"
+msgid "Object"
+msgstr "วัตถุ"
+
+
+msgctxt "Operator"
+msgid "Object & Data"
+msgstr "วัตถุและข้อมูล"
+
+
+msgctxt "Operator"
+msgid "Object & Data & Materials"
+msgstr "วัตถุ ข้อมูลและวัสดุ"
+
+
+msgctxt "Operator"
+msgid "Materials"
+msgstr "วัสดุ"
+
+
+msgctxt "Operator"
+msgid "Clean"
+msgstr "ล้าง"
+
+
+msgctxt "Operator"
+msgid "Fill Mask"
+msgstr "เทหน้ากาก"
+
+
+msgctxt "Operator"
+msgid "Clear Mask"
+msgstr "ล้างหน้ากาก"
+
+
+msgctxt "Operator"
+msgid "Smooth Mask"
+msgstr "ทำให้หน้ากากราบเรียบ"
+
+
+msgctxt "Operator"
+msgid "Grow Mask"
+msgstr "เปล่งแสงหน้ากาก"
+
+
+msgctxt "Operator"
+msgid "Calculate"
+msgstr "คำนวณ"
+
+
+msgctxt "Operator"
+msgid "Weak"
+msgstr "อ่อน"
+
+
+msgctxt "Operator"
+msgid "Medium"
+msgstr "ปานกลาง"
+
+
+msgctxt "Operator"
+msgid "Strong"
+msgstr "แข็งแรง"
+
+
+msgctxt "Operator"
+msgid "Rotate..."
+msgstr "หมุน..."
+
+
+msgctxt "Operator"
+msgid "Bones"
+msgstr "กระดูก"
+
+
+msgid "Origins"
+msgstr "จุดกำเนิด"
+
+
+msgid "Origins (All)"
+msgstr "จุดกำเนิด (ทั้งหมด)"
+
+
+msgctxt "Plural"
+msgid "Sharp"
+msgstr "แหลม"
+
+
+msgctxt "Operator"
+msgid "Armature"
+msgstr "โครงร่าง"
+
+
+msgid "Mirror Vertices"
+msgstr "สะท้อนจุดยอด"
+
+
+msgid "Snap Vertices"
+msgstr "ยึดจุดยอด"
+
+
+msgctxt "Operator"
+msgid "Close"
+msgstr "ปิด"
+
+
+msgctxt "Operator"
+msgid "Delete Vertices"
+msgstr "ลบจุดยอด"
+
+
+msgctxt "Operator"
+msgid "New Face from Edges"
+msgstr "แผ่นผิวใหม่จากขอบ"
+
+
+msgctxt "Operator"
+msgid "Delete Edges"
+msgstr "ลบขอบ"
+
+
+msgctxt "Operator"
+msgid "Bridge Faces"
+msgstr "ต่อแผ่นผิว"
+
+
+msgctxt "Operator"
+msgid "Delete Faces"
+msgstr "ลบแผ่นผิว"
+
+
+msgctxt "Operator"
+msgid "Apply Camera Image"
+msgstr "นำรูปของกล้องไปใช้"
+
+
+msgid "Editing Type"
+msgstr "ชนิดตัวแก้ไข"
+
+
+msgctxt "Operator"
+msgid "Add UVs"
+msgstr "เพิ่ม UV"
+
+
+msgid ", cannot have single-frame paths"
+msgstr ", ไม่สามารถมีเส้นทางเฟรมเดียว"
+
+
+msgid "Saved \"%s\""
+msgstr "บันทึก \"%s\" แล้ว"
+
+
+msgid "Scene Collection"
+msgstr "คอลเลกชันฉาก"
+
+
+msgid "ShapeKey"
+msgstr "เชพคีย์"
+
+
+msgctxt "Brush"
+msgid "Surface"
+msgstr "พื้นผิว"
+
+
+msgid "Key %d"
+msgstr "คีย์ %d"
+
+
+msgctxt "Curve"
+msgid "CurvePath"
+msgstr "เส้นทางโค้ง"
+
+
+msgctxt "Curve"
+msgid "Surface"
+msgstr "พื้นผิว"
+
+
+msgid "%s: %s"
+msgstr "%s: %s"
+
+
+msgid "Esc"
+msgstr "Esc"
+
+
+msgid "Redo"
+msgstr "ทำอีกครั้ง"
+
+
+msgid "OK"
+msgstr "ตกลง"
+
+
+msgid "Movie"
+msgstr "ภาพยนตร์"
+
+
+msgctxt "Operator"
+msgid "Click"
+msgstr "คลิก"
+
+
+msgid "Reset Color Ramp"
+msgstr "ตั้งค่าทางลาดสีใหม่"
+
+
+msgid "Reset View"
+msgstr "ตั้งมุมมองใหม่"
+
+
+msgid "Reset Curve"
+msgstr "ตั้งค่าเส้นโค้งใหม่"
+
+
+msgid "S"
+msgstr "S"
+
+
+msgid "Zoom in"
+msgstr "ซูมเข้า"
+
+
+msgid "Zoom out"
+msgstr "ซูมออก"
+
+
+msgctxt "Action"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Armature"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Brush"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Camera"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Curve"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "FreestyleLineStyle"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "GPencil"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Image"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Lattice"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Light"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "LightProbe"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Material"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Mesh"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Metaball"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "NodeTree"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Object"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "ParticleSettings"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Screen"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Sound"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Speaker"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "Texture"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "WorkSpace"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgctxt "World"
+msgid "New"
+msgstr "ใหม่"
+
+
+msgid "Yesterday"
+msgstr "เมื่อวาน"
+
+
+msgid "Path Mode"
+msgstr "โหมดเส้นทาง"
+
+
+msgid "Rigging"
+msgstr "Rigging"
+
+
+msgctxt "Mesh"
+msgid "Plane"
+msgstr "ระนาบ"
+
+
+msgctxt "Mesh"
+msgid "Cube"
+msgstr "ลูกบาศก์"
+
+
+msgctxt "Mesh"
+msgid "Circle"
+msgstr "วงกลม"
+
+
+msgctxt "Mesh"
+msgid "Cylinder"
+msgstr "ทรงกระบอก"
+
+
+msgctxt "Mesh"
+msgid "Cone"
+msgstr "ทรงกรวย"
+
+
+msgctxt "Mesh"
+msgid "Grid"
+msgstr "ตาราง"
+
+
+msgctxt "Mesh"
+msgid "Suzanne"
+msgstr "ซูซาน"
+
+
+msgctxt "Mesh"
+msgid "Sphere"
+msgstr "ทรงกลม"
+
+
+msgctxt "Mesh"
+msgid "Icosphere"
+msgstr "ทรงกลม Ico"
+
+
+msgid "Vertex select - Shift-Click for multiple modes, Ctrl-Click contracts selection"
+msgstr "เลือกจุดยอด"
+
+
+msgid "Face select - Shift-Click for multiple modes, Ctrl-Click expands selection"
+msgstr "เลือกด้าน"
+
+
+msgid "Paper"
+msgstr "กระดาษ"
+
+
+msgid "Blender Render"
+msgstr "ตัวเรนเดอร์ของ Blender"
+
+
+msgid "%d x %d"
+msgstr "%d x %d"
+
+
+msgid ", %d float channel(s)"
+msgstr ", ช่องทศนิยม %d ช่อง"
+
+
+msgid ", RGBA float"
+msgstr ", RGBA ทศนิยม"
+
+
+msgid ", RGB float"
+msgstr ", RGB ทศนิยม"
+
+
+msgid ", RGBA byte"
+msgstr ", RGBA ไบต์"
+
+
+msgid ", RGB byte"
+msgstr ", RGB ไบต์"
+
+
+msgid ", %.2f fps"
+msgstr ", %.2f เฟรม/วินาที"
+
+
+msgid ", failed to load"
+msgstr ", โหลดล้มเหลว"
+
+
+msgid "File: %s"
+msgstr "ไฟล์: %s"
+
+
+msgid " RGBA float"
+msgstr " ทศนิยม RGBA"
+
+
+msgid " RGB float"
+msgstr " ทศนิยม RGB"
+
+
+msgid " RGBA byte"
+msgstr " ไบต์ RGBA"
+
+
+msgid " RGB byte"
+msgstr " ไบต์ RGB"
+
+
+msgid "(Key) "
+msgstr "(คีย์) "
+
+
+msgid "Verts:%s/%s | Edges:%s/%s | Faces:%s/%s | Tris:%s"
+msgstr "จุดยอด:%s/%s | เส้นขอบ:%s/%s | ด้าน:%s/%s | ส่วนแบ่งสามส่วน:%s"
+
+
+msgid "Verts:%s/%s"
+msgstr "จุดยอด:%s/%s"
+
+
+msgid "(empty)"
+msgstr "(ว่างเปล่า)"
+
+
+msgid "Open Recent"
+msgstr "เปิดล่าสุด"
+
+
+msgid "Vertex:"
+msgstr "จุดยอด:"
+
+
+msgid "Z:"
+msgstr "Z:"
+
+
+msgid "Vertices Data:"
+msgstr "ข้อมูลจุดยอด:"
+
+
+msgid "User Orthographic"
+msgstr "ภาพฉาย"
+
+
+msgid "User Perspective"
+msgstr "ทัศนมิติ"
+
+
+msgid " along Y axis"
+msgstr " ตามแกน Y"
+
+
+msgid " along X axis"
+msgstr " ตามแกน X"
+
+
+msgid " locking %s X axis"
+msgstr " กำลังล็อก %s แกน X"
+
+
+msgid " along %s X axis"
+msgstr " ตาม %s แกน X"
+
+
+msgid " locking %s Y axis"
+msgstr " กำลังล็อก %s แกน Y"
+
+
+msgid " along %s Y axis"
+msgstr " ตาม %s แกน Y"
+
+
+msgid " locking %s Z axis"
+msgstr " กำลังล็อก %s แกน Z"
+
+
+msgid " along %s Z axis"
+msgstr " ตาม %s แกน Z"
+
+
+msgid "(Sharp)"
+msgstr "(แหลม)"
+
+
+msgid "(Smooth)"
+msgstr "(ราบเรียบ)"
+
+
+msgid "(Root)"
+msgstr "(รากฐาน)"
+
+
+msgid "(Linear)"
+msgstr "(เชิงเส้น)"
+
+
+msgid "(Constant)"
+msgstr "(คงที่)"
+
+
+msgid "(Sphere)"
+msgstr "(ทรงกลม)"
+
+
+msgid "(Random)"
+msgstr "(สุ่ม)"
+
+
+msgid " Proportional size: %.2f"
+msgstr " ขนาดสัดส่วน: %.2f"
+
+
+msgid "Roll: %s"
+msgstr "หมุน: %s"
+
+
+msgid "Roll: %.2f"
+msgstr "หมุน: %.2f"
+
+
+msgid "right"
+msgstr "ขวา"
+
+
+msgid "view"
+msgstr "มุมมอง"
+
+
+msgid "custom"
+msgstr "กำหนดเอง"
+
+
+msgctxt "Scene"
+msgid "Space"
+msgstr "ว่าง"
+
+
+msgid "Create %s"
+msgstr "สร้าง %s"
+
+
+msgid "Overwrite %s"
+msgstr "เขียนทับ %s"
+
+
+msgid "%s '%s'"
+msgstr "%s '%s'"
+
+
+msgid "Replace Original"
+msgstr "แทนที่อันดั้งเดิม"
+
+
+msgid "Val"
+msgstr "Val"
+
+
+msgid "Old"
+msgstr "เก่า"
+
+
+msgid "Ray Length"
+msgstr "ความยาวรังสี"
+
+
+msgid "View Distance"
+msgstr "ระยะมุมมอง"
+
+
+msgid "%s: incorrect dimensions for partial copy '%s'"
+msgstr "%s: มิติที่ไม่ถูกต้องสำหรับสำเนาบางส่วน '%s'"
+
+
+msgid "%s: failed to load '%s'"
+msgstr "%s: ไม่สามารถโหลด '%s'"
+
+
+msgid "Don't Save"
+msgstr "ไม่ได้บันทึก"
+
+
+msgid "Win"
+msgstr "Win"
+
+
+msgid "Bksp"
+msgstr "ปุ่มย้อนถอยหลัง"
+
+
+msgid "ON"
+msgstr "เปิด"
+
+
+msgid "OFF"
+msgstr "ปิด"
+
+
+msgid "%s '%s' not found"
+msgstr "ไม่พบ %s '%s'"
+
+
+msgid "Import-Export"
+msgstr "นำเข้า-ส่งออก"
+
