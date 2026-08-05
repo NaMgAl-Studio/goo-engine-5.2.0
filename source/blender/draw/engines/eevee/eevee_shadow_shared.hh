@@ -153,6 +153,18 @@ struct [[host_shared]] ShadowPagesInfoData {
   int _pad2;
 };
 
+/** Validation-only counters for the full 32-bit shadow caster-ID sidecar. */
+struct [[host_shared]] ShadowIdDiagnosticData {
+  uint first_caster_id;
+  uint first_receiver_id;
+  uint valid_id_reads;
+  uint sentinel_reads;
+  uint ignore_self_hits;
+  uint only_self_hits;
+  uint _pad0;
+  uint _pad1;
+};
+
 struct [[host_shared]] ShadowStatistics {
   /** Statistics that are read back to CPU after a few frame (to avoid stall). */
   /**

@@ -282,10 +282,12 @@ struct GooShaderInfoData {
   int light_count;
   int4 light_group_bits[GOO_MAX_LIGHTS];
   packed_float3 light_unshadowed[GOO_MAX_LIGHTS];
-  float light_shadow[GOO_MAX_LIGHTS];
+  float light_cast_shadow[GOO_MAX_LIGHTS];
+  float light_self_shadow[GOO_MAX_LIGHTS];
   float light_hl[GOO_MAX_LIGHTS];
   packed_float3 overflow_unshadowed;
-  float overflow_reached_lum;
+  float overflow_cast_reached_lum;
+  float overflow_self_reached_lum;
   float overflow_unshadowed_lum;
   float overflow_hl;
   bool valid;

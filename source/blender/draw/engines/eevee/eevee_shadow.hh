@@ -45,6 +45,7 @@ constexpr static const float shadow_clipmap_scale_mat[4][4] = {{SHADOW_TILEMAP_R
                                                                {0, 0, 0.5, 1}};
 
 using ShadowStatisticsBuf = draw::StorageBuffer<ShadowStatistics>;
+using ShadowIdDiagnosticBuf = draw::StorageBuffer<ShadowIdDiagnosticData>;
 using ShadowPagesInfoDataBuf = draw::StorageBuffer<ShadowPagesInfoData>;
 using ShadowPageHeapBuf = draw::StorageVectorBuffer<uint, SHADOW_MAX_PAGE>;
 using ShadowPageCacheBuf = draw::StorageArrayBuffer<uint2, SHADOW_MAX_PAGE, true>;
@@ -259,8 +260,16 @@ class ShadowModule {
    * \{ */
 
   static constexpr gpu::TextureFormat atlas_type = gpu::TextureFormat::UINT_32;
-  /** Atlas containing all physical pages. */
+  /** Atlas containing all physical depth pages. */
   Texture atlas_tx_ = {"shadow_atlas_tx_"};
+  /** Full 32-bit caster resource IDs with the exact same physical page layout as atlas_tx_.
+   * When disabled this is a legal 1x1 UINT_MAX dummy, keeping resource bindings valid. */
+  Texture atlas_id_tx_ = {"shadow_atlas_id_tx_"};
+  bool shadow_id_requested_ = false;
+  bool shadow_id_enabled_ = false;
+  bool shadow_id_diagnostics_enabled_ = false;
+  uint shadow_id_resolve_submits_ = 0;
+  ShadowIdDiagnosticBuf shadow_id_diagnostic_buf_ = {"ShadowIdDiagnosticBuf"};
 
   /** Pool of unallocated pages waiting to be assigned to specific tiles in the tile-map atlas. */
   ShadowPageHeapBuf pages_free_data_ = {"PagesFreeBuf"};
@@ -340,6 +349,18 @@ class ShadowModule {
   void init();
 
   void begin_sync();
+
+  /** Request the full-ID sidecar for this sync because a valid surface receiver uses it. */
+  void request_shadow_id()
+  {
+    shadow_id_requested_ = true;
+  }
+
+  bool shadow_id_enabled() const
+  {
+    return shadow_id_enabled_;
+  }
+
   /** Register a shadow caster or receiver. */
   void sync_object(const ObjectHandle &ob_handle,
                    bool is_alpha_blend,
@@ -357,13 +378,19 @@ class ShadowModule {
    * Needs to be called after `LightModule::set_view();` and after `ShadowModule::set_view();`. */
   void render(View &view, int2 extent);
 
+  /** Validation-only counters must span shadow generation and the later receiver light passes. */
+  void shadow_id_diagnostics_begin();
+  void shadow_id_diagnostics_end();
+
   void debug_end_sync();
   void debug_draw(View &view, gpu::FrameBuffer *view_fb);
 
   template<typename PassType> void bind_resources(PassType &pass)
   {
     pass.bind_texture(SHADOW_ATLAS_TEX_SLOT, &atlas_tx_);
+    pass.bind_texture(SHADOW_ATLAS_ID_TEX_SLOT, &atlas_id_tx_);
     pass.bind_texture(SHADOW_TILEMAPS_TEX_SLOT, &tilemap_pool.tilemap_tx);
+    pass.bind_ssbo(SHADOW_ID_DIAGNOSTIC_BUF_SLOT, &shadow_id_diagnostic_buf_);
   }
 
   const ShadowSceneData &get_data()
@@ -390,6 +417,13 @@ class ShadowModule {
  private:
   void remove_unused();
   bool shadow_update_finished(int loop_count);
+  void shadow_id_resources_sync();
+  void shadow_id_resolve_submit_record()
+  {
+    if (shadow_id_diagnostics_enabled_) {
+      shadow_id_resolve_submits_++;
+    }
+  }
 
   /** Compute approximate punctual shadow pixel world space radius, 1 unit away of the light. */
   float tilemap_pixel_radius();

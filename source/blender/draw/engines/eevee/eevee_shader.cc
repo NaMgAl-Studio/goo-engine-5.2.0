@@ -959,12 +959,14 @@ void ShaderModule::material_create_info_amend(GPUMaterial *gpumat, GPUCodegenOut
   eMaterialDisplacement displacement_type;
   eMaterialThickness thickness_type;
   bool transparent_shadows;
+  bool use_shadow_id;
   material_type_from_shader_uuid(shader_uuid,
                                  pipeline_type,
                                  geometry_type,
                                  displacement_type,
                                  thickness_type,
-                                 transparent_shadows);
+                                 transparent_shadows,
+                                 use_shadow_id);
 
   GPUCodegenOutput &codegen = *codegen_;
   ShaderCreateInfo &info = *reinterpret_cast<ShaderCreateInfo *>(codegen.create_info);
@@ -1009,11 +1011,21 @@ void ShaderModule::material_create_info_amend(GPUMaterial *gpumat, GPUCodegenOut
   }
   info.compilation_constant(gpu::shader::Type::bool_t, "use_transparency", use_transparency);
 
-  /* Legacy OPAQUE materials (MA_LEGACY_OPAQUE) that still carry a Transparent BSDF must render fully
-   * opaque. Force closure_eval() to drop g_transmittance for them (matches legacy/Goo OPAQUE). */
-  if (GPU_material_flag_get(gpumat, GPU_MATFLAG_TRANSPARENT) && !gpu_material_is_transparent(gpumat))
+  /* Legacy OPAQUE materials (MA_LEGACY_OPAQUE) that still carry a Transparent BSDF must render
+   * fully opaque. Force closure_eval() to drop g_transmittance for them (matches legacy/Goo
+   * OPAQUE). */
+  if (GPU_material_flag_get(gpumat, GPU_MATFLAG_TRANSPARENT) &&
+      !gpu_material_is_transparent(gpumat))
   {
     info.define("MAT_FORCE_OPAQUE");
+  }
+
+  /* Shadow-ID is a material variant: runtime toggles must not reuse a GPUMaterial compiled for
+   * the opposite behavior. Probe/capture and non-surface pipelines intentionally stay disabled. */
+  if (use_shadow_id && geometry_type_has_surface(geometry_type) &&
+      ELEM(pipeline_type, MAT_PIPE_FORWARD, MAT_PIPE_DEFERRED))
+  {
+    info.define("MAT_SHADOW_ID");
   }
 
   /* Goo Shader Info: only materials using the node run the per-fragment light-record bridge. */
@@ -1059,8 +1071,8 @@ void ShaderModule::material_create_info_amend(GPUMaterial *gpumat, GPUCodegenOut
     info.define("MAT_SHADER_TO_RGBA");
   }
   /* Goo Set Depth: early_fragment_test is no longer a shader attribute on surf_deferred; it is set
-   * here so a Set Depth material can disable it (to write gl_FragDepth) while normal materials keep
-   * it. */
+   * here so a Set Depth material can disable it (to write gl_FragDepth) while normal materials
+   * keep it. */
   if (pipeline_type == MAT_PIPE_DEFERRED) {
     info.early_fragment_test(!use_set_depth);
   }
@@ -1524,12 +1536,14 @@ static GPUPass *pass_replacement_cb(void *void_thunk, GPUMaterial *mat)
   eMaterialDisplacement displacement_type;
   eMaterialThickness thickness_type;
   bool transparent_shadows;
+  bool use_shadow_id;
   material_type_from_shader_uuid(shader_uuid,
                                  pipeline_type,
                                  geometry_type,
                                  displacement_type,
                                  thickness_type,
-                                 transparent_shadows);
+                                 transparent_shadows,
+                                 use_shadow_id);
 
   bool is_shadow_pass = pipeline_type == eMaterialPipeline::MAT_PIPE_SHADOW;
   bool is_prepass = ELEM(pipeline_type,
@@ -1552,9 +1566,9 @@ static GPUPass *pass_replacement_cb(void *void_thunk, GPUMaterial *mat)
 
   bool can_use_default = (is_shadow_pass &&
                           (!has_vertex_displacement && !has_shadow_transparency)) ||
-                         (is_prepass && (!has_vertex_displacement && !has_transparency &&
-                                         !has_raytraced_transmission && !has_raycast &&
-                                         !has_set_depth));
+                         (is_prepass &&
+                          (!has_vertex_displacement && !has_transparency &&
+                           !has_raytraced_transmission && !has_raycast && !has_set_depth));
   if (can_use_default) {
     GPUMaterial *mat = thunk->shader_module->material_shader_get(thunk->default_mat,
                                                                  thunk->default_mat->nodetree,
@@ -1597,8 +1611,12 @@ GPUMaterial *ShaderModule::material_shader_get(blender::Material *blender_mat,
   eMaterialDisplacement displacement_type = to_displacement_type(blender_mat->displacement_method);
   eMaterialThickness thickness_type = to_thickness_type(blender_mat->thickness_mode);
 
-  uint64_t shader_uuid = shader_uuid_from_material_type(
-      pipeline_type, geometry_type, displacement_type, thickness_type, blender_mat->blend_flag);
+  uint64_t shader_uuid = shader_uuid_from_material_type(pipeline_type,
+                                                        geometry_type,
+                                                        displacement_type,
+                                                        thickness_type,
+                                                        blender_mat->blend_flag,
+                                                        blender_mat->check_shadow_id != 0);
 
   bool is_default_material = default_mat == nullptr;
   BLI_assert(blender_mat != default_mat);

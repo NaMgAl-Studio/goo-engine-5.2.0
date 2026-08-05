@@ -103,12 +103,14 @@ Known Boundaries and Their Handling
 - **BSL limitation**: conditional attributes/parameters (`#if`) are not supported inside
   fragment signatures by the shader tooling; code is organized around unconditional
   signatures.
-- **"Check Self Shadowing" (`check_shadow_id`) not implemented yet**: the flag is stored
-  and round-trips, but EEVEE-Next does not consume it. Self-shadow suppression relies on
-  the legacy 5cm shadow bias approximation in the Shader Info bridge, which covers most
-  stylized self-shadow cases. An identity-based filter (shadow-ID side-channel in the
-  shadow atlas) was prototyped but did not reach the runtime material shaders as
-  expected and was reverted; it remains under investigation.
+- **"Check Self Shadowing" (`check_shadow_id`)** is implemented for reflected EEVEE
+  surface lighting with full 32-bit Draw Manager resource IDs. A lazily allocated R32UI
+  sidecar mirrors the virtual-shadow-map atlas pages; a depth pass followed by an ID
+  resolve pass records the nearest caster without changing the depth atlas. Filtering is
+  applied to every soft-shadow tracing sample: ordinary surface lighting and Shader Info
+  **Cast Shadows** ignore same-object casters, while Shader Info **Self Shadows** keeps
+  only same-object casters. Transmission, translucent-thickness lighting, volumes,
+  surfels, probes and baking deliberately keep the unfiltered EEVEE behavior.
 - **`blend_shadow` zero-value ambiguity (residual)**: a full fix via a dedicated
   `MA_LEGACY_NO_SHADOW` flag (file-level Goo fingerprint at load, flag read at render)
   has been designed but not implemented. Known corner case: appending a shadow-None

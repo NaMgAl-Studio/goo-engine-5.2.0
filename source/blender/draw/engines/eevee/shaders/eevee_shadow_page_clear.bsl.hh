@@ -14,6 +14,9 @@ struct PageClear {
   [[storage(2, read)]] const ShadowPagesInfoData &pages_infos_buf;
   [[storage(6, read)]] const uint (&dst_coord_buf)[SHADOW_RENDER_MAP_SIZE];
   [[image(SHADOW_ATLAS_IMG_SLOT, read_write, UINT_32)]] uimage2DArrayAtomic shadow_atlas_img;
+  [[image(SHADOW_ATLAS_ID_IMG_SLOT, read_write, UINT_32)]]
+  uimage2DArrayAtomic shadow_atlas_id_img;
+  [[push_constant]] bool clear_shadow_id;
 };
 
 /**
@@ -31,6 +34,9 @@ void page_clear_comp([[resource_table]] PageClear &srt,
   page_co.xy = page_co.xy * SHADOW_PAGE_RES + global_id.xy;
 
   imageStoreFast(srt.shadow_atlas_img, int3(page_co), uint4(floatBitsToUint(FLT_MAX)));
+  if (srt.clear_shadow_id) {
+    imageStoreFast(srt.shadow_atlas_id_img, int3(page_co), uint4(0xFFFFFFFFu));
+  }
 }
 
 PipelineCompute page_clear(page_clear_comp);

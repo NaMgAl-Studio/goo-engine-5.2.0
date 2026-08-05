@@ -153,6 +153,7 @@ void SyncModule::sync_common(const ObjectHandle &ob_handle,
   bool is_alpha_blend = false;
   bool has_transparent_shadows = false;
   bool has_time_dependent_shadows = false;
+  bool has_shadow_id_receiver = false;
   float inflate_bounds = 0.0f;
 
   for (const Material *material : materials) {
@@ -170,6 +171,7 @@ void SyncModule::sync_common(const ObjectHandle &ob_handle,
 
     is_alpha_blend |= material->is_alpha_blend_transparent;
     has_transparent_shadows |= material->has_transparent_shadows;
+    has_shadow_id_receiver |= material->use_shadow_id;
     has_time_dependent_shadows |= has_time_node &&
                                   (material->has_transparent_shadows || has_displacement);
 
@@ -181,6 +183,14 @@ void SyncModule::sync_common(const ObjectHandle &ob_handle,
   }
 
   inst_.cryptomatte.sync_object(ob_handle);
+
+  /* Only geometry that reached sync can request the sidecar. Hidden-camera and baking/probe-only
+   * objects are not surface receivers and must not pay for the second caster raster. */
+  if (has_shadow_id_receiver && !inst_.is_baking() &&
+      !(ob_handle.object->visibility_flag & OB_HIDE_CAMERA))
+  {
+    inst_.shadows.request_shadow_id();
+  }
 
   inst_.shadows.sync_object(
       ob_handle, is_alpha_blend, has_transparent_shadows, has_time_dependent_shadows);

@@ -8,6 +8,8 @@
  * The shadow module manages shadow update tagging & shadow rendering.
  */
 
+#include <cstdio>
+
 #include "BLI_math_matrix.hh"
 #include "GPU_batch_utils.hh"
 #include "GPU_compute.hh"
@@ -617,6 +619,13 @@ void ShadowModule::init()
     do_full_update_ = true;
   }
 
+  /* Keep a valid binding before material sync decides whether the full sidecar is needed. */
+  if (!atlas_id_tx_.is_valid()) {
+    if (atlas_id_tx_.ensure_2d_array(atlas_type, int2(1), 1, tex_usage)) {
+      atlas_id_tx_.clear(uint4(0xFFFFFFFFu));
+    }
+  }
+
   /* Make allocation safe. Avoids crash later on. */
   if (!atlas_tx_.is_valid()) {
     atlas_tx_.ensure_2d_array(ShadowModule::atlas_type, int2(1), 1);
@@ -651,6 +660,7 @@ void ShadowModule::init()
   }
 
   atlas_tx_.filter_mode(false);
+  atlas_id_tx_.filter_mode(false);
 
   /* Create different viewport to support different update region size. The most fitting viewport
    * is then selected during the tilemap finalize stage in `viewport_select`. */
@@ -665,8 +675,87 @@ void ShadowModule::init()
   }
 }
 
+void ShadowModule::shadow_id_resources_sync()
+{
+  const bool diagnostics = int(inst_.debug_mode) == 733;
+  bool enable = shadow_id_requested_ && enabled_ && !data_.use_debug_cost;
+
+  const int2 atlas_extent = shadow_page_size_ * int2(SHADOW_PAGE_PER_ROW, SHADOW_PAGE_PER_COL);
+  const int atlas_layers = divide_ceil_u(shadow_page_len_, SHADOW_PAGE_PER_LAYER);
+  const eGPUTextureUsage usage = GPU_TEXTURE_USAGE_SHADER_READ | GPU_TEXTURE_USAGE_SHADER_WRITE |
+                                 GPU_TEXTURE_USAGE_ATOMIC;
+
+  if (enable) {
+    const bool allocation_changed = atlas_id_tx_.ensure_2d_array(
+        atlas_type, atlas_extent, atlas_layers, usage);
+    if (!atlas_id_tx_.is_valid()) {
+      enable = false;
+      atlas_id_tx_.ensure_2d_array(atlas_type, int2(1), 1, usage);
+      if (atlas_id_tx_.is_valid()) {
+        atlas_id_tx_.clear(uint4(0xFFFFFFFFu));
+      }
+      inst_.info_append_i18n(
+          "Error: Could not allocate shadow-ID atlas. Self-shadow filtering is disabled.");
+    }
+    else if (allocation_changed || !shadow_id_enabled_) {
+      /* Every used physical page will be cleared by RenderClear before the two raster stages. */
+      do_full_update_ = true;
+    }
+  }
+  else {
+    /* Release the full sidecar while retaining a legal UINT_MAX dummy binding. */
+    if (atlas_id_tx_.ensure_2d_array(atlas_type, int2(1), 1, usage)) {
+      atlas_id_tx_.clear(uint4(0xFFFFFFFFu));
+    }
+  }
+
+  shadow_id_enabled_ = enable;
+  shadow_id_diagnostics_enabled_ = diagnostics;
+  data_.use_shadow_id = bool32_t(enable);
+  data_.use_shadow_id_diagnostics = bool32_t(diagnostics);
+  atlas_id_tx_.filter_mode(false);
+}
+
+void ShadowModule::shadow_id_diagnostics_begin()
+{
+  if (!shadow_id_diagnostics_enabled_) {
+    return;
+  }
+  shadow_id_diagnostic_buf_.first_caster_id = 0xFFFFFFFFu;
+  shadow_id_diagnostic_buf_.first_receiver_id = 0xFFFFFFFFu;
+  shadow_id_diagnostic_buf_.valid_id_reads = 0u;
+  shadow_id_diagnostic_buf_.sentinel_reads = 0u;
+  shadow_id_diagnostic_buf_.ignore_self_hits = 0u;
+  shadow_id_diagnostic_buf_.only_self_hits = 0u;
+  shadow_id_diagnostic_buf_._pad0 = 0u;
+  shadow_id_diagnostic_buf_._pad1 = 0u;
+  shadow_id_diagnostic_buf_.push_update();
+  shadow_id_resolve_submits_ = 0u;
+}
+
+void ShadowModule::shadow_id_diagnostics_end()
+{
+  if (!shadow_id_diagnostics_enabled_) {
+    return;
+  }
+  GPU_memory_barrier(GPU_BARRIER_SHADER_STORAGE | GPU_BARRIER_BUFFER_UPDATE);
+  shadow_id_diagnostic_buf_.read();
+  printf(
+      "SHADOW_ID_DIAG caster_id=%u receiver_id=%u id_resolve_submits=%u "
+      "valid_reads=%u sentinel_reads=%u ignore_self_hits=%u only_self_hits=%u\n",
+      shadow_id_diagnostic_buf_.first_caster_id,
+      shadow_id_diagnostic_buf_.first_receiver_id,
+      shadow_id_resolve_submits_,
+      shadow_id_diagnostic_buf_.valid_id_reads,
+      shadow_id_diagnostic_buf_.sentinel_reads,
+      shadow_id_diagnostic_buf_.ignore_self_hits,
+      shadow_id_diagnostic_buf_.only_self_hits);
+  fflush(stdout);
+}
+
 void ShadowModule::begin_sync()
 {
+  shadow_id_requested_ = false;
   past_casters_updated_.clear();
   curr_casters_updated_.clear();
   curr_casters_.clear();
@@ -765,10 +854,13 @@ void ShadowModule::sync_object(const ObjectHandle &ob_handle,
     const bool is_initialized = shadow_ob.resource_handle.is_valid();
     const bool has_jittered_transparency = has_transparent_shadows && data_.use_jitter;
     ResourceHandle instance_handle = ob_handle.res_handle.sub_handle(i);
-    if (is_shadow_caster &&
-        (ob_handle.recalc || !is_initialized || has_jittered_transparency || shape_changed))
+    const bool resource_id_changed = is_initialized &&
+                                     (shadow_ob.resource_handle.raw() != instance_handle.raw());
+    const bool id_cache_changed = shadow_id_enabled_ && resource_id_changed;
+    if (is_shadow_caster && (ob_handle.recalc || !is_initialized || has_jittered_transparency ||
+                             shape_changed || id_cache_changed))
     {
-      if (ob_handle.recalc && is_initialized) {
+      if ((ob_handle.recalc || id_cache_changed) && is_initialized) {
         past_casters_updated_.append(shadow_ob.resource_handle.raw());
       }
 
@@ -789,6 +881,9 @@ void ShadowModule::sync_object(const ObjectHandle &ob_handle,
 
 void ShadowModule::end_sync()
 {
+  /* Material/object sync has now identified whether any valid surface receiver needs IDs. */
+  shadow_id_resources_sync();
+
   /* Delete unused shadows first to release tile-maps that could be reused for new lights. */
   for (Light &light : inst_.lights.light_map_.values()) {
     /* Do not discard lights in baking mode. See WORKAROUND in `surfels_create`. */
@@ -1112,6 +1207,8 @@ void ShadowModule::end_sync()
         sub.bind_ssbo("pages_infos_buf", pages_infos_data_);
         sub.bind_ssbo("dst_coord_buf", dst_coord_buf_);
         sub.bind_image("shadow_atlas_img", atlas_tx_);
+        sub.bind_image("shadow_atlas_id_img", atlas_id_tx_);
+        sub.push_constant("clear_shadow_id", shadow_id_enabled_);
         sub.dispatch(clear_dispatch_buf_);
         sub.barrier(GPU_BARRIER_SHADER_IMAGE_ACCESS);
       }

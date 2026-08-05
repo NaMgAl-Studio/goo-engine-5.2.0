@@ -7,8 +7,8 @@
  * \ingroup shdnodes
  *
  * Shader Info node (ported from Goo Engine, SH_NODE_SHADER_INFO). Interface and
- * light-group storage are preserved so Goo files load. Lighting outputs are
- * currently neutral (see the node GLSL for the architectural rationale).
+ * light-group storage are preserved so Goo files load. EEVEE's forward bridge computes
+ * independent Cast and Self shadow visibility when material shadow-ID filtering is enabled.
  */
 
 #include "DNA_node_types.h"
@@ -16,8 +16,8 @@
 #include "UI_interface_layout.hh"
 #include "UI_resources.hh"
 
-#include "node_util.hh"
 #include "node_shader_util.hh"
+#include "node_util.hh"
 
 namespace blender {
 
@@ -98,7 +98,8 @@ void register_node_type_sh_shader_info()
 
   common_node_type_base(&ntype, "ShaderNodeShaderInfo"_ustr, SH_NODE_SHADER_INFO);
   ntype.ui_name = "Shader Info";
-  ntype.ui_description = "Separate internal lighting into multiple outputs (per-node light groups)";
+  ntype.ui_description =
+      "Separate internal lighting into multiple outputs (per-node light groups)";
   ntype.enum_name_legacy = "SHADERINFO";
   ntype.nclass = NODE_CLASS_INPUT;
   ntype.declare = file_ns::node_declare;

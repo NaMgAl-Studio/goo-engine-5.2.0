@@ -161,9 +161,9 @@ void surf_hybrid([[resource_table]] PipelineConstants &pipe,
 
   fragment_displacement();
 
-  /* Goo Shader Info: compute the separable lighting components (bound light resources are available
-   * here, and the deferred/hybrid path receives cast shadows) before the node tree reads them.
-   * Compiled only for materials that actually contain the node (MAT_GOO_SHADER_INFO). */
+  /* Goo Shader Info: compute the separable lighting components (bound light resources are
+   * available here, and the deferred/hybrid path receives cast shadows) before the node tree reads
+   * them. Compiled only for materials that actually contain the node (MAT_GOO_SHADER_INFO). */
 #ifdef MAT_GOO_SHADER_INFO
   eevee::goo_shader_info_compute(view, resource_id, frag_co.xy);
 #endif
@@ -173,7 +173,8 @@ void surf_hybrid([[resource_table]] PipelineConstants &pipe,
 #if defined(MAT_SET_DEPTH)
   /* Goo Set Depth: write the node-provided view-space depth as a screen depth. Requires the
    * create-info to disable early_fragment_test and enable depth_write for this material. */
-  gl_FragDepth = g_set_depth_written ? (1.0f - view.depth_view_to_screen(-g_set_depth)) : frag_co.z;
+  gl_FragDepth = g_set_depth_written ? (1.0f - view.depth_view_to_screen(-g_set_depth)) :
+                                       frag_co.z;
 #endif
 
   g_holdout = saturate(g_holdout);
@@ -222,11 +223,17 @@ void surf_hybrid([[resource_table]] PipelineConstants &pipe,
       gbuf_data.closure[i] = g_closure_get_resolved(i, alpha_rcp);
     }
   }
-  const bool use_object_id = pipe.use_sss || use_light_linking || use_terminator_offset;
+#ifdef MAT_SHADOW_ID
+  const bool use_shadow_id = true;
+#else
+  const bool use_shadow_id = false;
+#endif
+  const bool use_object_id = pipe.use_sss || use_light_linking || use_terminator_offset ||
+                             use_shadow_id;
 
   float3 gbuffer_dither = sampling.rng_3D_get(SAMPLING_GBUFFER_U);
   gbuffer::Packed gbuf = gbuffer::pack(
-      gbuf_params, gbuf_data, g_data.Ng, g_data.N, g_thickness, use_object_id);
+      gbuf_params, gbuf_data, g_data.Ng, g_data.N, g_thickness, use_object_id, use_shadow_id);
 
   /* Output header and first closure using frame-buffer attachment. */
   frag_out.gbuf_header = gbuf.header;

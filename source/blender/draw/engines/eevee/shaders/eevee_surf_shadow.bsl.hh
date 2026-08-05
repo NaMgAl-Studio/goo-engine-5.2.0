@@ -34,6 +34,11 @@ float4 closure_to_rgba_shadow(Closure /*cl*/)
 
 namespace eevee {
 
+enum class ShadowPassMode : uint {
+  Depth = 0u,
+  IdResolve = 1u,
+};
+
 struct SurfShadow {
   [[legacy_info]] ShaderCreateInfo eevee_geom_iface_info;
 
@@ -41,6 +46,10 @@ struct SurfShadow {
             read)]] const uint (&render_map_buf)[SHADOW_RENDER_MAP_SIZE];
 
   [[image(SHADOW_ATLAS_IMG_SLOT, read_write, UINT_32)]] uimage2DArrayAtomic shadow_atlas_img;
+  [[image(SHADOW_ATLAS_ID_IMG_SLOT, read_write, UINT_32)]]
+  uimage2DArrayAtomic shadow_atlas_id_img;
+  [[storage(SHADOW_ID_DIAGNOSTIC_BUF_SLOT, read_write)]]
+  ShadowIdDiagnosticData &shadow_id_diagnostic;
 };
 
 [[fragment]] [[texture_atomic]]
@@ -55,6 +64,7 @@ void surf_shadow([[resource_table]] PipelineConstants &pipe,
 {
   auto &shadow_iface = interface_get(eevee_shadow_iface_info, shadow_iface);
   auto &shadow_clip = interface_get(eevee_shadow_iface_info, shadow_clip);
+  auto &interp_flat = interface_get(eevee_geom_iface_info, interp_flat);
 
   float linear_depth = length(shadow_clip.position);
 
@@ -113,11 +123,33 @@ void surf_shadow([[resource_table]] PipelineConstants &pipe,
    * This is equivalent of calling `next_after`, but without the safety. */
   u_depth += 2;
 
-  if (uni.uniform_buf.shadow.use_debug_cost) {
-    imageAtomicAdd(srt.shadow_atlas_img, out_texel, 1u);
+  ShadowPassMode pass_mode = ShadowPassMode(uni.uniform_buf.shadow.shadow_pass_mode);
+  if (pass_mode == ShadowPassMode::Depth) {
+    if (uni.uniform_buf.shadow.use_debug_cost) {
+      imageAtomicAdd(srt.shadow_atlas_img, out_texel, 1u);
+    }
+    else {
+      imageAtomicMin(srt.shadow_atlas_img, out_texel, u_depth);
+    }
   }
   else {
-    imageAtomicMin(srt.shadow_atlas_img, out_texel, u_depth);
+    /* Invalid virtual pages deliberately map to layer -1 in the depth pass. Avoid loading the
+     * out-of-range image in the resolve pass. */
+    if (page_packed >= SHADOW_MAX_PAGE) {
+      return;
+    }
+    uint final_depth = imageLoad(srt.shadow_atlas_img, out_texel).r;
+    if (u_depth == final_depth) {
+      /* Shadow draw IDs contain six multiview bits. Strip exactly those bits and keep the full
+       * resource ID, including the valid value zero. Equal-depth ties resolve deterministically
+       * to the smallest full ID. */
+      draw::ID caster_draw_id{interp_flat.resource_id_raw};
+      uint caster_id = caster_draw_id.resource_id<64>();
+      imageAtomicMin(srt.shadow_atlas_id_img, out_texel, caster_id);
+      if (uni.uniform_buf.shadow.use_shadow_id_diagnostics) {
+        atomicCompSwap(srt.shadow_id_diagnostic.first_caster_id, 0xFFFFFFFFu, caster_id);
+      }
+    }
   }
 }
 

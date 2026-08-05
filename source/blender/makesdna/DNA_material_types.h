@@ -450,9 +450,9 @@ struct Material {
   /* Displacement. */
   float inflate_bounds = 0;
 
-  /* Goo Engine: "Check Self Shadowing" - filter shadows cast by this object's own geometry
-   * (legacy shadow-ID separation). Preserved from Goo files; not yet consumed by EEVEE-Next
-   * (kept so the author's intent round-trips and a future implementation can use it). */
+  /* Goo Engine: "Check Self Shadowing" - use shadow-ID filtering so reflected EEVEE surface
+   * lighting ignores shadow-map winners from this object's own geometry while retaining other
+   * objects' shadows. */
   char check_shadow_id = 0;
   char _pad3[3] = {};
 

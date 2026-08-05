@@ -88,7 +88,8 @@ static inline void material_type_from_shader_uuid(uint64_t shader_uuid,
                                                   eMaterialGeometry &geometry_type,
                                                   eMaterialDisplacement &displacement_type,
                                                   eMaterialThickness &thickness_type,
-                                                  bool &transparent_shadows)
+                                                  bool &transparent_shadows,
+                                                  bool &use_shadow_id)
 {
   const uint64_t geometry_mask = ((1u << 4u) - 1u);
   const uint64_t pipeline_mask = ((1u << 4u) - 1u);
@@ -99,6 +100,7 @@ static inline void material_type_from_shader_uuid(uint64_t shader_uuid,
   displacement_type = static_cast<eMaterialDisplacement>((shader_uuid >> 8u) & displacement_mask);
   thickness_type = static_cast<eMaterialThickness>((shader_uuid >> 9u) & thickness_mask);
   transparent_shadows = (shader_uuid >> 10u) & 1u;
+  use_shadow_id = (shader_uuid >> 11u) & 1u;
 }
 
 static inline uint64_t shader_uuid_from_material_type(
@@ -106,7 +108,8 @@ static inline uint64_t shader_uuid_from_material_type(
     eMaterialGeometry geometry_type,
     eMaterialDisplacement displacement_type = MAT_DISPLACEMENT_BUMP,
     eMaterialThickness thickness_type = MAT_THICKNESS_SPHERE,
-    char blend_flags = 0)
+    char blend_flags = 0,
+    bool use_shadow_id = false)
 {
   BLI_assert(int64_t(displacement_type) < (1 << 1));
   BLI_assert(int64_t(thickness_type) < (1 << 1));
@@ -120,6 +123,7 @@ static inline uint64_t shader_uuid_from_material_type(
   uuid |= displacement_type << 8;
   uuid |= thickness_type << 9;
   uuid |= transparent_shadows << 10;
+  uuid |= uint64_t(use_shadow_id) << 11;
   return uuid;
 }
 
@@ -257,7 +261,8 @@ struct MaterialKey {
                                              geometry,
                                              to_displacement_type(mat_->displacement_method),
                                              to_thickness_type(mat_->thickness_mode),
-                                             mat_->blend_flag);
+                                             mat_->blend_flag,
+                                             mat_->check_shadow_id != 0);
     options = (options << 1) | (visibility_flags & OB_HIDE_CAMERA ? 0 : 1);
     options = (options << 1) | (visibility_flags & OB_HIDE_SHADOW ? 0 : 1);
     options = (options << 1) | (visibility_flags & OB_HIDE_PROBE_CUBEMAP ? 0 : 1);
@@ -333,6 +338,8 @@ struct Material {
   bool has_transparent_shadows;
   bool has_surface;
   bool has_volume;
+  /** Surface reflections ignore shadow-map winners from the same full resource ID. */
+  bool use_shadow_id = false;
   MaterialPass shadow;
   MaterialPass shading;
   MaterialPass prepass;

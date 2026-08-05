@@ -65,6 +65,14 @@ endif()
 set(INC_SYS
 )
 
+# These translation units include Draw's generated shader metadata/create-info lists. Make their
+# object freshness explicit because this MSVC/Ninja configuration does not emit include depfiles.
+set_source_files_properties(
+  intern/gpu_shader_create_info.cc
+  intern/gpu_shader_dependency.cc
+  PROPERTIES OBJECT_DEPENDS "${GLSL_DRAW_GENERATED_C}"
+)
+
 set(SRC
   intern/gpu_batch.cc
   intern/gpu_batch_presets.cc

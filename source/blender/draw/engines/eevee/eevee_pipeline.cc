@@ -208,6 +208,8 @@ void ShadowPipeline::sync()
     pass.bind_texture(RBUFS_UTILITY_TEX_SLOT, inst_.pipelines.utility_tx);
     pass.bind_ssbo(SHADOW_RENDER_VIEW_BUF_SLOT, &inst_.shadows.render_view_buf_);
     pass.bind_image(SHADOW_ATLAS_IMG_SLOT, inst_.shadows.atlas_tx_);
+    pass.bind_image(SHADOW_ATLAS_ID_IMG_SLOT, inst_.shadows.atlas_id_tx_);
+    pass.bind_ssbo(SHADOW_ID_DIAGNOSTIC_BUF_SLOT, &inst_.shadows.shadow_id_diagnostic_buf_);
     pass.bind_ssbo(SHADOW_RENDER_MAP_BUF_SLOT, &inst_.shadows.render_map_buf_);
     pass.bind_ssbo(SHADOW_PAGE_INFO_SLOT, &inst_.shadows.pages_infos_data_);
     pass.bind_resources(inst_.uniform_data);
@@ -229,7 +231,20 @@ PassMain::Sub *ShadowPipeline::surface_material_add(blender::Material *material,
 
 void ShadowPipeline::render(View &view)
 {
+  shadow_pass_mode_ = ShadowPassMode::Depth;
+  inst_.uniform_data.data.shadow.shadow_pass_mode = uint(shadow_pass_mode_);
+  inst_.uniform_data.data.push_update();
   inst_.manager->submit(render_ps_, view);
+
+  if (inst_.shadows.shadow_id_enabled()) {
+    /* The resolve pass must observe the final depth winner for every atlas texel. */
+    GPU_memory_barrier(GPU_BARRIER_SHADER_IMAGE_ACCESS | GPU_BARRIER_TEXTURE_FETCH);
+    shadow_pass_mode_ = ShadowPassMode::IdResolve;
+    inst_.uniform_data.data.shadow.shadow_pass_mode = uint(shadow_pass_mode_);
+    inst_.uniform_data.data.push_update();
+    inst_.manager->submit(render_ps_, view);
+    inst_.shadows.shadow_id_resolve_submit_record();
+  }
 }
 
 /** \} */

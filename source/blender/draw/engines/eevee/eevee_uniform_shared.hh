@@ -44,9 +44,12 @@ struct [[host_shared]] ShadowSceneData {
   bool32_t use_jitter;
   /* Output atomic counter instead of depth. */
   bool32_t use_debug_cost;
-  int _pad0;
-  int _pad1;
-  int _pad2;
+  /* Full-resolution caster-ID sidecar is allocated and valid for sampling. */
+  bool32_t use_shadow_id;
+  /* Enable validation-only shadow-ID atomic statistics (--debug-value 733). */
+  bool32_t use_shadow_id_diagnostics;
+  /* 0: depth raster, 1: ID resolve raster. */
+  uint shadow_pass_mode;
 };
 
 struct [[host_shared]] SceneData {

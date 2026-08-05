@@ -63,6 +63,11 @@ void forward_lighting_eval(const ViewMatrices view,
   float3 V = view.world_incident_vector(g_data.P);
 
   light::EvalCtx<false> ctx;
+#ifdef MAT_SHADOW_ID
+  ctx.shadow_id_filter = shadow_id_filter_ignore_self(resource_id);
+#else
+  ctx.shadow_id_filter = shadow_id_filter_disabled();
+#endif
   for (uint i = 0u; i < 3; i++) [[unroll]] {
     if (srt.light_closure_eval_count_reflect > i) [[static_branch]] {
       ClosureUndetermined cl = g_closure_get(uchar(i));
@@ -289,8 +294,7 @@ float goo_contact_shadow(LightData light, float3 P, float3 Ng, float3 L)
       }
       float delta = depth_sample - ss_p.z;
       /* Below the surface but within the thickness slab (or step-sized tolerance). */
-      if (delta < 0.0f &&
-          (delta > ss_p.z - ss_p.w || abs(delta) < abs(ss_step.z * stride * 2.0f)))
+      if (delta < 0.0f && (delta > ss_p.z - ss_p.w || abs(delta) < abs(ss_step.z * stride * 2.0f)))
       {
         return 0.0f;
       }
@@ -302,9 +306,10 @@ float goo_contact_shadow(LightData light, float3 P, float3 Ng, float3 L)
 
 /* Goo Engine `calc_shader_info`: a self-contained forward light loop (independent of the material
  * closures) that reproduces Goo's separable per-light accumulation. Runs in the forward pipeline
- * where the light resources are bound, and stores the result in the g_goo_shader_info bridge global
- * for the Shader Info node to read. Uses the standard LTC diffuse eval so units match a normal
- * render (solid-angle normalized) and shadowed/unshadowed give the cast/self shadow ratio. */
+ * where the light resources are bound, and stores the result in the g_goo_shader_info bridge
+ * global for the Shader Info node to read. Uses the standard LTC diffuse eval so units match a
+ * normal render (solid-angle normalized) and shadowed/unshadowed give the cast/self shadow ratio.
+ */
 struct GooShaderInfoCtx {
   float3 P;
   float3 N;
@@ -315,15 +320,20 @@ struct GooShaderInfoCtx {
    * shadow_eval self-shadows entire curved surfaces on coarse VSM texels (large scenes). */
   float terminator_normal_offset;
   float terminator_geometry_offset;
+  /** Full receiver resource ID shared with the shadow caster sidecar. */
+  uint receiver_id;
   /* Per-light records are written straight into g_goo_shader_info; the context only tracks the
    * running count and the always-on overflow accumulator for lights beyond GOO_MAX_LIGHTS. */
   int count;
   float3 overflow_unshadowed;
-  float overflow_reached_lum;
+  float overflow_cast_reached_lum;
+  float overflow_self_reached_lum;
   float overflow_unshadowed_lum;
   float overflow_hl;
 
-  void accumulate([[resource_table]] LightEvalData &srt, LightData light, const bool is_directional)
+  void accumulate([[resource_table]] LightEvalData &srt,
+                  LightData light,
+                  const bool is_directional)
   {
     /* Goo's exact group rule: a light with all-zero group bits can never match any mask, so it
      * contributes to nothing. This also excludes EEVEE-Next's world-sun placeholder lights
@@ -345,7 +355,8 @@ struct GooShaderInfoCtx {
     float attenuation = light_attenuation_surface(light, is_directional, lv);
     attenuation *= light_attenuation_facing(light, lv.L, lv.dist, N, false);
 
-    float shadow = 1.0f;
+    float cast_shadow = 1.0f;
+    float self_shadow = 1.0f;
     ClosureLight tmp;
     tmp.light_shadowed = float3(0.0f);
     tmp.light_unshadowed = float3(0.0f);
@@ -363,21 +374,69 @@ struct GooShaderInfoCtx {
          * by pushing the sampling point toward the light; clamped for very close punctual lights.
          * Bridge-only: regular pipeline shadows are untouched. */
         float goo_shadow_bias = min(0.05f, lv.dist * 0.5f);
-        shadow = shadow_eval(srd, light, is_directional, false, false, texel, Thickness::zero(),
-                             P + lv.L * goo_shadow_bias, Ng, N, terminator_normal_offset,
-                             terminator_geometry_offset, ray_count, ray_step_count);
+#ifdef MAT_SHADOW_ID
+        /* The two traces intentionally share every non-ID input. Shadow sampling is derived from
+         * immutable sampling state, so the second call does not advance a mutable RNG. */
+        cast_shadow = shadow_eval(srd,
+                                  light,
+                                  is_directional,
+                                  false,
+                                  false,
+                                  shadow_id_filter_ignore_self(receiver_id),
+                                  texel,
+                                  Thickness::zero(),
+                                  P + lv.L * goo_shadow_bias,
+                                  Ng,
+                                  N,
+                                  terminator_normal_offset,
+                                  terminator_geometry_offset,
+                                  ray_count,
+                                  ray_step_count);
+        self_shadow = shadow_eval(srd,
+                                  light,
+                                  is_directional,
+                                  false,
+                                  false,
+                                  shadow_id_filter_only_self(receiver_id),
+                                  texel,
+                                  Thickness::zero(),
+                                  P + lv.L * goo_shadow_bias,
+                                  Ng,
+                                  N,
+                                  terminator_normal_offset,
+                                  terminator_geometry_offset,
+                                  ray_count,
+                                  ray_step_count);
+#else
+        /* Disabled materials preserve the legacy bridge cost and exact Cast/Self equivalence. */
+        cast_shadow = shadow_eval(srd,
+                                  light,
+                                  is_directional,
+                                  false,
+                                  false,
+                                  shadow_id_filter_disabled(),
+                                  texel,
+                                  Thickness::zero(),
+                                  P + lv.L * goo_shadow_bias,
+                                  Ng,
+                                  N,
+                                  terminator_normal_offset,
+                                  terminator_geometry_offset,
+                                  ray_count,
+                                  ray_step_count);
+        self_shadow = cast_shadow;
+#endif
       }
-      /* Goo legacy contact shadows: screen-space short-range occlusion re-adds the true contact
-       * shadows that the legacy 5cm bias (above) exempts. Only for lights with the legacy
-       * LA_SHAD_CONTACT flag (contact_dist > 0), like Goo's `light_contact_shadows`. */
-      if (light.contact_dist > 0.0f && shadow > 0.0f) {
-        shadow *= goo_contact_shadow(light, P, Ng, lv.L);
+      /* Goo legacy contact shadows belong only to Cast Shadows. Self Shadows is the VSM
+       * OnlySelf result and deliberately excludes screen-space contact occlusion. */
+      if (light.contact_dist > 0.0f && cast_shadow > 0.0f) {
+        cast_shadow *= goo_contact_shadow(light, P, Ng, lv.L);
       }
       LightVertices vertices = light_shape_corners(light, lv);
       tmp.ltc_mat = eevee::lut::ltc::identity();
       tmp.N = N;
       tmp.type = LIGHT_DIFFUSE;
-      light::eval_single_closure(util_tx, light, lv, vertices, tmp, V, attenuation, shadow);
+      light::eval_single_closure(util_tx, light, lv, vertices, tmp, V, attenuation, cast_shadow);
     }
 
     float unshadowed_lum = average(tmp.light_unshadowed);
@@ -387,13 +446,15 @@ struct GooShaderInfoCtx {
     if (count < GOO_MAX_LIGHTS) {
       g_goo_shader_info.light_group_bits[count] = light.light_group_bits;
       g_goo_shader_info.light_unshadowed[count] = tmp.light_unshadowed;
-      g_goo_shader_info.light_shadow[count] = shadow;
+      g_goo_shader_info.light_cast_shadow[count] = cast_shadow;
+      g_goo_shader_info.light_self_shadow[count] = self_shadow;
       g_goo_shader_info.light_hl[count] = hl;
       count += 1;
     }
     else {
       overflow_unshadowed += tmp.light_unshadowed;
-      overflow_reached_lum += unshadowed_lum * shadow;
+      overflow_cast_reached_lum += unshadowed_lum * cast_shadow;
+      overflow_self_reached_lum += unshadowed_lum * self_shadow;
       overflow_unshadowed_lum += unshadowed_lum;
       overflow_hl += hl;
     }
@@ -408,8 +469,9 @@ struct GooShaderInfoCtx {
   }
 };
 
-template void light::foreach<GooShaderInfoCtx, LightEvalData>(
-    const LightRenderData &, GooShaderInfoCtx &, LightEvalData &);
+template void light::foreach<GooShaderInfoCtx, LightEvalData>(const LightRenderData &,
+                                                              GooShaderInfoCtx &,
+                                                              LightEvalData &);
 
 void goo_shader_info_compute(const ViewMatrices view, uint resource_id, float2 frag_co)
 {
@@ -433,9 +495,11 @@ void goo_shader_info_compute(const ViewMatrices view, uint resource_id, float2 f
   ObjectInfos object_infos = infos.get(resource_id);
   ctx.terminator_normal_offset = object_infos.shadow_terminator_normal_offset;
   ctx.terminator_geometry_offset = object_infos.shadow_terminator_geometry_offset;
+  ctx.receiver_id = resource_id;
   ctx.count = 0;
   ctx.overflow_unshadowed = float3(0.0f);
-  ctx.overflow_reached_lum = 0.0f;
+  ctx.overflow_cast_reached_lum = 0.0f;
+  ctx.overflow_self_reached_lum = 0.0f;
   ctx.overflow_unshadowed_lum = 0.0f;
   ctx.overflow_hl = 0.0f;
 
@@ -447,7 +511,8 @@ void goo_shader_info_compute(const ViewMatrices view, uint resource_id, float2 f
 
   g_goo_shader_info.light_count = ctx.count;
   g_goo_shader_info.overflow_unshadowed = ctx.overflow_unshadowed;
-  g_goo_shader_info.overflow_reached_lum = ctx.overflow_reached_lum;
+  g_goo_shader_info.overflow_cast_reached_lum = ctx.overflow_cast_reached_lum;
+  g_goo_shader_info.overflow_self_reached_lum = ctx.overflow_self_reached_lum;
   g_goo_shader_info.overflow_unshadowed_lum = ctx.overflow_unshadowed_lum;
   g_goo_shader_info.overflow_hl = ctx.overflow_hl;
   g_goo_shader_info.ambient = max(samp.volume_irradiance.evaluate_lambert(N).rgb, float3(0.0f));

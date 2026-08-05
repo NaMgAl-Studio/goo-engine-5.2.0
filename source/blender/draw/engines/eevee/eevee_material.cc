@@ -416,6 +416,7 @@ Material &MaterialModule::material_sync(const ObjectHandle &ob_handle,
                                      gpu_material_is_transparent(mat.shading.gpumat);
     mat.has_transparent_shadows = blender_mat->blend_flag & MA_BL_TRANSPARENT_SHADOW &&
                                   gpu_material_is_transparent(mat.shading.gpumat);
+    mat.use_shadow_id = mat.has_surface && (blender_mat->check_shadow_id != 0);
 
     return mat;
   });

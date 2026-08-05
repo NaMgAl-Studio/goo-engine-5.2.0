@@ -1151,11 +1151,13 @@ void RNA_def_material(BlenderRNA *brna)
       prop, "Shadow Backface Culling", "Use back face culling when casting shadows");
   RNA_def_property_update(prop, 0, "rna_Material_draw_update");
 
-  /* Goo Engine: preserved legacy flag (shadow-ID self-shadow filtering). Not consumed by
-   * EEVEE-Next yet; exposed so files round-trip and scripts can inspect it. */
+  /* Goo Engine shadow-ID filtering for reflected EEVEE surface lighting. */
   prop = RNA_def_property(srna, "check_shadow_id", PROP_BOOLEAN, PROP_NONE);
   RNA_def_property_boolean_sdna(prop, nullptr, "check_shadow_id", 1);
-  RNA_def_property_ui_text(prop, "Check Self Shadowing", "Filter shadows cast by this Object");
+  RNA_def_property_ui_text(prop,
+                           "Check Self Shadowing",
+                           "Ignore shadows cast by the same object while preserving shadows from "
+                           "other objects; affects reflected EEVEE surface lighting only");
   RNA_def_property_update(prop, 0, "rna_Material_draw_update");
 
   prop = RNA_def_property(srna, "use_backface_culling_lightprobe_volume", PROP_BOOLEAN, PROP_NONE);

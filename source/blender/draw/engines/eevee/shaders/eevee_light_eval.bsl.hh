@@ -99,6 +99,7 @@ template<bool is_transmission> struct EvalCtx {
   uchar receiver_light_set;
   float terminator_normal_offset;
   float terminator_geometry_offset;
+  ShadowIdFilter shadow_id_filter;
 
   void light_eval_single([[resource_table]] LightEvalData &srt,
                          LightData light,
@@ -145,6 +146,7 @@ template<bool is_transmission> struct EvalCtx {
                            is_directional,
                            is_transmission,
                            is_translucent_with_thickness,
+                           shadow_id_filter,
                            texel,
                            thickness,
                            P,
@@ -216,6 +218,8 @@ EvalCtx<true> init_from_reflect_ctx(EvalCtx<false> ctx)
   ctx_tr.receiver_light_set = ctx.receiver_light_set;
   ctx_tr.terminator_normal_offset = ctx.terminator_normal_offset;
   ctx_tr.terminator_geometry_offset = ctx.terminator_geometry_offset;
+  /* Transmission never applies caster/receiver identity filtering. */
+  ctx_tr.shadow_id_filter = shadow_id_filter_disabled();
   return ctx_tr;
 }
 

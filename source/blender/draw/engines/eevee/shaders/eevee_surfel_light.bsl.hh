@@ -41,6 +41,7 @@ void eval_light([[resource_table]] EvalLight & /*srt*/,
   float3 P = surfel.position;
 
   eevee::light::EvalCtx<false> ctx;
+  ctx.shadow_id_filter = eevee::shadow_id_filter_disabled();
   ctx.P = P;
   ctx.Ng = Ng;
   ctx.V = V;

@@ -153,6 +153,7 @@ void light_eval_frag([[resource_table]] LightEval &srt,
   const float vPz = dot(view.forward(), P) - dot(view.forward(), view.position());
 
   light::EvalCtx<false> ctx;
+  ctx.shadow_id_filter = shadow_id_filter_disabled();
   /* Unroll light stack array assignments to avoid non-constant indexing. */
   for (uint i = 0u; i < 3; i++) [[unroll]] {
     if (lrt.light_closure_eval_count_reflect > i) [[static_branch]] {
@@ -174,6 +175,9 @@ void light_eval_frag([[resource_table]] LightEval &srt,
     ctx.receiver_light_set = receiver_light_set_get(object_infos);
     ctx.terminator_normal_offset = object_infos.shadow_terminator_normal_offset;
     ctx.terminator_geometry_offset = object_infos.shadow_terminator_geometry_offset;
+    if (gbuf.header.use_shadow_id()) {
+      ctx.shadow_id_filter = shadow_id_filter_ignore_self(object_id);
+    }
   }
 
   /* TODO(fclem): If transmission (no SSS) is present, we could reduce LIGHT_CLOSURE_EVAL_COUNT
@@ -334,6 +338,7 @@ void sphere_eval_frag([[resource_table]] LightEvalIterator &lights,
   cl_transmit.type = CLOSURE_BSDF_TRANSLUCENT_ID;
 
   light::EvalCtx<false> ctx;
+  ctx.shadow_id_filter = shadow_id_filter_disabled();
   ctx.P = P;
   ctx.Ng = Ng;
   ctx.V = V;
@@ -505,6 +510,7 @@ void planar_eval_frag([[resource_table]] PlanarProbeEval & /*srt*/,
   cl_transmit.type = CLOSURE_BSDF_TRANSLUCENT_ID;
 
   light::EvalCtx<false> ctx;
+  ctx.shadow_id_filter = shadow_id_filter_disabled();
   ctx.P = P;
   ctx.Ng = Ng;
   ctx.V = V;

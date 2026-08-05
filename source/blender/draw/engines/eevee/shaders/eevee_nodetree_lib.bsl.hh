@@ -426,9 +426,10 @@ void screenspace_info_eval([[maybe_unused]] float3 view_position,
     !defined(MAT_GEOM_WORLD)
   const ViewMatrices view = views.get(0);
   int2 texel = int2(gl_FragCoord.xy);
-  /* Goo `screenspace_info`: project the (Goo-convention, +Z-forward) view position to screen UV and
-   * sample the scene depth there -- matches get_uvs_from_view(viewPos * (1,1,-1)). The unlinked
-   * default (view_position_get) is this fragment's own position, so it samples its own pixel. */
+  /* Goo `screenspace_info`: project the (Goo-convention, +Z-forward) view position to screen UV
+   * and sample the scene depth there -- matches get_uvs_from_view(viewPos * (1,1,-1)). The
+   * unlinked default (view_position_get) is this fragment's own position, so it samples its own
+   * pixel. */
   float2 uv = view.point_view_to_ndc(view_position * float3(1.0f, 1.0f, -1.0f)).xy * 0.5f + 0.5f;
   float depth = textureLod(hiz.hiz_tx, uv * uni.uniform_buf.hiz.uv_scale, 0.0f).r;
   /* Linear (view-space) distance to the scene surface behind that position. */
@@ -480,7 +481,8 @@ void shader_info_eval([[maybe_unused]] float3 position,
      * (beyond GOO_MAX_LIGHTS) are always-on. */
     float3 dif = g_goo_shader_info.overflow_unshadowed;
     float hl = g_goo_shader_info.overflow_hl;
-    float sh_reached = g_goo_shader_info.overflow_reached_lum;
+    float cast_reached = g_goo_shader_info.overflow_cast_reached_lum;
+    float self_reached = g_goo_shader_info.overflow_self_reached_lum;
     float sh_total = g_goo_shader_info.overflow_unshadowed_lum;
     int light_count = g_goo_shader_info.light_count;
     for (int i = 0; i < light_count; i++) {
@@ -495,13 +497,14 @@ void shader_info_eval([[maybe_unused]] float3 position,
       }
       if (shadow_match != 0) {
         float lum = average(g_goo_shader_info.light_unshadowed[i]);
-        sh_reached += lum * g_goo_shader_info.light_shadow[i];
+        cast_reached += lum * g_goo_shader_info.light_cast_shadow[i];
+        self_reached += lum * g_goo_shader_info.light_self_shadow[i];
         sh_total += lum;
       }
     }
     diffuse_shading = float4(dif, 1.0f);
-    cast_shadows = (sh_total > 1e-4f) ? saturate(sh_reached / sh_total) : 1.0f;
-    self_shadows = cast_shadows;
+    cast_shadows = (sh_total > 1e-4f) ? saturate(cast_reached / sh_total) : 1.0f;
+    self_shadows = (sh_total > 1e-4f) ? saturate(self_reached / sh_total) : 1.0f;
     ambient = float4(g_goo_shader_info.ambient, 1.0f);
     half_lambert = hl;
   }

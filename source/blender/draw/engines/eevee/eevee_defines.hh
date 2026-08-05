@@ -239,6 +239,8 @@
 #define GBUF_CLOSURE_TEX_SLOT 17
 #define GBUF_NORMAL_TEX_SLOT 18
 #define GBUF_HEADER_TEX_SLOT 19
+/* Full 32-bit caster resource ID atlas, sharing the virtual-shadow physical page layout. */
+#define SHADOW_ATLAS_ID_TEX_SLOT 20
 
 /* Images. */
 #define RBUFS_COLOR_SLOT 0
@@ -259,6 +261,7 @@
 #define VOLUME_HIT_COUNT_SLOT 1
 /* Only during shadow rendering. */
 #define SHADOW_ATLAS_IMG_SLOT 4
+#define SHADOW_ATLAS_ID_IMG_SLOT 5
 
 /* Uniform Buffers. */
 /* Slot 0 is GPU_NODE_TREE_UBO_SLOT. */
@@ -294,6 +297,8 @@
 #define SHADOW_RENDER_MAP_BUF_SLOT 3
 #define SHADOW_PAGE_INFO_SLOT 4
 #define SHADOW_RENDER_VIEW_BUF_SLOT 5
+/* Used by shadow-ID raster and sampling only when --debug-value 733 is active. */
+#define SHADOW_ID_DIAGNOSTIC_BUF_SLOT 8
 
 /* Only during pre-pass. */
 #define VELOCITY_OBJ_PREV_BUF_SLOT 0

@@ -264,6 +264,7 @@ def draw_material_surface_settings(layout, mat, is_eevee=True):
 
     if is_eevee:
         layout.prop(mat, "use_transparent_shadow")
+        layout.prop(mat, "check_shadow_id")
 
     col = layout.column()
     col.prop(mat, "surface_render_method", text="Render Method")

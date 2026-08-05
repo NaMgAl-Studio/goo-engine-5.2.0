@@ -116,9 +116,15 @@ class WorldVolumePipeline {
  *
  * \{ */
 
+enum class ShadowPassMode : uint {
+  Depth = 0u,
+  IdResolve = 1u,
+};
+
 class ShadowPipeline {
  private:
   Instance &inst_;
+  ShadowPassMode shadow_pass_mode_ = ShadowPassMode::Depth;
 
   /* Shadow update pass. */
   PassMain render_ps_ = {"Shadow.Surface"};

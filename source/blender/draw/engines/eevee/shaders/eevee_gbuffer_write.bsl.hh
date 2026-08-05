@@ -350,17 +350,20 @@ struct InputClosures {
  * - surface_N     : packed surface normal.
  * - thickness     : object thickness, packed in additional information if a closure needs it.
  * - use_object_id : if surface uses a dedicated object id layer. Should only be on if needed.
+ * - use_shadow_id : per-pixel opt-in to IgnoreSelf; implies use_object_id.
  */
 Packed pack([[resource_table]] const PackParameters &srt,
             InputClosures cl_data,
             float3 Ng,
             packed_float3 surface_N,
             Thickness thickness,
-            bool use_object_id)
+            bool use_object_id,
+            bool use_shadow_id)
 {
   Packer packer;
   packer.header = Header::zero();
-  packer.header.use_object_id_set(use_object_id);
+  packer.header.use_shadow_id_set(use_shadow_id);
+  packer.header.use_object_id_set(use_object_id || use_shadow_id);
 
   for (int i = 0; i < 3 /* GBUFFER_LAYER_MAX */; i++) [[unroll]] {
     if (srt.gbuffer_layer_max > i) [[static_branch]] {
@@ -395,6 +398,17 @@ Packed pack([[resource_table]] const PackParameters &srt,
   packer.header.geometry_normal_set(Ng, packer.closures[0].N);
 
   return packer.result_get(srt);
+}
+
+/* Compatibility overload for unit-test and non-shadow-ID callers. */
+Packed pack([[resource_table]] const PackParameters &srt,
+            InputClosures cl_data,
+            float3 Ng,
+            packed_float3 surface_N,
+            Thickness thickness,
+            bool use_object_id)
+{
+  return pack(srt, cl_data, Ng, surface_N, thickness, use_object_id, false);
 }
 
 /** \} */

@@ -321,9 +321,9 @@ struct Header {
    * Bit packed header.
    *
    *  Use Object ID
-   *    |
-   *    |
-   * |  v |         UNUSED         |       Geometric normal      |       UNUSED      |
+   *    |  Use Shadow ID
+   *    |    |
+   * |  v |  v |       UNUSED       |       Geometric normal      |       UNUSED      |
    * |....|....|....|....|....|....|....|....|....|....|....|....|....|....|....|....|
    *   31   30   29   28   27   26   25   24   23   22   21   20   19   18   17   16
    *
@@ -371,6 +371,16 @@ struct Header {
   void use_object_id_set(bool value)
   {
     set_flag_from_test(this->header_, value, 1u << 31u);
+  }
+
+  /* Per-pixel material opt-in for full resource-ID shadow filtering. Bit 31 must also be set. */
+  bool use_shadow_id() const
+  {
+    return flag_test(this->header_, 1u << 30u);
+  }
+  void use_shadow_id_set(bool value)
+  {
+    set_flag_from_test(this->header_, value, 1u << 30u);
   }
 
   /**

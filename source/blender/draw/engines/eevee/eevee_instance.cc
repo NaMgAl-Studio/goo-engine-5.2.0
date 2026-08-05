@@ -155,6 +155,9 @@ void Instance::init(const int2 &output_res,
   update_eval_members();
 
   info_ = "";
+  /* Image renders do not enter the viewport-only debug-mode assignment below. Keep
+   * --debug-value available to validation-only render diagnostics as well. */
+  debug_mode = eDebugMode(G.debug_value);
 
   if (is_viewport()) {
     is_image_render = draw_ctx->is_image_render();
@@ -572,7 +575,9 @@ void Instance::render_sample()
     lookdev.rotate_world();
     capture_view.render_probes();
 
+    shadows.shadow_id_diagnostics_begin();
     main_view.render();
+    shadows.shadow_id_diagnostics_end();
 
     lookdev_view.render();
 

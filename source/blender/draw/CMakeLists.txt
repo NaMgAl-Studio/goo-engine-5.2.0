@@ -805,6 +805,22 @@ foreach(GLSL_FILE ${GLSL_SRC})
   glsl_to_c(${GLSL_FILE} GLSL_C GLSL_INC)
 endforeach()
 
+# Unity sources include the generated DataToC files, but Ninja does not track those includes as
+# dependencies of the Unity object. Compile each generated shader source directly so incremental
+# BSL changes cannot leave stale shader bodies embedded in bf_draw_shaders.
+set_source_files_properties(${GLSL_C} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+# The GPU shader registries include the generated metadata and create-info files. Their compiler
+# dependency output is unavailable in this build configuration, so expose correlated generated C
+# outputs to the sibling GPU directory as explicit object dependencies.
+set(GLSL_DRAW_GENERATED_C "")
+foreach(GLSL_FILE ${GLSL_C})
+  if(IS_ABSOLUTE "${GLSL_FILE}")
+    list(APPEND GLSL_DRAW_GENERATED_C "${GLSL_FILE}")
+  endif()
+endforeach()
+set(GLSL_DRAW_GENERATED_C "${GLSL_DRAW_GENERATED_C}" PARENT_SCOPE)
+
 blender_add_lib(bf_draw_shaders "${GLSL_C}" "" "" "")
 blender_set_target_unity_build(bf_draw_shaders 10)
 
