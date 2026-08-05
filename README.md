@@ -64,6 +64,10 @@ What Was Ported and How
   Set Depth, Curvature, Light Info, Hexagon Texture, Twirl, Water Ripples,
   and OKLab Color Ramp.
 - **Set Depth** rewritten for the reverse-Z depth convention of EEVEE-Next.
+- **Screenspace Info**: Scene Depth samples the EEVEE-Next depth buffer (hiz_tx); Scene
+  Color samples the previous-layer radiance texture for transparent Shader-to-RGB
+  materials (the same source screen-space refraction reads) — matching Goo, where Scene
+  Color likewise only has values behind transparent layers.
 - **Curvature** ported with the original 8-direction sampling algorithm, and screen-space
   depth sampling aligned with Goo's output.
 - **OKLab Color Ramp** aligned with Goo's render path (easing behavior and linear output).
@@ -99,6 +103,12 @@ Known Boundaries and Their Handling
 - **BSL limitation**: conditional attributes/parameters (`#if`) are not supported inside
   fragment signatures by the shader tooling; code is organized around unconditional
   signatures.
+- **"Check Self Shadowing" (`check_shadow_id`) not implemented yet**: the flag is stored
+  and round-trips, but EEVEE-Next does not consume it. Self-shadow suppression relies on
+  the legacy 5cm shadow bias approximation in the Shader Info bridge, which covers most
+  stylized self-shadow cases. An identity-based filter (shadow-ID side-channel in the
+  shadow atlas) was prototyped but did not reach the runtime material shaders as
+  expected and was reverted; it remains under investigation.
 - **`blend_shadow` zero-value ambiguity (residual)**: a full fix via a dedicated
   `MA_LEGACY_NO_SHADOW` flag (file-level Goo fingerprint at load, flag read at render)
   has been designed but not implemented. Known corner case: appending a shadow-None

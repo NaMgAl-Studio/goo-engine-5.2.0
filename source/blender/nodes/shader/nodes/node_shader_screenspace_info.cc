@@ -7,8 +7,12 @@
  * \ingroup shdnodes
  *
  * Screenspace Info node (ported from Goo Engine, SH_NODE_SCREENSPACE_INFO).
- * Samples EEVEE's scene depth buffer. Scene Color output is a documented stub
- * pending a scene-radiance texture binding to the material pass.
+ * Scene Depth samples EEVEE's depth buffer (hiz_tx) and matches Goo's output
+ * (verified against Goo 4.4). Scene Color samples the previous-layer radiance
+ * texture, which EEVEE-Next binds only for transparent Shader-to-RGB
+ * materials (see `screenspace_info_eval` in eevee_nodetree_lib.bsl.hh); this
+ * matches Goo, where Scene Color likewise only has values behind transparent
+ * layers. Other pipelines return black.
  */
 
 #include "node_util.hh"
