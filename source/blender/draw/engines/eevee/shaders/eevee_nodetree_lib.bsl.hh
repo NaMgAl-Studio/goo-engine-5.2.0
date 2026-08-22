@@ -198,11 +198,14 @@ Closure closure_eval(ClosureEmission emission)
 
 Closure closure_eval(ClosureTransparency transparency)
 {
-#if !defined(MAT_FORCE_OPAQUE)
-  /* MAT_FORCE_OPAQUE is defined for materials flagged MA_LEGACY_OPAQUE (legacy EEVEE "OPAQUE"),
-   * which must ignore transparency and stay fully opaque. */
+#ifdef MAT_LEGACY_OPAQUE
+  /* Legacy Goo/EEVEE OPAQUE suppresses external transparency, but the old renderer still used
+   * this weight for internal alpha-reciprocal closure/emission energy recovery. */
+  g_legacy_transmittance += transparency.transmittance * transparency.weight;
+#else
   g_transmittance += transparency.transmittance * transparency.weight;
 #endif
+  /* Holdout is independent from both surface transparency modes. */
   g_holdout += transparency.holdout * transparency.weight;
   return Closure(0);
 }
@@ -481,9 +484,12 @@ void shader_info_eval([[maybe_unused]] float3 position,
      * (beyond GOO_MAX_LIGHTS) are always-on. */
     float3 dif = g_goo_shader_info.overflow_unshadowed;
     float hl = g_goo_shader_info.overflow_hl;
-    float cast_reached = g_goo_shader_info.overflow_cast_reached_lum;
-    float self_reached = g_goo_shader_info.overflow_self_reached_lum;
-    float sh_total = g_goo_shader_info.overflow_unshadowed_lum;
+    /* Goo 4.4 normalizes Cast/Self with the raw-light-color weight, and clamps the denominator
+     * from below at one. Overflow lights are always-on for group filtering, but their occlusion
+     * contribution is already accumulated in the bridge record. */
+    float cast_occlusion = g_goo_shader_info.overflow_cast_occlusion;
+    float self_occlusion = g_goo_shader_info.overflow_self_occlusion;
+    float light_accum = g_goo_shader_info.overflow_goo_weight;
     int light_count = g_goo_shader_info.light_count;
     for (int i = 0; i < light_count; i++) {
       int4 bits = g_goo_shader_info.light_group_bits[i];
@@ -496,15 +502,16 @@ void shader_info_eval([[maybe_unused]] float3 position,
         hl += g_goo_shader_info.light_hl[i];
       }
       if (shadow_match != 0) {
-        float lum = average(g_goo_shader_info.light_unshadowed[i]);
-        cast_reached += lum * g_goo_shader_info.light_cast_shadow[i];
-        self_reached += lum * g_goo_shader_info.light_self_shadow[i];
-        sh_total += lum;
+        const float light_fac = g_goo_shader_info.light_goo_weight[i];
+        cast_occlusion += (1.0f - g_goo_shader_info.light_cast_shadow[i]) * light_fac;
+        self_occlusion += (1.0f - g_goo_shader_info.light_self_shadow[i]) * light_fac;
+        light_accum += light_fac;
       }
     }
     diffuse_shading = float4(dif, 1.0f);
-    cast_shadows = (sh_total > 1e-4f) ? saturate(cast_reached / sh_total) : 1.0f;
-    self_shadows = (sh_total > 1e-4f) ? saturate(self_reached / sh_total) : 1.0f;
+    const float goo_shadow_denominator = max(light_accum, 1.0f);
+    cast_shadows = saturate(1.0f - cast_occlusion / goo_shadow_denominator);
+    self_shadows = saturate(1.0f - self_occlusion / goo_shadow_denominator);
     ambient = float4(g_goo_shader_info.ambient, 1.0f);
     half_lambert = hl;
   }

@@ -222,6 +222,11 @@ static void rna_Material_active_paint_texture_index_update(bContext *C, PointerR
 static int rna_Material_blend_method_get(PointerRNA *ptr)
 {
   Material *material = id_cast<Material *>(ptr->owner_id);
+  /* Goo/legacy EEVEE OPAQUE has no direct EEVEE-Next surface method equivalent. Expose the
+   * compatibility state through the deprecated RNA property without mutating the material. */
+  if (material->flag & MA_LEGACY_OPAQUE) {
+    return MA_BM_SOLID;
+  }
   switch (material->surface_render_method) {
     case MA_SURFACE_METHOD_DEFERRED:
       return MA_BM_HASHED;
@@ -251,11 +256,12 @@ static void rna_Material_blend_method_set(PointerRNA *ptr, int new_blend_method)
 static void rna_Material_render_method_set(PointerRNA *ptr, int new_render_method)
 {
   Material *material = id_cast<Material *>(ptr->owner_id);
-  material->surface_render_method = eMaterial_SurfaceRenderMethod(new_render_method);
 
-  /* The user is explicitly choosing a render method, so stop overriding a legacy-OPAQUE material
-   * to fully opaque (see MA_LEGACY_OPAQUE / gpu_material_is_transparent). */
+  /* Explicit render-method choice exits the legacy OPAQUE compatibility state before changing any
+   * of the public compatibility fields. The RNA update callback performs the dependency-graph and
+   * GPU material synchronization after this setter returns. */
   material->flag &= ~MA_LEGACY_OPAQUE;
+  material->surface_render_method = eMaterial_SurfaceRenderMethod(new_render_method);
 
   /* Still sets the legacy property for forward compatibility. */
   switch (new_render_method) {
@@ -1106,7 +1112,9 @@ void RNA_def_material(BlenderRNA *brna)
   RNA_def_property_ui_text(
       prop,
       "Blend Mode",
-      "Blend Mode for Transparent Faces (Deprecated: use 'surface_render_method')");
+      "Blend Mode for Transparent Faces (Deprecated: use 'surface_render_method'). Legacy Goo "
+      "OPAQUE keeps the external surface opaque while Transparent BSDF weights still participate "
+      "in internal legacy energy recovery.");
   RNA_def_property_enum_funcs(
       prop, "rna_Material_blend_method_get", "rna_Material_blend_method_set", nullptr);
   RNA_def_property_translation_context(prop, BLT_I18NCONTEXT_ID_MATERIAL);

@@ -92,6 +92,12 @@ void Light::sync(ShadowModule &shadows,
   const bool transmission_visibility = (visibility_flag & OB_HIDE_TRANSMISSION) == 0;
   const bool volume_visibility = (visibility_flag & OB_HIDE_VOLUME_SCATTER) == 0;
 
+  /* Goo 4.4 Shader Info uses the raw light color and DNA diffuse factor for its shadow
+   * normalization. Do not derive this from LightData.color or power[LIGHT_DIFFUSE], since those
+   * already include energy/shape radiance and would double-count them. */
+  this->goo_shader_info_weight = reduce_max(BKE_light_color(*la)) * la->diff_fac *
+                                 float(diffuse_visibility);
+
   float shape_power = shape_radiance_get();
   float point_power = point_radiance_get();
   this->power[LIGHT_DIFFUSE] = la->diff_fac * shape_power * diffuse_visibility;

@@ -89,9 +89,10 @@ enum eMaterial_Flag : short {
    */
   MA_DS_SHOW_TEXS = 1 << 2,
   /**
-   * Set by versioning for materials authored with the legacy EEVEE "OPAQUE" blend mode
-   * (blend_method SOLID). EEVEE-Next then treats them as fully opaque, ignoring any transparency
-   * closure, to match legacy/Goo behavior. Not set for materials created in EEVEE-Next.
+   * Set by versioning for materials authored with the legacy EEVEE/Goo "OPAQUE" blend mode
+   * (blend_method SOLID). The external surface remains opaque, while Transparent BSDF weights are
+   * retained for the legacy internal alpha-reciprocal/energy-recovery semantics. Not set for
+   * materials created in EEVEE-Next.
    */
   MA_LEGACY_OPAQUE = 1 << 3,
 };

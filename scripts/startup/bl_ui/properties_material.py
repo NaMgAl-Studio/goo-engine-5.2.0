@@ -268,6 +268,13 @@ def draw_material_surface_settings(layout, mat, is_eevee=True):
 
     col = layout.column()
     col.prop(mat, "surface_render_method", text="Render Method")
+    if mat.blend_method == 'OPAQUE' and mat.surface_render_method == 'DITHERED':
+        layout.label(text="Legacy OPAQUE compatibility active", icon='INFO')
+        # Keep the compatibility value visible/read-only and reuse the RNA tooltip without letting
+        # the draw callback mutate material state.
+        legacy_row = layout.row(align=True)
+        legacy_row.enabled = False
+        legacy_row.prop(mat, "blend_method", text="Compatibility")
     if mat.surface_render_method == 'BLENDED':
         col.prop(mat, "use_transparency_overlap", text="Transparency Overlap")
     elif mat.surface_render_method == 'DITHERED':

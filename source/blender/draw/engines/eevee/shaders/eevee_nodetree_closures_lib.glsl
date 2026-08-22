@@ -11,6 +11,9 @@
 
 packed_float3 g_emission;
 packed_float3 g_transmittance;
+/* Legacy Goo/EEVEE OPAQUE keeps Transparent BSDF weight for internal alpha reciprocal
+ * recovery, while g_transmittance remains reserved for real external transparency. */
+packed_float3 g_legacy_transmittance;
 float g_holdout;
 
 packed_float3 g_volume_scattering;
@@ -150,7 +153,24 @@ void closure_weights_reset(float closure_rand)
 
   g_emission = float3(0.0f);
   g_transmittance = float3(0.0f);
+  g_legacy_transmittance = float3(0.0f);
   g_volume_scattering = float3(0.0f);
   g_volume_absorption = float3(0.0f);
   g_holdout = 0.0f;
+}
+
+/* Surface alpha used to normalize closure energy. Legacy OPAQUE deliberately uses its private
+ * transmittance accumulator here, but never exposes it to the external transparency pipeline. */
+float surface_internal_alpha()
+{
+#ifdef MAT_LEGACY_OPAQUE
+  return saturate(1.0f - average(g_legacy_transmittance));
+#else
+  return saturate(1.0f - average(g_transmittance));
+#endif
+}
+
+float surface_internal_alpha_rcp()
+{
+  return safe_rcp(surface_internal_alpha());
 }

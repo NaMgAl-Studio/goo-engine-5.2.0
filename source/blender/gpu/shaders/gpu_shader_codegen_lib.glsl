@@ -285,10 +285,11 @@ struct GooShaderInfoData {
   float light_cast_shadow[GOO_MAX_LIGHTS];
   float light_self_shadow[GOO_MAX_LIGHTS];
   float light_hl[GOO_MAX_LIGHTS];
+  float light_goo_weight[GOO_MAX_LIGHTS];
   packed_float3 overflow_unshadowed;
-  float overflow_cast_reached_lum;
-  float overflow_self_reached_lum;
-  float overflow_unshadowed_lum;
+  float overflow_goo_weight;
+  float overflow_cast_occlusion;
+  float overflow_self_occlusion;
   float overflow_hl;
   bool valid;
 };

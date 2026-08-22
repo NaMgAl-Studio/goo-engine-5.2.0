@@ -216,7 +216,8 @@ struct [[host_shared]] LightData {
   float contact_dist;
   float contact_bias;
   float contact_thickness;
-  float _goo_pad0;
+  /* Goo Shader Info compatibility weight: max(raw light color) * diffuse factor. */
+  float goo_shader_info_weight;
 
   union {
     union_t<struct LightLocalData> local;

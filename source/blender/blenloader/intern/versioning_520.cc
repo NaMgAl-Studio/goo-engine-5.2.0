@@ -1,4 +1,4 @@
-﻿/* SPDX-FileCopyrightText: 2025 Blender Authors
+/* SPDX-FileCopyrightText: 2025 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -8,13 +8,17 @@
 
 #define DNA_DEPRECATED_ALLOW
 
+/* Define macros in `DNA_genfile.h` for versioning provenance checks. */
+#define DNA_GENFILE_VERSIONING_MACROS
+#include "DNA_genfile.h"
+#undef DNA_GENFILE_VERSIONING_MACROS
+
 #include "NOD_geometry_nodes_srna.hh"
 
 #include "DNA_ID.h"
 #include "DNA_brush_types.h"
 #include "DNA_camera_types.h"
 #include "DNA_curve_types.h"
-#include "DNA_genfile.h"
 #include "DNA_mesh_types.h"
 #include "DNA_modifier_types.h"
 #include "DNA_node_tree_interface_types.h"
@@ -698,31 +702,35 @@ void do_versions_after_linking_520(FileData *fd, Main *bmain)
     }
   }
 
-  if (!MAIN_VERSION_FILE_ATLEAST(bmain, 502, 47)) {
-    /* Goo/legacy EEVEE "OPAQUE" materials ignored their transparency closure entirely (always fully
-     * opaque). EEVEE-Next has no equivalent mode, so such materials are flagged MA_LEGACY_OPAQUE and
-     * the material shader then forces them opaque (see gpu_material_is_transparent / MAT_FORCE_OPAQUE).
+  if (!MAIN_VERSION_FILE_ATLEAST(bmain, 502, 48)) {
+    /* Goo/legacy EEVEE "OPAQUE" materials had a real opaque surface mode even when their node
+     * tree contained a Transparent BSDF. EEVEE-Next has no equivalent public mode, so retain an
+     * internal provenance flag and let the material shader provide the compatibility behavior.
      *
-     * The legacy DNA `blend_method` is deprecated and its default value is MA_BM_SOLID(0) — which is
-     * exactly what official 4.2+/5.x files store for every material. Gating purely on
-     * `blend_method == MA_BM_SOLID` therefore wrongly flags official-file materials that legitimately
-     * use dithered/blended alpha (e.g. transparent PNG cards), turning their transparent areas black.
-     *
-     * Restrict the legacy behavior to materials that actually originate from the Goo/legacy world:
-     *   - the material's node tree (recursively, incl. node groups) uses a Goo-ported node, or
-     *   - the file predates EEVEE-Next (versionfile < 402), where "OPAQUE" was a real global mode.
-     * Recompute from scratch (clear first) so files wrongly flagged by an earlier port build that
-     * only checked blend_method are repaired on load. Newly-created EEVEE-Next materials never run
-     * this versioning and keep their intended alpha. */
+     * The deprecated DNA `blend_method` defaults to MA_BM_SOLID for modern files too. Therefore the
+     * flag must be recomputed from provenance rather than from blend_method alone, otherwise native
+     * EEVEE-Next alpha cards would be incorrectly made opaque. Clearing first also repairs files that
+     * were loaded by an earlier port build which set the flag too broadly. */
     const bool legacy_eevee_era = bmain->versionfile < 402;
+    /* Goo 4.4 kept the legacy EEVEE data model alive after official Blender had moved on.
+     * Its files are version 4.4 (not < 4.2), and an OPAQUE material need not contain a Goo node,
+     * so node-tree inspection alone cannot identify the provenance. The combination of Goo-only
+     * DNA members is a stable marker for those files. Keep the version guard so a material saved
+     * by this port is never reclassified merely because the current DNA also contains these
+     * members. */
+    const bool goo_file_dna =
+        bmain->versionfile < 500 &&
+        DNA_struct_member_exists(fd->filesdna, "Material", "char", "check_shadow_id") &&
+        DNA_struct_member_exists(fd->filesdna, "Material", "int", "light_group_shadow_bits[4]") &&
+        DNA_struct_member_exists(fd->filesdna, "NodeShaderInfo", "int", "light_group_shadow_bits[4]");
     for (Material &mat : bmain->materials) {
-      mat.flag &= ~MA_LEGACY_OPAQUE;
-      if (mat.blend_method != MA_BM_SOLID) {
-        continue;
-      }
+      /* `blend_method` is still the legacy DNA value at this point in the load sequence. The
+       * 4.2 conversion that maps legacy modes to HASHED/BLEND runs in the earlier generation
+       * versioning pass, while this after-linking pass is where Goo node groups are available. */
       const bool from_goo = mat.nodetree != nullptr &&
                             material_node_tree_uses_goo_node(*mat.nodetree);
-      if (legacy_eevee_era || from_goo) {
+      mat.flag &= ~MA_LEGACY_OPAQUE;
+      if (mat.blend_method == MA_BM_SOLID && (legacy_eevee_era || goo_file_dna || from_goo)) {
         mat.flag |= MA_LEGACY_OPAQUE;
       }
     }

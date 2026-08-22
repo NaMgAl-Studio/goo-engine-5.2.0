@@ -128,9 +128,11 @@ void surf_deferred([[resource_table]] PipelineConstants &pipe,
 
   Thickness thickness = Thickness::from(nodetree_thickness(), thickness_mode);
 
-  /** Transparency weight is already applied through dithering, remove it from other closures. */
-  float alpha = 1.0f - average(g_transmittance);
-  float alpha_rcp = safe_rcp(alpha);
+  /** Transparency weight is already applied through dithering, remove it from other closures.
+   * Legacy OPAQUE uses its private accumulator for the internal energy recovery while keeping the
+   * external transmittance path opaque. */
+  float alpha = surface_internal_alpha();
+  float alpha_rcp = surface_internal_alpha_rcp();
 
   /* Object holdout. */
   eObjectInfoFlag ob_flag = object_infos_get().flag;
