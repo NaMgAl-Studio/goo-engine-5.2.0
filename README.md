@@ -72,7 +72,13 @@ What Was Ported and How
   depth sampling aligned with Goo's output.
 - **OKLab Color Ramp** aligned with Goo's render path (easing behavior and linear output).
 - **Light Groups** management UI (`scripts/startup/goo_engine_light_groups.py`) together
-  with the Light DNA/RNA extensions; shader Add menu regrouped into Goo categories.
+  with Material/Light DNA/RNA extensions; Shader Info inherits its material's diffuse and
+  shadow masks unless **Use Own Light Groups** is enabled. Named groups, default-group and
+  Ignore Shadows controls are available in Material Properties, including pinned materials.
+  Changes invalidate the material through RNA (also for shared nested node groups); no new
+  EEVEE pass resources or Shadow-ID changes are needed. The compatibility UI controls the
+  Goo Shader Info outputs, not native EEVEE light linking or ordinary BSDF lighting.
+  Shader Add menu regrouped into Goo categories.
 - **Legacy material semantics** restored through file versioning:
   - `MA_LEGACY_OPAQUE` (legacy `blend_method == Opaque`) is tagged at load time, gated by
     "material node tree uses a Goo node OR file version < 4.2" (file subversion 502.47,
@@ -131,3 +137,34 @@ Disclaimer
 This is an experimental, unofficial build provided under the GPL without any warranty.
 For production NPR work on Blender 4.4, use the original Goo Engine release from
 DillonGoo Studios.
+
+Material Light Groups regression
+--------------------------------
+
+The self-contained `tests/python/goo_light_groups.py` runs fresh background Blender processes
+and records commands, exits, linear EXR pixel hashes, fixtures, and a manifest. Run with a
+**new** output directory (requires a full build with file subversion 502.49):
+
+```text
+python tests/python/goo_light_groups.py --blender <blender.exe> --output <new-directory>
+```
+
+For an incremental developer build whose runtime scripts have not been packaged, add
+`--startup <source>/scripts/startup`. The test reloads the existing startup module once;
+it never registers a second copy under another name. `--reference <previous-blender.exe>`
+compares ordinary EEVEE and modern transparency pixels against a previous release and checks
+migration of its saved materials. `--legacy <goo-4.4-blender.exe>` additionally creates an
+original Goo fixture and checks material groups, Ignore Shadows, OPAQUE provenance and roundtrip.
+`GOO_LIGHT_GROUPS_MATRIX_PASS` requires every case to pass. This tests Material/Light UI
+registration and operators, masks including signed bits/default-bit reservation, dynamic
+material/node overrides, shared groups, multi-slot materials, Sun/Point/Spot/Area,
+Cast/Self with Shadow-ID and Ignore Shadows, and save/reopen/append/link. Shader Info uses
+the Hybrid path for DITHERED and Forward for BLENDED; ordinary-material controls cover the
+unchanged native Deferred and Forward paths.
+
+502.49 restores the original Material mask fields (default `{0, 0, 0, 1}`). Files with
+existing Goo DNA retain them; files without the fields receive the default. Named group
+collections are persistent ID properties; mask fields are derived caches resynchronized
+after load/import, undo/redo, and before render. This does not change 502.48's OPAQUE
+provenance migration. Lights beyond the Shader Info bridge's per-fragment record limit
+retain the pre-existing always-on overflow policy.

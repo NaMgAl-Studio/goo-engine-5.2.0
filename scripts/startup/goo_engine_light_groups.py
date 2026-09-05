@@ -3,18 +3,19 @@
 """
 Light group key management for Goo Engine NPR nodes, ported to Blender 5.2 (EEVEE-Next).
 
-Provides the user-facing UI (Light Data properties + Shader Info node sidebar) to create and
+Provides the user-facing UI (Material/Light properties + Shader Info node sidebar) to create and
 assign named light groups. Named groups are synced into the per-data-block ``light_group_bits``
-bitfields (on Lights and Shader Info nodes) that the shader actually reads.
+bitfields (on Materials, Lights and Shader Info nodes) that the shader actually reads.
 
-Unlike original Goo, materials do not carry light groups in this port: grouping lives on the
-Shader Info node (via ``use_own_light_groups``) and on lights, which is what the ported EEVEE-Next
-shader path consumes.
+Materials, lights, and Shader Info nodes participate in the same named light-group namespace.
+Material groups provide the default Shader Info mask; a Shader Info node with
+``use_own_light_groups`` enabled overrides that default with its own mask.
 """
 
 import bpy
 from bpy.types import (
     Panel,
+    Material,
     Light,
     PropertyGroup,
     UIList,
@@ -37,65 +38,101 @@ from ctypes import c_int32
 
 SIZEOF_INT = 32
 MAX_LIGHT_GROUP_BIT = 127
+MAX_NAMED_LIGHT_GROUPS = MAX_LIGHT_GROUP_BIT
+
+_sync_in_progress = False
 
 
 def set_bit(vec, bit):
+    if bit < 0 or bit > MAX_LIGHT_GROUP_BIT:
+        return
     index = bit // SIZEOF_INT
     mask = 1 << ((bit + 1) % SIZEOF_INT)
-    if index > 3:
-        return
     vec[index] = int(c_int32(vec[index] | mask).value)
 
 
+def _set_array_if_changed(data, property_name, values):
+    values = tuple(values)
+    if tuple(getattr(data, property_name)) != values:
+        setattr(data, property_name, values)
+
+
 def map_bits(data, mapping):
-    data.light_group_bits = (0, 0, 0, 0)
-    # Only Shader Info nodes carry a separate per-group shadow mask.
-    has_shadow = isinstance(data, ShaderNodeShaderInfo)
-    if has_shadow:
-        data.light_group_shadow_bits = (0, 0, 0, 0)
+    bits = [0, 0, 0, 0]
+    # Materials and Shader Info nodes carry separate diffuse/shadow masks. Lights only carry
+    # their membership mask; the material/node shadow mask controls whether that group casts into
+    # the Shader Info result.
+    has_shadow = isinstance(data, (Material, ShaderNodeShaderInfo))
+    shadow_bits = [0, 0, 0, 0]
 
     for grp in data.light_groups.groups:
         index = mapping.get(grp.name)
         if index is not None:
-            set_bit(data.light_group_bits, index)
+            set_bit(bits, index)
             if has_shadow and not grp.ignore_shadow:
-                set_bit(data.light_group_shadow_bits, index)
+                set_bit(shadow_bits, index)
 
     if data.light_groups.use_default:
-        set_bit(data.light_group_bits, MAX_LIGHT_GROUP_BIT)
+        set_bit(bits, MAX_LIGHT_GROUP_BIT)
         if has_shadow and not data.light_groups.ignore_default_shadow:
-            set_bit(data.light_group_shadow_bits, MAX_LIGHT_GROUP_BIT)
+            set_bit(shadow_bits, MAX_LIGHT_GROUP_BIT)
+
+    _set_array_if_changed(data, "light_group_bits", bits)
+    if has_shadow:
+        _set_array_if_changed(data, "light_group_shadow_bits", shadow_bits)
+
+
+def iter_shader_info_nodes():
+    """Yield every Shader Info node, including nodes which currently use the material mask."""
+    seen = set()
+    node_trees = chain(bpy.data.node_groups, (mat.node_tree for mat in bpy.data.materials))
+    for node_tree in node_trees:
+        if not node_tree:
+            continue
+        pointer = node_tree.as_pointer()
+        if pointer in seen:
+            continue
+        seen.add(pointer)
+        for node in node_tree.nodes:
+            if isinstance(node, ShaderNodeShaderInfo):
+                yield node
 
 
 def iter_light_group_owners():
-    # Shader Info nodes (in node groups and material trees) that opt into their own groups.
-    for node_tree in chain(bpy.data.node_groups, (m.node_tree for m in bpy.data.materials)):
-        if not node_tree:
-            continue
-        for node in node_tree.nodes:
-            if isinstance(node, ShaderNodeShaderInfo) and node.use_own_light_groups:
-                yield node
-
-    for light in bpy.data.lights:
-        yield light
+    # Materials provide the default light-group mask for Shader Info nodes.
+    yield from bpy.data.materials
+    # Keep all Shader Info node masks synchronized. Nodes that do not use their own mask simply
+    # ignore these values until use_own_light_groups is enabled.
+    yield from iter_shader_info_nodes()
+    yield from bpy.data.lights
 
 
 def sync_light_groups():
-    # Group names are authored on lights; assign each a stable bit index.
-    light_names = set()
-    for light in bpy.data.lights:
-        for grp in light.light_groups.groups:
-            light_names.add(grp.name)
+    global _sync_in_progress
+    if _sync_in_progress:
+        return
 
-    if len(light_names) >= MAX_LIGHT_GROUP_BIT:
-        print("WARNING: Max number of light groups (127) reached. "
-              "Some Light Groups will not be included.")
+    _sync_in_progress = True
+    try:
+        # Group names are authored on lights; assign deterministic bit indices. Using sorted names
+        # makes the bit layout stable across runs, saves, and machines instead of depending on the
+        # hash-table iteration order of a Python set.
+        sorted_names = sorted({
+            grp.name
+            for light in bpy.data.lights
+            for grp in light.light_groups.groups
+        })
+        if len(sorted_names) > MAX_NAMED_LIGHT_GROUPS:
+            print("WARNING: Max number of named light groups (127) reached. "
+                  "Groups after the first 127 sorted names are ignored.")
+            sorted_names = sorted_names[:MAX_NAMED_LIGHT_GROUPS]
 
-    # The default group is reserved at bit 127.
-    bit_mapping = {name: index for index, name in enumerate(light_names)}
-
-    for data in iter_light_group_owners():
-        map_bits(data, bit_mapping)
+        # The default group is reserved at bit 127.
+        bit_mapping = {name: index for index, name in enumerate(sorted_names)}
+        for data in iter_light_group_owners():
+            map_bits(data, bit_mapping)
+    finally:
+        _sync_in_progress = False
 
 
 def update_handler(_s, _c):
@@ -116,13 +153,13 @@ def sync_dg_handler(scn, dg):
         uid = update.id
         if not uid:
             continue
-        if isinstance(uid, (bpy.types.Material, bpy.types.Light)):
+        if isinstance(uid, (bpy.types.Material, bpy.types.Light, bpy.types.NodeTree)):
             sync_light_groups()
             return
 
 
 def rename_group(data, src, tgt):
-    if getattr(data, 'library', False):
+    if data.id_data.library:
         return
     for grp in data.light_groups.groups:
         if grp.name == src:
@@ -138,6 +175,7 @@ def set_name(self, value):
     orig_name = self.name
     for data in iter_light_group_owners():
         rename_group(data, orig_name, value)
+    sync_light_groups()
 
 
 class LightGroup(PropertyGroup):
@@ -187,17 +225,55 @@ def unique_group_name():
     return name
 
 
+def _material_from_context(ctx):
+    """Resolve the material shown by a Material Properties context, including pinned data."""
+    mat = getattr(ctx, 'material', None)
+    if isinstance(mat, Material):
+        return mat
+
+    space = getattr(ctx, 'space_data', None)
+    pin_id = getattr(space, 'pin_id', None)
+    if isinstance(pin_id, Material):
+        return pin_id
+
+    obj = getattr(ctx, 'object', None)
+    if obj is None:
+        return None
+    mat = getattr(obj, 'active_material', None)
+    if mat is not None:
+        return mat
+    return None
+
+
 def get_groups(obj):
-    if obj and obj.type == 'LIGHT':
+    if obj and getattr(obj, 'type', None) == 'LIGHT':
         return obj.data.light_groups
-    raise ValueError("Light groups are only available on lights or Shader Info nodes")
+    if obj and hasattr(obj, 'active_material'):
+        mat = getattr(obj, 'active_material', None)
+        return mat.light_groups if mat is not None else None
+    if isinstance(obj, Material):
+        return obj.light_groups
+    raise ValueError("Light groups are only available on materials, lights, or Shader Info nodes")
 
 
 def get_groups_ctx(ctx):
     node = getattr(ctx, 'active_node', None)
     if node is not None and isinstance(node, ShaderNodeShaderInfo):
         return node.light_groups
-    return get_groups(ctx.object)
+    light = getattr(ctx, 'light', None)
+    if light is not None:
+        return light.light_groups
+    space = getattr(ctx, 'space_data', None)
+    pin_id = getattr(space, 'pin_id', None)
+    if isinstance(pin_id, Light):
+        return pin_id.light_groups
+    mat = _material_from_context(ctx)
+    if mat is not None:
+        return mat.light_groups
+    obj = getattr(ctx, 'object', None)
+    if obj is not None:
+        return get_groups(obj)
+    return None
 
 
 class MAT_UL_LightGroupList(UIList):
@@ -205,8 +281,8 @@ class MAT_UL_LightGroupList(UIList):
                   active_data, active_property, index=0, flt_flag=0):
         row = layout.row(align=True)
         row.prop(item, "viz_name", emboss=False, text="")
-        # Per-group shadow toggle only makes sense on Shader Info nodes.
-        if isinstance(data.id_data, ShaderNodeTree):
+        # Material and Shader Info masks can independently ignore shadows from a group.
+        if isinstance(data.id_data, (Material, ShaderNodeTree)):
             row.prop(item, "ignore_shadow", text="",
                      icon="REC" if item.ignore_shadow else "OVERLAY", emboss=False)
 
@@ -236,6 +312,7 @@ class ALightGroupPanel(Panel):
         groups = self.get_groups(ctx)
         if groups is None:
             return
+        layout.enabled = groups.id_data.is_editable
         row = layout.row()
         row.template_list("MAT_UL_LightGroupList", "",
                           groups, "groups", groups, "group_index",
@@ -252,31 +329,35 @@ class ALightGroupPanel(Panel):
 
         row = layout.row()
         row.prop(groups, 'use_default', text="Use Default Group")
-        # Shadow-related options only apply to Shader Info nodes (not to lights).
+        # Shadow-related options apply to materials and Shader Info nodes, not lights.
         if getattr(self, 'bl_context', '') != "data" or self.bl_space_type == 'NODE_EDITOR':
             row = row.row()
             row.enabled = groups.use_default
             row.prop(groups, 'ignore_default_shadow', text="Ignore Default Shadows")
 
 
+class OBJ_PT_MLightGroupPanel(ALightGroupPanel):
+    bl_context = 'material'
+
+    def get_groups(self, ctx):
+        mat = _material_from_context(ctx)
+        return mat.light_groups if mat is not None else None
+
+    @classmethod
+    def poll(cls, ctx):
+        return _material_from_context(ctx) is not None
+
+
 class OBJ_PT_LLightGroupPanel(ALightGroupPanel):
     bl_context = 'data'
 
     def get_groups(self, ctx):
-        ob = ctx.object
-        light = ctx.light
-        space = ctx.space_data
-        if ob:
-            data = ob.data
-        elif light:
-            data = space.pin_id
-        else:
-            return None
-        return data.light_groups
+        light = getattr(ctx, 'light', None)
+        return light.light_groups if light is not None else None
 
     @classmethod
     def poll(cls, ctx):
-        return ctx.light
+        return getattr(ctx, 'light', None) is not None
 
 
 class NOD_PT_LightGroupPanel(ALightGroupPanel):
@@ -305,7 +386,7 @@ class LightGroupOp(Operator):
     @classmethod
     def poll(cls, ctx):
         try:
-            return cls.get_groups(ctx) is not None
+            return (groups := cls.get_groups(ctx)) is not None and groups.id_data.is_editable
         except Exception:
             return False
 
@@ -321,7 +402,8 @@ class LightGroupSelectionOp(Operator):
     def poll(cls, ctx):
         try:
             grp = cls.get_groups(ctx)
-            return grp is not None and 0 <= grp.group_index < len(grp.groups)
+            return (grp is not None and grp.id_data.is_editable and
+                    0 <= grp.group_index < len(grp.groups))
         except Exception:
             return False
 
@@ -376,9 +458,12 @@ class MAT_OT_DeleteLightGroup(LightGroupSelectionOp):
         lgs = self.get_groups(ctx)
         grp_name = lgs.groups[lgs.group_index].name
         for data in iter_light_group_owners():
-            if grp_name not in data.light_groups.groups:
+            if data.id_data.library:
                 continue
-            data.light_groups.groups.remove(data.light_groups.groups.find(grp_name))
+            groups = data.light_groups.groups
+            index = groups.find(grp_name)
+            if index != -1:
+                groups.remove(index)
         lgs.group_index -= 1
         sync_light_groups()
         return {'FINISHED'}
@@ -411,6 +496,7 @@ _classes = (
     LightGroup,
     LightGroups,
     MAT_UL_LightGroupList,
+    OBJ_PT_MLightGroupPanel,
     OBJ_PT_LLightGroupPanel,
     NOD_PT_LightGroupPanel,
     MAT_OT_NewLightGroup,
@@ -433,21 +519,39 @@ def _safe_remove(handler_list, fn):
         handler_list.remove(fn)
 
 
+def _ensure_pointer_property(owner, name):
+    if not hasattr(owner, name):
+        setattr(owner, name, PointerProperty(type=LightGroups))
+
+
+def _remove_pointer_property(owner, name):
+    if hasattr(owner, name):
+        delattr(owner, name)
+
+
 def register():
     _register()
-    Light.light_groups = PointerProperty(type=LightGroups)
-    ShaderNodeShaderInfo.light_groups = PointerProperty(type=LightGroups)
+    _ensure_pointer_property(Material, "light_groups")
+    _ensure_pointer_property(Light, "light_groups")
+    _ensure_pointer_property(ShaderNodeShaderInfo, "light_groups")
 
     _safe_append(bpy.app.handlers.render_init, sync_handler)
     _safe_append(bpy.app.handlers.load_post, sync_handler)
+    _safe_append(bpy.app.handlers.blend_import_post, sync_handler)
+    _safe_append(bpy.app.handlers.undo_post, sync_handler)
+    _safe_append(bpy.app.handlers.redo_post, sync_handler)
     _safe_append(bpy.app.handlers.depsgraph_update_post, sync_dg_handler)
 
 
 def unregister():
     _safe_remove(bpy.app.handlers.depsgraph_update_post, sync_dg_handler)
+    _safe_remove(bpy.app.handlers.redo_post, sync_handler)
+    _safe_remove(bpy.app.handlers.undo_post, sync_handler)
+    _safe_remove(bpy.app.handlers.blend_import_post, sync_handler)
     _safe_remove(bpy.app.handlers.load_post, sync_handler)
     _safe_remove(bpy.app.handlers.render_init, sync_handler)
 
-    del Light.light_groups
-    del ShaderNodeShaderInfo.light_groups
+    _remove_pointer_property(Material, "light_groups")
+    _remove_pointer_property(Light, "light_groups")
+    _remove_pointer_property(ShaderNodeShaderInfo, "light_groups")
     _unregister()

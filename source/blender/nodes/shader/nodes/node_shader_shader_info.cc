@@ -11,6 +11,7 @@
  * independent Cast and Self shadow visibility when material shadow-ID filtering is enabled.
  */
 
+#include "DNA_material_types.h"
 #include "DNA_node_types.h"
 
 #include "UI_interface_layout.hh"
@@ -37,6 +38,10 @@ static void node_declare(NodeDeclarationBuilder &b)
 static void node_shader_init_shader_info(bNodeTree * /*ntree*/, bNode *node)
 {
   NodeShaderInfo *shinfo = MEM_new<NodeShaderInfo>(__func__);
+  for (int i = 0; i < 4; i++) {
+    shinfo->light_group_bits[i] = 0;
+    shinfo->light_group_shadow_bits[i] = 0;
+  }
   shinfo->light_group_bits[3] = 1;
   shinfo->light_group_shadow_bits[3] = 1;
   shinfo->use_own_light_groups = 0;
@@ -70,14 +75,29 @@ static int node_shader_gpu_shader_info(GPUMaterial *mat,
   }
   /* Pass the node's per-node light-group masks as uniforms (int bits reinterpreted as floats,
    * recovered with floatBitsToInt in the shader), matching Goo's node_shader_info_light_groups.
-   * When the node does not use its own light groups, pass an all-ones mask so it sums every group
-   * bucket (i.e. sees all lights). */
+   * Without a per-node override, inherit the source material masks. RNA mask updates tag
+   * ID_RECALC_SHADING; BKE_material_eval frees the old GPUMaterial, including its optimized pass
+   * and uniform buffer, before the next draw. Shared node groups therefore inherit per material. */
   const NodeShaderInfo *info = static_cast<const NodeShaderInfo *>(node->storage);
   int light_groups[4];
   int light_group_shadows[4];
+  const Material *material = GPU_material_get_material(mat);
   for (int i = 0; i < 4; i++) {
-    light_groups[i] = info->use_own_light_groups ? info->light_group_bits[i] : ~0;
-    light_group_shadows[i] = info->use_own_light_groups ? info->light_group_shadow_bits[i] : ~0;
+    if (info->use_own_light_groups) {
+      light_groups[i] = info->light_group_bits[i];
+      light_group_shadows[i] = info->light_group_shadow_bits[i];
+    }
+    else if (material != nullptr) {
+      /* Material masks are baked as node uniforms during GPU material construction. This avoids
+       * a per-pass resource and keeps the default mask attached to the GPUMaterial source. */
+      light_groups[i] = material->light_group_bits[i];
+      light_group_shadows[i] = material->light_group_shadow_bits[i];
+    }
+    else {
+      /* World/non-material fallback: include every named light group. */
+      light_groups[i] = ~0;
+      light_group_shadows[i] = ~0;
+    }
   }
   return GPU_stack_link(mat,
                         node,
@@ -99,7 +119,7 @@ void register_node_type_sh_shader_info()
   common_node_type_base(&ntype, "ShaderNodeShaderInfo"_ustr, SH_NODE_SHADER_INFO);
   ntype.ui_name = "Shader Info";
   ntype.ui_description =
-      "Separate internal lighting into multiple outputs (per-node light groups)";
+      "Separate internal lighting into multiple outputs (material or per-node light groups)";
   ntype.enum_name_legacy = "SHADERINFO";
   ntype.nclass = NODE_CLASS_INPUT;
   ntype.declare = file_ns::node_declare;

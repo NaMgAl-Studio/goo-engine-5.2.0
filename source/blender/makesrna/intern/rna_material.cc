@@ -1159,6 +1159,26 @@ void RNA_def_material(BlenderRNA *brna)
       prop, "Shadow Backface Culling", "Use back face culling when casting shadows");
   RNA_def_property_update(prop, 0, "rna_Material_draw_update");
 
+  /* Goo Engine material light-group masks. These are synchronized from the named Python
+   * light-group collections and consumed as the default Shader Info masks. */
+  prop = RNA_def_property(srna, "light_group_bits", PROP_INT, PROP_NONE);
+  RNA_def_property_int_sdna(prop, nullptr, "light_group_bits");
+  RNA_def_property_array(prop, 4);
+  RNA_def_property_ui_text(
+      prop, "Light Groups", "Light-group membership bitfield used by the Shader Info node");
+  RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+  RNA_def_property_flag(prop, PROP_SKIP_SAVE | PROP_LIB_EXCEPTION);
+  RNA_def_property_update(prop, 0, "rna_Material_draw_update");
+
+  prop = RNA_def_property(srna, "light_group_shadow_bits", PROP_INT, PROP_NONE);
+  RNA_def_property_int_sdna(prop, nullptr, "light_group_shadow_bits");
+  RNA_def_property_array(prop, 4);
+  RNA_def_property_ui_text(
+      prop, "Light Group Shadows", "Light-group shadow bitfield used by the Shader Info node");
+  RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+  RNA_def_property_flag(prop, PROP_SKIP_SAVE | PROP_LIB_EXCEPTION);
+  RNA_def_property_update(prop, 0, "rna_Material_draw_update");
+
   /* Goo Engine shadow-ID filtering for reflected EEVEE surface lighting. */
   prop = RNA_def_property(srna, "check_shadow_id", PROP_BOOLEAN, PROP_NONE);
   RNA_def_property_boolean_sdna(prop, nullptr, "check_shadow_id", 1);

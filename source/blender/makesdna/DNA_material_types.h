@@ -469,6 +469,11 @@ struct Material {
   /** Grease pencil color. */
   struct MaterialGPencilStyle *gp_style = nullptr;
   struct MaterialLineArt lineart;
+  /* Goo Engine: named light-group membership and shadow masks used as the default
+   * Shader Info mask when a node does not use its own groups. These are runtime-derived
+   * caches; the persistent group names live on the Python RNA property. */
+  int light_group_bits[4] = {0, 0, 0, 1};
+  int light_group_shadow_bits[4] = {0, 0, 0, 1};
 };
 
 }  // namespace blender

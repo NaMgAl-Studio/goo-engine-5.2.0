@@ -480,7 +480,7 @@ void shader_info_eval([[maybe_unused]] float3 position,
      * placeholders) contribute to nothing. Diffuse + half-lambert use the diffuse mask
      * (light_groups) and the UNSHADOWED lighting (Goo's Diffuse Shading carries no shadow
      * factor); cast/self shadows use the separate shadow mask and the per-light shadow
-     * visibility. A node not using its own light groups passes all-ones masks. Overflow lights
+     * visibility. A node not using its own light groups inherits the material masks. Overflow lights
      * (beyond GOO_MAX_LIGHTS) are always-on. */
     float3 dif = g_goo_shader_info.overflow_unshadowed;
     float hl = g_goo_shader_info.overflow_hl;

@@ -702,6 +702,24 @@ void do_versions_after_linking_520(FileData *fd, Main *bmain)
     }
   }
 
+  if (!MAIN_VERSION_FILE_ATLEAST(bmain, 502, 49)) {
+    /* Material light-group bitfields were not present in older 5.2 port builds. Keep legacy
+     * Goo fields when they are available in the source DNA, otherwise initialize every material
+     * to the builtin default group so modern files retain ordinary all-default behavior. */
+    const bool has_material_light_groups =
+        DNA_struct_member_exists(fd->filesdna, "Material", "int", "light_group_bits[4]") &&
+        DNA_struct_member_exists(fd->filesdna, "Material", "int", "light_group_shadow_bits[4]");
+    if (!has_material_light_groups) {
+      for (Material &mat : bmain->materials) {
+        mat.light_group_bits[0] = mat.light_group_bits[1] = mat.light_group_bits[2] = 0;
+        mat.light_group_bits[3] = 1;
+        mat.light_group_shadow_bits[0] = mat.light_group_shadow_bits[1] =
+            mat.light_group_shadow_bits[2] = 0;
+        mat.light_group_shadow_bits[3] = 1;
+      }
+    }
+  }
+
   if (!MAIN_VERSION_FILE_ATLEAST(bmain, 502, 48)) {
     /* Goo/legacy EEVEE "OPAQUE" materials had a real opaque surface mode even when their node
      * tree contained a Transparent BSDF. EEVEE-Next has no equivalent public mode, so retain an
