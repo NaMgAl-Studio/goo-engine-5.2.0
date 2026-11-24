@@ -48,8 +48,6 @@ struct [[host_shared]] ShadowSceneData {
   bool32_t use_shadow_id;
   /* Enable validation-only shadow-ID atomic statistics (--debug-value 733). */
   bool32_t use_shadow_id_diagnostics;
-  /* 0: depth raster, 1: ID resolve raster. */
-  uint shadow_pass_mode;
 };
 
 struct [[host_shared]] SceneData {

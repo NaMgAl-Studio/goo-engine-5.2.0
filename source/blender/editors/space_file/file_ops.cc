@@ -2443,7 +2443,12 @@ static wmOperatorStatus file_smoothscroll_invoke(bContext *C,
   ScrArea *area = CTX_wm_area(C);
   SpaceFile *sfile = CTX_wm_space_file(C);
   ARegion *region, *region_ctx = CTX_wm_region(C);
-  if (UNLIKELY(!sfile->layout)) {
+  wmWindowManager *wm = CTX_wm_manager(C);
+  wmWindow *win = CTX_wm_window(C);
+  if (UNLIKELY(sfile == nullptr || sfile->files == nullptr || sfile->layout == nullptr)) {
+    if (sfile != nullptr && wm != nullptr && win != nullptr && sfile->smoothscroll_timer != nullptr) {
+      file_params_smoothscroll_timer_clear(wm, win, sfile);
+    }
     return OPERATOR_PASS_THROUGH;
   }
   const bool is_horizontal = (sfile->layout->flag & FILE_LAYOUT_HOR) != 0;
@@ -2476,9 +2481,6 @@ static wmOperatorStatus file_smoothscroll_invoke(bContext *C,
       break;
     }
   }
-
-  wmWindowManager *wm = CTX_wm_manager(C);
-  wmWindow *win = CTX_wm_window(C);
 
   /* if we are not editing, we are done */
   if (edit_idx == -1) {

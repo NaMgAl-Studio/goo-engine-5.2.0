@@ -61,8 +61,8 @@ Upstream Maintenance Baseline (2026-09-12)
 
 The port incorporates the complete official Blender **v5.2.1** maintenance release
 (`9e2066aef7ef7e20c142ad7bd3303138a4304c93`), preserving the Goo additions on top of
-v5.2.0. The program patch version is 5.2.1; the fork file subversion remains
-**502.49**, so this update does not downgrade or reclassify existing Goo data.
+v5.2.0. The program patch version is 5.2.1; the fork file subversion is
+**502.48**, so this update does not downgrade or reclassify existing Goo data.
 
 The declared release validation scope is the Windows full build, existing Goo
 regression matrices, and extracted-package checks. Dedicated upstream-fix and
@@ -118,9 +118,10 @@ What Was Ported and How
 - **Forward pipeline light cap** raised to 512 visible lights per fragment.
 - **Contact shadows** bridged to EEVEE-Next equivalents; legacy **Bloom migrated to Glare**
   through versioning; a file browser crash fixed.
-- **Build configuration**: `WITH_INTERNATIONAL`, `WITH_INPUT_IME` and `WITH_BULLET`
-  enabled (the lite profile shipped with these off, which broke language switching,
-  IME input and rigid body physics).
+- **Build configuration**: `WITH_INTERNATIONAL` and `WITH_BULLET` enabled (the lite profile
+  shipped with these off, which broke language switching and rigid body physics).
+  `WITH_INPUT_IME` is enabled for Windows, macOS and Wayland; Blender does not implement
+  IME for Linux X11, where the top-level build configuration keeps it disabled.
 
 Known Boundaries and Their Handling
 -----------------------------------
@@ -151,9 +152,10 @@ Known Boundaries and Their Handling
   value and later resolved. The engine defect is documented; callers must write geometry
   nodes modifier inputs as `inputs[identifier]["value"] = value` (never overwrite the
   `{value, type}` group), which avoids the code path entirely.
-- **File subversions 502.45-49** are used by this fork. If a future official 5.2.x LTS
-  release uses the same subversion numbers for its own versioning, files saved by this
-  fork could skip those official versioning blocks.
+- **File subversion 502.48** is used by this fork. If a future official 5.2.x LTS
+  release uses the same subversion number for its own versioning, files saved by this
+  fork could skip that official versioning block. Keep the original `.blend` when
+  round-tripping through official builds.
 
 Disclaimer
 ----------
@@ -167,17 +169,17 @@ Material Light Groups regression
 
 The self-contained `tests/python/goo_light_groups.py` runs fresh background Blender processes
 and records commands, exits, linear EXR pixel hashes, fixtures, and a manifest. Run with a
-**new** output directory (requires a full build with file subversion 502.49):
+**new** output directory (requires a full build with file subversion 502.48):
 
 ```text
-python tests/python/goo_light_groups.py --blender <blender.exe> --output <new-directory>
+python tests/python/goo_light_groups.py --blender <blender> --output <new-directory>
 ```
 
 For an incremental developer build whose runtime scripts have not been packaged, add
 `--startup <source>/scripts/startup`. The test reloads the existing startup module once;
-it never registers a second copy under another name. `--reference <previous-blender.exe>`
+it never registers a second copy under another name. `--reference <previous-blender>`
 compares ordinary EEVEE and modern transparency pixels against a previous release and checks
-migration of its saved materials. `--legacy <goo-4.4-blender.exe>` additionally creates an
+migration of its saved materials. `--legacy <goo-4.4-blender>` additionally creates an
 original Goo fixture and checks material groups, Ignore Shadows, OPAQUE provenance and roundtrip.
 `GOO_LIGHT_GROUPS_MATRIX_PASS` requires every case to pass. This tests Material/Light UI
 registration and operators, masks including signed bits/default-bit reservation, dynamic
@@ -186,24 +188,23 @@ Cast/Self with Shadow-ID and Ignore Shadows, and save/reopen/append/link. Shader
 the Hybrid path for DITHERED and Forward for BLENDED; ordinary-material controls cover the
 default-group native Deferred and Forward paths.
 
-502.49 restores the original Material mask fields (default `{0, 0, 0, 1}`). Files with
+502.48 restores the original Material mask fields (default `{0, 0, 0, 1}`). Files with
 existing Goo DNA retain them; files without the fields receive the default. Named group
 collections are persistent ID properties; mask fields are derived caches resynchronized
-after load/import, undo/redo, and before render. This does not change 502.48's OPAQUE
-provenance migration. Lights beyond the Shader Info bridge's per-fragment record limit
-retain the pre-existing always-on overflow policy.
+after load/import, undo/redo, and before render. This is the same subversion as the
+OPAQUE provenance migration. Lights beyond the Shader Info bridge's per-fragment record
+limit retain the pre-existing always-on overflow policy.
 
 Screen Space Info regression
 ----------------------------
 
 `tests/python/goo_screenspace.py` builds an isolated split-background receiver fixture in a
 fresh Blender process. It requires `--output <new-directory>` after Blender's `--` separator.
-The bridge's `tests/01_节点移植验证/run_screenspace_matrix.py` orchestrates independent processes,
-strict non-black ROI oracles, reverse-Z depth, linked offsets, World/AOV, volume, runtime
-material/global toggles, resize, probes, legacy files and unchanged ordinary-pixel controls.
-Use host Python with NumPy and OpenEXR for the complete matrix. `--suite smoke` needs neither
-host image library and covers six direct-color/World cases. Diagnostic value 734 reports
-CPU snapshot submission counts; normal rendering performs no statistical GPU atomics.
+Run one process per configuration (method, background, offset, depth, volume, probes, legacy
+load, runtime toggles) and compare the written EXRs; the script is intentionally single-case
+rather than a hidden orchestrator. Host-side comparison with NumPy and OpenEXR is optional for
+inspection but is not shipped as a test matrix. Diagnostic value 734 reports CPU snapshot
+submission counts; normal rendering performs no statistical GPU atomics.
 Screen Space Info is a camera-buffer effect, not physically correct transparent geometry:
 it cannot reveal off-screen surfaces, its own opaque-refraction layer, or later BLENDED
 surfaces. Ordinary BSDF material groups were added subsequently; see the section below.
@@ -225,7 +226,9 @@ the extra layer/table fetch. Shadow-ID header bits 30/31 remain unchanged. Group
 update draw data, not shader variants. A source-SDNA check initializes missing Light and
 Material fields for native files (including linked data), regardless of file subversion,
 without UI handlers. Existing Goo masks, including intentional empty groups, are retained.
-No new DNA/RNA field or file subversion is introduced by this change.
+The compatibility fields add DNA members and bump the file subversion to `502.48`.
+Files saved here are not guaranteed to round-trip through an official Blender build
+that later claims the same `5.2.x` subversion; keep a copy of the original `.blend`.
 
 Permanent workers: `tests/python/goo_bsdf_light_groups.py` and
 `tests/python/goo_bsdf_light_groups_cases.py`. A single worker builds and validates an
@@ -238,9 +241,9 @@ blender -b --factory-startup --python-exit-code 1 --python tests/python/goo_bsdf
 Cases include groups, slots, shadows, self, contact, high_bits, table_growth, linking,
 world, probe_plane, probe_sphere, volume_probe, default and modern_alpha. `--method forward|hybrid` selects other
 paths. `--native-save` creates native-file oracles; `--load` and `--link` verify missing-DNA
-migration without Python handlers. The companion bridge runner
-`goo_to_eevee52_bridge/tests/02_灯光组验证/run_bsdf_matrix.py` runs the complete strict
-matrix in fresh processes and records script/binary/artifact SHA-256 and exit codes.
+migration without Python handlers. `tests/python/goo_light_groups.py` is the matrix runner:
+it starts a fresh Blender process per case, records commands, exit codes, pixel hashes and a
+manifest, and prints `GOO_LIGHT_GROUPS_MATRIX_PASS` only when every case passes.
 The older Shader Info/UI suite remains a separate regression, not a substitute for the
 ordinary BSDF suite. Planar reflection tests use SCREEN tracing and a camera-hidden
 target, so neither a black PROBE fallback nor a screen-visible substitute can pass.

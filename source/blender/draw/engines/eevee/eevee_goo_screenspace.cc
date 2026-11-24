@@ -41,9 +41,11 @@ void GooScreenSpaceModule::register_material(const blender::Material *material,
                                              const GPUMaterial *gpumat,
                                              eMaterialPipeline pipeline)
 {
-  if (!ELEM(pipeline, MAT_PIPE_DEFERRED, MAT_PIPE_FORWARD) || !inst_.raytracing.use_raytracing() ||
-      !uses_material(material, gpumat))
-  {
+  /* This condition must match the shader create-info condition in `eevee_shader.cc`, which does
+   * not depend on ray-tracing being enabled. Otherwise a material can request the screenspace
+   * resources while the module never records them; binding a stale/dummy reference is only safe
+   * because `bind()` always provides the dummy resources, so keep them registered as well. */
+  if (!ELEM(pipeline, MAT_PIPE_DEFERRED, MAT_PIPE_FORWARD) || !uses_material(material, gpumat)) {
     return;
   }
   const bool color = GPU_material_flag_get(gpumat, GPU_MATFLAG_GOO_SCREENSPACE_COLOR);

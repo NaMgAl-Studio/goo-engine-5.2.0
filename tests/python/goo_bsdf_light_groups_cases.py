@@ -146,11 +146,15 @@ def run_extra(a, s, receiver, ma, key, fill, groups, render, rgb, check, make_ma
         sphere_rgb = lambda image: image[28:36,28:36,:3]
         before = render('before_bake')
         check('sphere_no_direct', sphere_rgb(before).max() < 1e-4)
-        bpy.ops.object.lightprobe_cache_bake(subset='ACTIVE')
+        result = bpy.ops.object.lightprobe_cache_bake(subset='ACTIVE')
+        if result != {'FINISHED'}:
+            raise RuntimeError(f'lightprobe_cache_bake failed: {result}')
         red = render('baked_key')
         check('surfel_key_indirect', sphere_rgb(red)[:,:,0].mean() > .001 and sphere_rgb(red)[:,:,2].max() < .001)
         groups(ma, ['Fill'])
-        bpy.ops.object.lightprobe_cache_bake(subset='ACTIVE')
+        result = bpy.ops.object.lightprobe_cache_bake(subset='ACTIVE')
+        if result != {'FINISHED'}:
+            raise RuntimeError(f'lightprobe_cache_bake failed: {result}')
         blue = render('baked_fill')
         check('surfel_fill_indirect', sphere_rgb(blue)[:,:,2].mean() > .001 and sphere_rgb(blue)[:,:,0].max() < .001)
     else:

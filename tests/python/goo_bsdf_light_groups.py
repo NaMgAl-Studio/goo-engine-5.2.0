@@ -28,7 +28,7 @@ def main():
     p.add_argument('--load', type=Path)
     p.add_argument('--link', type=Path)
     p.add_argument('--resolution', type=int, choices=[64], default=64)
-    a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
+    a = p.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else None)
     a.output.mkdir(parents=True, exist_ok=False)
     lg = None
     if not a.native_save:
@@ -152,7 +152,8 @@ def main():
     try:
         if a.load or a.link:
             # Prove SDNA migration without Python UI handlers repairing missing fields.
-            lg.unregister()
+            if lg is not None:
+                lg.unregister()
             lg = None
         if a.link:
             with bpy.data.libraries.load(str(a.link), link=True) as (available, loaded):
