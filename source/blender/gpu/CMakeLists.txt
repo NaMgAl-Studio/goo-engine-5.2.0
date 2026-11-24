@@ -921,6 +921,11 @@ if(WITH_GTESTS)
 endif()
 
 blender_add_lib(bf_gpu "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
+
+# Visual Studio and Xcode ignore OBJECT_DEPENDS for generated sources. Make the generated
+# shader metadata available before bf_gpu's translation units are compiled. This is the
+# cross-generator equivalent of the OBJECT_DEPENDS entries above.
+add_dependencies(bf_gpu bf_draw_shaders)
 add_library(bf::gpu ALIAS bf_gpu)
 target_link_libraries(bf_gpu PUBLIC
   bf_compositor_shaders
