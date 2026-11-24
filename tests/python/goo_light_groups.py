@@ -416,7 +416,9 @@ def main():
         return
     if args.blender is None:
         parser.error('--blender is required for the matrix runner')
-    args.output.mkdir(parents=True, exist_ok=False)
+    if args.output.exists() and any(args.output.iterdir()):
+        parser.error(f'--output must be empty or new: {args.output}')
+    args.output.mkdir(parents=True, exist_ok=True)
     manifest = {'binary': str(args.blender), 'binary_sha256': sha(args.blender),
                 'binary_mtime_ns': args.blender.stat().st_mtime_ns,
                 'script_sha256': sha(__file__), 'cases': [], 'started': time.time()}
@@ -450,11 +452,16 @@ def main():
         if case == 'legacy_load':
             cmd += ['--fixture', str(args.output/'legacy_source/legacy.blend')]
         with (folder/'run.log').open('w', encoding='utf8') as log:
-            proc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+            try:
+                proc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+                exit_code = proc.returncode
+            except subprocess.TimeoutExpired:
+                log.write('\nTIMEOUT after 900 seconds\n')
+                exit_code = 124
         result_path = folder/'result.json'
         data = json.loads(result_path.read_text(encoding='utf8')) if result_path.exists() else {}
-        ok = proc.returncode == 0 and data.get('pass', False)
-        manifest['cases'].append({'case': case, 'command': cmd, 'exit_code': proc.returncode, 'pass': ok})
+        ok = exit_code == 0 and data.get('pass', False)
+        manifest['cases'].append({'case': case, 'command': cmd, 'exit_code': exit_code, 'pass': ok})
         print(case, 'PASS' if ok else 'FAIL', flush=True)
         if not ok:
             print((folder/'run.log').read_text(encoding='utf8', errors='replace')[-1800:], flush=True)

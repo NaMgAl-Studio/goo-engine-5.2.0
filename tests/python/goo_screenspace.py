@@ -40,7 +40,7 @@ def arguments():
     p.add_argument("--set-depth", action="store_true")
     p.add_argument("--film-transparent", action="store_true")
     p.add_argument("--camera-x", type=float, default=0.0)
-    return p.parse_args(sys.argv[sys.argv.index("--") + 1:])
+    return p.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else None)
 
 
 def material(name, color):

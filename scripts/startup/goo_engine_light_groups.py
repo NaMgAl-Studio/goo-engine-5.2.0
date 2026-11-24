@@ -114,14 +114,10 @@ def sync_light_groups():
 
     _sync_in_progress = True
     try:
-        # Group names are authored on lights; assign deterministic bit indices. Using sorted names
-        # makes the bit layout stable across runs, saves, and machines instead of depending on the
-        # hash-table iteration order of a Python set.
-        sorted_names = sorted({
-            grp.name
-            for light in bpy.data.lights
-            for grp in light.light_groups.groups
-        })
+        # Materials, Shader Info nodes and lights share one namespace. Collect from all owners:
+        # a group linked only to a material is still a valid filter and must receive a bit instead
+        # of showing up in the UI while silently evaluating to the empty mask.
+        sorted_names = sorted(get_name_set())
         if len(sorted_names) > MAX_NAMED_LIGHT_GROUPS:
             print("WARNING: Max number of named light groups (127) reached. "
                   "Groups after the first 127 sorted names are ignored.")
@@ -141,6 +137,10 @@ def update_handler(_s, _c):
 
 @persistent
 def sync_handler(*_):
+    # The render thread must not write RNA/ID state; load/undo/depsgraph handlers already keep
+    # the masks current before a render starts.
+    if bpy.app.is_job_running('RENDER'):
+        return
     sync_light_groups()
 
 
@@ -173,6 +173,12 @@ def get_name(self):
 # Update all matching names across the file.
 def set_name(self, value):
     orig_name = self.name
+    value = value.strip()
+    if not value or value == orig_name:
+        return
+    if value in get_name_set():
+        # Keep the old name rather than merging two distinct groups into one bit.
+        return
     for data in iter_light_group_owners():
         rename_group(data, orig_name, value)
     sync_light_groups()
@@ -192,7 +198,7 @@ class LightGroup(PropertyGroup):
 
 class LightGroups(PropertyGroup):
     groups: CollectionProperty(type=LightGroup)
-    group_index: IntProperty(name="Active Light Group", update=update_handler)
+    group_index: IntProperty(name="Active Light Group")
     use_default: BoolProperty(
         name="Use default Light Group",
         default=True,
@@ -439,6 +445,11 @@ class MAT_OT_LinkLightGroup(LightGroupOp):
 
     def execute(self, ctx):
         lgs = self.get_groups(ctx)
+        if not self.name or not lgs.id_data.is_editable:
+            return {'CANCELLED'}
+        if self.name in lgs.groups:
+            lgs.group_index = lgs.groups.find(self.name)
+            return {'CANCELLED'}
         new = lgs.groups.add()
         new.name = self.name
         lgs.group_index = lgs.groups.find(new.name)
@@ -464,7 +475,7 @@ class MAT_OT_DeleteLightGroup(LightGroupSelectionOp):
             index = groups.find(grp_name)
             if index != -1:
                 groups.remove(index)
-        lgs.group_index -= 1
+        lgs.group_index = min(max(lgs.group_index, 0), max(len(lgs.groups) - 1, 0))
         sync_light_groups()
         return {'FINISHED'}
 
@@ -477,7 +488,7 @@ class MAT_OT_UnlinkLightGroup(LightGroupSelectionOp):
     def execute(self, ctx):
         lgs = self.get_groups(ctx)
         lgs.groups.remove(lgs.group_index)
-        lgs.group_index -= 1
+        lgs.group_index = min(max(lgs.group_index, 0), max(len(lgs.groups) - 1, 0))
         sync_light_groups()
         return {'FINISHED'}
 
@@ -535,7 +546,6 @@ def register():
     _ensure_pointer_property(Light, "light_groups")
     _ensure_pointer_property(ShaderNodeShaderInfo, "light_groups")
 
-    _safe_append(bpy.app.handlers.render_init, sync_handler)
     _safe_append(bpy.app.handlers.load_post, sync_handler)
     _safe_append(bpy.app.handlers.blend_import_post, sync_handler)
     _safe_append(bpy.app.handlers.undo_post, sync_handler)
