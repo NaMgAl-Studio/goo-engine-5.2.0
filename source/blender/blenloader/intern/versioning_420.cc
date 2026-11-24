@@ -532,6 +532,13 @@ void do_versions_after_linking_420(FileData *fd, Main *bmain)
     /* Convert blend method to math nodes. */
     if (all_scenes_use(bmain, {RE_engine_id_BLENDER_EEVEE})) {
       for (Material &material : bmain->materials) {
+        /* Preserve the legacy OPAQUE surface mode before blend_method is rewritten below. The
+         * 5.2 after-linking pass cannot recover this from the converted HASHED/BLEND value. */
+        material.flag &= ~MA_LEGACY_OPAQUE;
+        if (material.blend_method == MA_BM_SOLID) {
+          material.flag |= MA_LEGACY_OPAQUE;
+        }
+
         if (!material.use_nodes || material.nodetree == nullptr) {
           /* Nothing to version. */
         }

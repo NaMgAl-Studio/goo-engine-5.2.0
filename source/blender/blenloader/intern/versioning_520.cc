@@ -487,6 +487,12 @@ static void versioning_replace_legacy_compositor_switch_node(bNodeTree *node_tre
  * knee / tint semantics, radius maps onto the normalized glare size, intensity onto strength. */
 static void do_version_goo_bloom_to_glare(Main *bmain, Scene *scene)
 {
+  /* Official 5.x files never contained legacy EEVEE Bloom, but bit 8 of the deprecated flag is
+   * still present in the DNA. Only migrate files that predate the 5.0 compositor redesign; in
+   * particular, never rewrite a native 5.2 scene based on this legacy bit alone. */
+  if (bmain->versionfile >= 500) {
+    return;
+  }
   if (!(scene->eevee.flag & SCE_EEVEE_BLOOM_ENABLED)) {
     return;
   }
@@ -496,10 +502,19 @@ static void do_version_goo_bloom_to_glare(Main *bmain, Scene *scene)
   const bool tree_is_new = (node_tree == nullptr);
   if (tree_is_new) {
     /* Bloom-only files often have no compositor at all. Build a minimal Render Layers -> Group
-     * Output chain; pre-5.0 files store it as an embedded scene tree which the after-setup
-     * versioning converts into a reusable node group like any other legacy file. */
-    node_tree = bke::node_tree_add_tree_embedded(
-        nullptr, &scene->id, "Compositing Nodetree", "CompositorNodeTree");
+     * Output chain. Pre-5.0 files store it as an embedded scene tree which the after-setup
+     * versioning converts into a reusable node group like any other legacy file. For 5.0+ files
+     * the compositor is a regular node-group ID, so an embedded tree would be attached to the
+     * legacy `scene->nodetree` slot and silently ignored. */
+    if (MAIN_VERSION_FILE_ATLEAST(bmain, 500, 4)) {
+      node_tree = bke::node_tree_add_tree(
+          bmain, "Compositing Nodetree", "CompositorNodeTree");
+      scene->compositing_node_group = node_tree;
+    }
+    else {
+      node_tree = bke::node_tree_add_tree_embedded(
+          nullptr, &scene->id, "Compositing Nodetree", "CompositorNodeTree");
+    }
     scene->r.scemode |= R_DOCOMP;
   }
   bke::node_tree_set_type(*node_tree);
@@ -755,8 +770,13 @@ void do_versions_after_linking_520(FileData *fd, Main *bmain)
        * versioning pass, while this after-linking pass is where Goo node groups are available. */
       const bool from_goo = mat.nodetree != nullptr &&
                             material_node_tree_uses_goo_node(*mat.nodetree);
+      /* The 4.2 conversion preserves the OPAQUE provenance in this flag. Keep it, otherwise the
+       * conversion would erase the information it was added to carry. */
+      const bool was_legacy_opaque = (mat.flag & MA_LEGACY_OPAQUE) != 0;
       mat.flag &= ~MA_LEGACY_OPAQUE;
-      if (mat.blend_method == MA_BM_SOLID && (legacy_eevee_era || goo_file_dna || from_goo)) {
+      if ((legacy_eevee_era || goo_file_dna || from_goo) &&
+          (was_legacy_opaque || mat.blend_method == MA_BM_SOLID))
+      {
         mat.flag |= MA_LEGACY_OPAQUE;
       }
     }

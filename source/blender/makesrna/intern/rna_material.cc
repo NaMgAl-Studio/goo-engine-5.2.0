@@ -239,6 +239,11 @@ static int rna_Material_blend_method_get(PointerRNA *ptr)
 static void rna_Material_blend_method_set(PointerRNA *ptr, int new_blend_method)
 {
   Material *material = id_cast<Material *>(ptr->owner_id);
+  /* Assigning the value that is already exposed must not silently drop the legacy OPAQUE
+   * provenance. Only an actual blend-mode change exits the compatibility state. */
+  if (new_blend_method == rna_Material_blend_method_get(ptr)) {
+    return;
+  }
   /* Explicit blend-mode choice: stop overriding a legacy-OPAQUE material to fully opaque. */
   material->flag &= ~MA_LEGACY_OPAQUE;
   switch (new_blend_method) {
